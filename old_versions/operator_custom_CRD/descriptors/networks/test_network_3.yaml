@@ -1,6 +1,0 @@
-apiVersion: l2sm.k8s.conf.io/v1
-kind: VirtualNetwork
-metadata:
-  name: my-third-network
-spec:
-  name: my-third-network
