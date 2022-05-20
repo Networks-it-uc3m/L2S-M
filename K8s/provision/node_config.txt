@@ -1,2 +1,0 @@
-#Node vxlan1 example
-vxlan1;192.168.7.6
