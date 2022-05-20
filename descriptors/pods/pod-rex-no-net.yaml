@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-rex-no-net
+  annotations:
+    k8s.v1.cni.cncf.io/networks: vpod4
+spec:
+  containers: 
+  - name: pod-rex-no-net
+    command: ["/bin/ash", "-c", "trap : TERM INT; sleep infinity & wait"]
+    image: alpine:latest
+    securityContext:
+      capabilities:
+        add: ["NET_ADMIN"]
+  nodeName: rex

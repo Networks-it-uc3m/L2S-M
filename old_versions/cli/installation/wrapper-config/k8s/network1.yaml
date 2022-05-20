@@ -1,0 +1,7 @@
+apiVersion: l2sm.k8s.conf.io/v1
+kind: VirtualNetwork
+metadata:
+  name: my-first-network-2
+spec:
+  name: hello-world
+  id: 345678

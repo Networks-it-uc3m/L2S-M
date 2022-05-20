@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ping-l2sm-arm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      test: pyra
+  template:
+    metadata:
+      labels:
+        test: pyra
+      annotations:
+        k8s.v1.cni.cncf.io/networks: my-first-network
+    spec:
+      containers: 
+      - name: ping-arm
+        command: ["/bin/ash", "-c", "trap : TERM INT; sleep infinity & wait"]
+        image: alpine:latest
+        securityContext:
+          capabilities:
+            add: ["NET_ADMIN"]
+      nodeName: pyra

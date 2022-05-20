@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: l2-ps-arm64
+  #namespace: kube-system
+  labels:
+    l2sm-component: l2-ps
+spec:
+  selector:
+    matchLabels:
+      l2sm-component: l2-ps
+  template:
+    metadata:
+      labels:
+        l2sm-component: l2-ps
+      annotations:
+        k8s.v1.cni.cncf.io/networks: vhost1@vhost1, vhost2@vhost2, vhost3@vhost3, vhost4@vhost4, vxlan1@vxlan1
+    spec:
+      tolerations:
+      # this toleration is to have the daemonset runnable on master nodes
+      # remove it if your masters can't run pods
+      - key: node-role.kubernetes.io/master
+        operator: Exists
+        effect: NoSchedule
+      containers:
+      - name: l2-ps
+        image: lewisfelix24/ovs-pod-ml2s:rpi
+        command: ["/bin/sh", "-c"]
+        args: ["ovsdb-server --remote=punix:/var/run/openvswitch/db.sock --remote=db:Open_vSwitch,Open_vSwitch,manager_options --pidfile=/var/run/openvswitch/ovsdb-server.pid 
+         --detach && ovs-vsctl --db=unix:/var/run/openvswitch/db.sock --no-wait init && ovs-vswitchd --pidfile=/var/run/openvswitch/ovs-vswitchd.pid --detach && 
+         ip link set vhost1 up && ip link set vhost2 up && ip link set vhost3 up && ip link set vhost4 up && ip link set vxlan1 up &&
+         ovs-vsctl add-br brtun && ip link set brtun up &&
+         ovs-vsctl add-port brtun vhost1 && ovs-vsctl add-port brtun vhost2 && ovs-vsctl add-port brtun vhost3 && ovs-vsctl add-port brtun vhost4 && ovs-vsctl add-port brtun vxlan1 &&
+         /bin/sleep 3650d"]
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          capabilities:
+            add: ["NET_ADMIN"]
+      nodeSelector:
+        kubernetes.io/arch: arm64

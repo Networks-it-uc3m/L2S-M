@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ping-l2sm-amd
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      test: rex
+  template:
+    metadata:
+      labels:
+        test: rex
+      annotations:
+        l2sm.k8s.conf.io/virtual-networks: my-first-network
+    spec:
+      containers: 
+      - name: ping-amd
+        command: ["/bin/ash", "-c", "trap : TERM INT; sleep infinity & wait"]
+        image: alpine:latest
+        securityContext:
+          capabilities:
+            add: ["NET_ADMIN"]
+      nodeSelector:
+        kubernetes.io/arch: amd64
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ping-l2sm-arm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      test: pyra
+  template:
+    metadata:
+      labels:
+        test: pyra
+      annotations:
+        l2sm.k8s.conf.io/virtual-networks: my-first-network
+    spec:
+      containers: 
+      - name: ping-arm
+        command: ["/bin/ash", "-c", "trap : TERM INT; sleep infinity & wait"]
+        image: lewisfelix24/testing-pod:rpi
+        securityContext:
+          capabilities:
+            add: ["NET_ADMIN"]
+      nodeSelector:
+        kubernetes.io/arch: arm64

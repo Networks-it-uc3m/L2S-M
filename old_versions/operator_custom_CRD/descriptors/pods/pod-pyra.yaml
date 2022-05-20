@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-pyra
+  annotations:
+    l2sm.k8s.conf.io/virtual-networks: my-first-network
+spec:
+  containers: 
+  - name: pod-pyra
+    command: ["/bin/ash", "-c", "trap : TERM INT; sleep infinity & wait"]
+    image: lewisfelix24/testing-pod:rpi
+    securityContext:
+      capabilities:
+        add: ["NET_ADMIN"]
+  nodeName: pyra

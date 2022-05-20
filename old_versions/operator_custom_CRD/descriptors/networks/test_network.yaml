@@ -1,0 +1,6 @@
+apiVersion: l2sm.k8s.conf.io/v1
+kind: VirtualNetwork
+metadata:
+  name: my-first-network
+spec:
+  name: my-first-network
