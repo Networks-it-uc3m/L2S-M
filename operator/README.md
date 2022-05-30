@@ -13,7 +13,7 @@ This repository contains an script to generate the necessary 10 VXLANs with thei
 To use the script, execute the following command in every of the nodes of your cluster:
 
 ```bash
-sudo ./generate_vxlans.bash
+sudo ./L2S-M/K8s/provision/vxlan.bash
 ```
 If you want to create the VXLANs manually, you can use the following code instead for every VXLAN in most Linux distributions:
 
@@ -44,7 +44,7 @@ sudo bridge fdb append to 00:00:00:00:00:00 dst [dst_IP] dev [vxlan_Name]
 
 3. Create the vEth virtual interfaces in every host of the cluster by using the following script
 ```bash
-sudo ./L2S-M/operator/deploy/interfaces/configure_interfaces.bash
+sudo ./L2S-M/K8s/provision/veth.bash
 ```
 4. Install the Multus CNI Plugin in your K8s cluster. For more information on how to install Multus in your cluster, check their [official GitHub repository](https://github.com/k8snetworkplumbingwg/multus-cni).
 5. The host-device cni plugin must be able to be used in your cluster. If it Is not present in your K8s distribution, you can find how to install it in your K8s cluster in their [official GitHub repository](https://github.com/containernetworking/plugins).
