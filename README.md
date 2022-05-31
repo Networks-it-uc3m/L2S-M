@@ -1,27 +1,25 @@
 # L2S-M 
 Welcome to the official repository of L2S-M, a Kubernetes operator that enables virtual networking in K8s clusters.
 
-In the following figure, you can see an example of a K8s cluster with L2S-M installed and running. In principle, L2S-M builds a programmable data plane between different programmable switches deployed (or present) over a K8s infrastructure. These switches can be either physical (like they can be found in a classic datacentre infrastructure) or virtual (deployed by the L2S-M operator). 
+Link-Layer Secure commectivity for Microservice platforms (L2S-M) is a K8s networking solution that complements the current CNI Plugin solutions available in order to create and manage virtual networks in K8s clusters. These virtual networks allow microservices (pods) to atatch to isolated link-layer (point to point or multi-point) connectivity with other pods deployed in a K8s cluster, regardless of their physical location. These virtual networks can be created on-demand, and its management (as well as attaching/detaching pods to these networks) are completely integrated in the K8s environment, thanks to the L2S-M K8s operator.
+
+The way that L2S-M achieves this operation is through the use of a programmable data-plane managed by SDN, which in turn provides a high degree of flexibility to dynamically incorporate new application and/or network configurations into a cluster that uses L2S-M. Moreover, L2S-M's design is able to flexibly accomodate various deployment options for Network Services, ranging from small clusters to those with a high number of distributed nodes. 
 
 ![alt text](https://github.com/Networks-it-uc3m/L2S-M/blob/main/v1_architecture.png?raw=true)
 
-**NOTE**: The current verison of L2S-M only supports the deployment of virtual switches based on [Open Virtual Switch (OVS)](http://www.openvswitch.org).
+The main K8s interface of pods remains intact, retaining the compatibility with all the standard K8s elements (e.g., services, CNI connectivity). Moreover, this solution has the potential to be used for inter-cluster communications to support scenarios where network functions are spread through mutliple distributed infrastructures (work in progress).  
 
-Each one of these switches are interconnected with selected peers by taking advantage of IP tunneling mechanisms (VXLAN) to build an overlay of programmable switches. Aftearwards, an SDN Application is used to inject the corresponding traffic rules to ensure that traffic between virtual network are isolated between each other (i.e., instrucing the switches which ports should be used to forwards and/or block incoming-outgoing traffic).
-
-Specifically for K8s clusters, the element in charge of managing the creation, deletion and management of virtual networks is the L2S-M operator. This operator treats virtual networks as Multus CRDs, using the K8s events to detect the instances where a pod wants to attach/detach from a virtual network. In the former case, the operator will select one of the available interfaces in the switch, and associate it with the virtual network that wants to be used. This interface will appear in the pod as a secondary interface that can be used to communicate with other pods attached to the network, which will be seen as if they were deployed in the same Local Area Network (LAN). The CNI interface remains intact.
-
-To provide the isolation mechanisms between virtual networks, an SDN controller is deployed in the cluster as part of the L2S-M solution. The operator will interact with this compotent to communicate which ports are associated with each virtual network, updating its status everytime a pod is deployed/deleted. Using this information, the SDN Controller injects the corresponding rules in the switches, forwarding and/or blocking traffic according to the virtual networks being used at each moment.
-
-**NOTE**: The current version of L2S-M does not implement an SDN controller yet: the first iteration of this component is expected to be added in the near future. 
-
-More information on how to deploy virtualise workloads attached to virtual networks can be seen in the [ping-pong](https://github.com/Networks-it-uc3m/L2S-M/tree/main/descriptors) example.
+Further details about the architecture of L2S-M can be seen in the following [documentation](https://github.com/Networks-it-uc3m/L2S-M/tree/main/K8s).
 
 If you want to learn how to install L2S-M in your cluster, see the [installation guide](https://github.com/Networks-it-uc3m/L2S-M/tree/main/operator) of this repository to start its installation.
 
-If you want more information about the original idea of L2S-M and its initial design, you can check our latest publication in the [IEEE Network journal](https://ieeexplore.ieee.org/document/9740640).
+If you want more information about the original idea of L2S-M and its initial design, you can check our latest publication in the [IEEE Network journal](https://ieeexplore.ieee.org/document/9740640):
+
+- L. F. Gonzalez, I. Vidal, F. Valera and D. R. Lopez, "Link Layer Connectivity as a Service for Ad-Hoc Microservice Platforms," in IEEE Network, vol. 36, no. 1, pp. 10-17, January/February 2022, doi: 10.1109/MNET.001.2100363.
 
 Did you already install the operator and  you cannot wait to start building your own virtual networks in your K8s cluster? Check out our [ping-pong](https://github.com/Networks-it-uc3m/L2S-M/tree/main/descriptors) example!
+
+Did you like L2S-M and want to use it in your K8s infrastructure or project? Please, feel free to do so, and dont forget to cite us! 
 
 ### Project where L2S-M is being used:
 - H2020 FISHY Project: https://fishy-project.eu (H2020-MG-2019-TwoStages-861696) 
@@ -29,7 +27,7 @@ Did you already install the operator and  you cannot wait to start building your
 
 ### How to reach us
 
-If you have any doubts about L2S-M or its instalaltion, please do not hesitate to contact us out through our e-mail!
+Do you have any doubts about L2S-M or its instalaltion? Do you want to provide feedback about the solution? Please, do not hesitate to contact us out through e-mail!
 - Luis F. Gonzalez: luisfgon@it.uc3m.es (Universidad Carlos III de Madrid)
 - Ivan Vidal : ividal@it.uc3m.es (Universidad Carlos III de Madrid)
 - Francisco Valera: fvalera@it.uc3m.es (Universidad Carlos III de Madrid
