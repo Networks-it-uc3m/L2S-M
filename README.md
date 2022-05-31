@@ -19,7 +19,7 @@ If you want more information about the original idea of L2S-M and its initial de
 
 Did you already install the operator and  you cannot wait to start building your own virtual networks in your K8s cluster? Check out our [ping-pong](https://github.com/Networks-it-uc3m/L2S-M/tree/main/descriptors) example!
 
-Did you like L2S-M and want to use it in your K8s infrastructure or project? Please, feel free to do so, and dont forget to cite us! 
+Did you like L2S-M and want to use it in your K8s infrastructure or project? Please, feel free to do so, and don't forget to cite us! 
 
 ### Project where L2S-M is being used:
 - H2020 FISHY Project: https://fishy-project.eu (H2020-MG-2019-TwoStages-861696) 
