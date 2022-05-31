@@ -6,28 +6,20 @@ This guide details the necessary prerequisites to install the L2S-M Kubernetes o
 
 1. Clone the L2S-M repository in your host.  This guide will assume that all commands are executed in the directory where L2S-M was downloaded.
 
-2. In order to start with the installation of L2S-M, it is necessary to set up the IP tunnel overlay between the nodes that you want to interconnect. To do so, **it is necessary to have 10 VXLAN interfaces (named vxlan1 up to vxlan10) in the host namespace. **
+2. In order to start with the installation of L2S-M, it is necessary to set up the IP tunnel overlay between the nodes that you want to interconnect. To do so, **it is necessary to have 10 VXLAN interfaces (named vxlan1 up to vxlan10) in the host namespace.**
 
-This repository contains an script to generate the necessary 10 VXLANs with their respective name, although any IP tunnelling mechanism can be suitable to be used. 
-
-To use the script, execute the following command in every of the nodes of your cluster:
+This repository contains an script to generate the necessary 10 VXLANs with their respective names. To use the script, execute the following command in every node of your cluster:
 
 ```bash
 sudo ./L2S-M/K8s/provision/vxlan.bash
 ```
-If you want to create the VXLANs manually, you can use the following code instead for every VXLAN in most Linux distributions:
+If you want to manually create the VXLANs instead, you can use the following code for every VXLAN in most Linux distributions:
 
 ```bash
 sudo ip link add [vxlan_Name] type vxlan id [id] dev [interface_to_use] dstport [dst_port]
 ```
 
-To configure the VXLAN tunnels between neighbouring nodes, you can use the following command for every pair of interfaces you want to configure in their respective nodes:
-
-```bash
-sudo bridge fdb append to 00:00:00:00:00:00 dst [dst_IP] dev [vxlan_Name]
-```
-
-**WARNING:**  Make sure that the VXLAN id coincides between each tunnel pairs, specially when using the configure_vxlan file. You can use the following table in order to check the associated ids with each one of the vxlans.
+**WARNING:**  Make sure that the VXLAN id coincides between each tunnel pairs if you are manually creating the interfaces. You can use the following table in order to check the associated ids with each one of the VXLAN interfaces.
 
 | **VXLAN Name** |**ID**  |
 |--|--|
@@ -42,13 +34,21 @@ sudo bridge fdb append to 00:00:00:00:00:00 dst [dst_IP] dev [vxlan_Name]
 | vxlan9 |  1969|
 | vxlan10 |  1970|
 
-3. Create the vEth virtual interfaces in every host of the cluster by using the following script
+3. To configure the VXLAN tunnels between neighbouring nodes, use the following command for every pair of interfaces you want to configure in their respective nodes:
+
+```bash
+sudo bridge fdb append to 00:00:00:00:00:00 dst [dst_IP] dev [vxlan_Name]
+```
+
+4. Create the vEth virtual interfaces in every host of the cluster by using the following script
 ```bash
 sudo ./L2S-M/K8s/provision/veth.bash
 ```
-4. Install the Multus CNI Plugin in your K8s cluster. For more information on how to install Multus in your cluster, check their [official GitHub repository](https://github.com/k8snetworkplumbingwg/multus-cni).
-5. The host-device cni plugin must be able to be used in your cluster. If it Is not present in your K8s distribution, you can find how to install it in your K8s cluster in their [official GitHub repository](https://github.com/containernetworking/plugins).
-6. Your K8s Controller node must be able to deploy K8s pods for the operator to work. Remove its master and control-plane taints using the following command:
+5. Install the Multus CNI Plugin in your K8s cluster. For more information on how to install Multus in your cluster, check their [official GitHub repository](https://github.com/k8snetworkplumbingwg/multus-cni).
+
+6. The host-device cni plugin must be able to be used in your cluster. If it is not present in your K8s distribution, you can find how to install it in your K8s cluster in their [official GitHub repository](https://github.com/containernetworking/plugins).
+
+7. Your K8s Controller node must be able to deploy K8s pods for the operator to work. Remove its master and control-plane taints using the following command:
 ```bash
 kubectl taint nodes --all node-role.kubernetes.io/control-plane- node-role.kubernetes.io/master-
 ```
@@ -62,6 +62,7 @@ kubectl create -f ./L2S-M/K8s/interfaces_definitions
 ```
 
 **NOTE:** If you are using interfaces whose definitions are not present in the virtual interfaces definitions in the folder, you must create the corresponding virtual definition in the same fashion as the VXLANs. For example, if you want to use a VPN interface called "tun0", first write the descriptor "tun0.yaml":
+
  ```yaml
 apiVersion: "k8s.cni.cncf.io/v1"
 kind: NetworkAttachmentDefinition
