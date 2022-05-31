@@ -9,7 +9,7 @@ L2S-M provides its intended functionalities using a programmable data-plane base
 
 The main K8s interface of pods remains intact (provided by a CNI plugin), retaining the compatibility with all the standard K8s elements (e.g., services, connectivity through the main interface, etc.). Moreover, the solution has the potential to be used for inter-cluster communications to support scenarios where network functions are spread through multiple distributed infrastructures (this is still a work in progress).  
 
-The figure below outlines the design of L2S-M. See [how L2S-M works](https://github.com/Networks-it-uc3m/L2S-M/tree/main/K8s) to read further details on the L2S-M solution.
+The figure outlines the design of L2S-M. See [how L2S-M works](https://github.com/Networks-it-uc3m/L2S-M/tree/main/K8s) to read further details on the L2S-M solution.
 
 If you want to learn how to install L2S-M in your cluster, see the [installation guide](https://github.com/Networks-it-uc3m/L2S-M/tree/main/operator) of this repository to start its installation.
 
