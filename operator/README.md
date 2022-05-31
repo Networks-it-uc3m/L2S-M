@@ -106,4 +106,4 @@ kubectl create -f ./L2S-M/operator/daemonset
 ```
 **NOTE:** If you have introduced new interfaces in your cluster besides the VXLANs, you will need to modify the descriptor to introduce those as well (modify both MULTUS annotations and the commands to attach the interface to the OVS switch). 
 
-You are all set! If you want to learn how to create virtual networks and use them in your applications, [check the following section of the repository] (https://github.com/Networks-it-uc3m/L2S-M/tree/main/descriptors)
+You are all set! If you want to learn how to create virtual networks and use them in your applications, [check the following section of the repository](https://github.com/Networks-it-uc3m/L2S-M/tree/main/descriptors)
