@@ -1,13 +1,13 @@
 # L2S-M 
 Welcome to the official repository of L2S-M, a Kubernetes operator that enables virtual networking in K8s clusters.
 
-Link-Layer Secure commectivity for Microservice platforms (L2S-M) is a K8s networking solution that complements the current CNI Plugin solutions available in order to create and manage virtual networks in K8s clusters. These virtual networks allow microservices (pods) to atatch to isolated link-layer (point to point or multi-point) connectivity with other pods deployed in a K8s cluster, regardless of their physical location. These virtual networks can be created on-demand, and its management (as well as attaching/detaching pods to these networks) are completely integrated in the K8s environment, thanks to the L2S-M K8s operator.
+Link-Layer Secure connectivity for Microservice platforms (L2S-M) is a K8s networking solution that complements CNI Plugin solutions in order to create and manage virtual networks in K8s clusters. These virtual networks allow microservices (pods) to have isolated link-layer connectivity with other pods deployed in a K8s cluster taht are attached to the same virtual network, regardless of their physical location. These virtual networks can be created on-demand, and its management (as well as attaching/detaching pods to these networks) is completely integrated inside the K8s environment, thanks to the L2S-M K8s operator.
 
 The way that L2S-M achieves this operation is through the use of a programmable data-plane managed by SDN, which in turn provides a high degree of flexibility to dynamically incorporate new application and/or network configurations into a cluster that uses L2S-M. Moreover, L2S-M's design is able to flexibly accomodate various deployment options for Network Services, ranging from small clusters to those with a high number of distributed nodes. 
 
 ![alt text](https://github.com/Networks-it-uc3m/L2S-M/blob/main/v1_architecture.png?raw=true)
 
-The main K8s interface of pods remains intact, retaining the compatibility with all the standard K8s elements (e.g., services, CNI connectivity). Moreover, this solution has the potential to be used for inter-cluster communications to support scenarios where network functions are spread through mutliple distributed infrastructures (work in progress).  
+The main K8s interface of pods remains intact, retaining the compatibility with all the standard K8s elements (e.g., services, connectivity through the main interface). Moreover, this solution has the potential to be used for inter-cluster communications to support scenarios where network functions are spread through mutliple distributed infrastructures (work in progress).  
 
 Further details about the architecture of L2S-M can be seen in the following [documentation](https://github.com/Networks-it-uc3m/L2S-M/tree/main/K8s).
 
