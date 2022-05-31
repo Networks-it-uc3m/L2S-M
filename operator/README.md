@@ -43,7 +43,7 @@ where *dst_IP* must be replaced by the IP address of the neighboring K8s node in
 
 
 4. Create a set of vEth virtual interfaces in every host of the K8s cluster. These interfaces are needed in L2S-M to support the attachment of pods to virtual networks. This can be done executing the following script:
-5. 
+
 ```bash
 sudo ./L2S-M/K8s/provision/veth.bash
 ```
