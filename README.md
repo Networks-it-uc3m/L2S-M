@@ -30,7 +30,7 @@ In the [following section](https://github.com/Networks-it-uc3m/L2S-M/tree/main/a
 
 L2S-M has been presented in the following events:
 
-* Open Source Mano (OSM) #13 plenary meeting (01/06/2022): In this meeting, L2S-M was presented as a solution to enable virtual networking to deploy Cloud Network Functions (CNFs) in K8s clusters. Moreover, the potential use of L2S-M to become the basis for a feature to be introduced in OSM's code was discussed as well.
+* [Open Source Mano (OSM) #13 plenary meeting (01/06/2022)](https://github.com/Networks-it-uc3m/L2S-M/blob/main/additional%20info/OSM%2313%20Plenary%20Meeting.pdf): In this meeting, L2S-M was presented as a solution to enable virtual networking to deploy Cloud Network Functions (CNFs) in K8s clusters. Moreover, the potential use of L2S-M to become the basis for a feature to be introduced in OSM's code was discussed as well.
 
 ### How to reach us
 
