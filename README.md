@@ -21,9 +21,16 @@ If you want more information about the original idea of L2S-M and its initial de
 
 Did you like L2S-M and want to use it in your K8s infrastructure or project? Please, feel free to do so, and don't forget to cite us! 
 
-### Project where L2S-M is being used:
+### Projects where L2S-M is being used:
 - H2020 FISHY Project: https://fishy-project.eu (H2020-MG-2019-TwoStages-861696) 
 - True5G Project: (PID2019-108713RB-C52 / AEI / 10.13039/501100011033)
+
+### Additional information about L2S-M
+In the [following section](https://github.com/Networks-it-uc3m/L2S-M/tree/main/additional%20info) of the repository, you can find a series of documents and slides that provide additional information about L2S-M, including presentations where our solution has been showcased to the public in various events.
+
+L2S-M has been presented in the following events:
+
+* Open Source Mano (OSM) #13 plenary meeting (01/06/2022): In this meeting, L2S-M was presented as a solution to enable virtual networking to deploy Cloud Network Functions (CNFs) in K8s clusters. Moreover, the potential use of L2S-M to become the basis for a feature to be introduced in OSM's code was discussed as well.
 
 ### How to reach us
 
