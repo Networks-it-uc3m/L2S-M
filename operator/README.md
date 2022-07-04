@@ -11,7 +11,7 @@ This guide details the necessary steps to install the L2S-M Kubernetes operator 
 This repository contains a script to generate the necessary 10 VXLANs with their respective names. To use the script, execute the following command in every node of your cluster (this is the **recommended option**):
 
 ```bash
-sudo ./L2S-M/K8s/provision/vxlan.bash
+sudo ./L2S-M/K8s/provision/vxlan.bash [interface_to_use_for_vxlan_tunnel]
 ```
 You may want to manually create the VXLANs instead. To that purpose, you can use the following command for every VXLAN in most Linux distributions:
 
