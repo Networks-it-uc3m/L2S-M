@@ -40,4 +40,9 @@ spec:
           persistentVolumeClaim:
             claimName: mysql-pv-claim
       nodeSelector:
-        node-role.kubernetes.io/master: ""
+        dedicated: master
+      tolerations:
+      - key: dedicated
+        operator: Equal
+        value: master
+        effect: NoSchedule
