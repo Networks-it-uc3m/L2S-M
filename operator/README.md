@@ -42,7 +42,7 @@ This guide details the necessary steps to install the L2S-M Kubernetes operator 
     Once opened, append the following line at the end of the file:
 
     ```bash
-    @reboot sh [directory-where-L2S-M-directory-is-located]/L2S-M/K8s/provision/set-interfaces.sh [interface_to_use] [directory-where-L2S-M-directory-is-located]/L2S-M/K8s/provision/vxlans.txt
+    @reboot sh [directory-where-L2S-M-is-located]/L2S-M/K8s/provision/set-interfaces.sh [interface_to_use] [directory-where-L2S-M-is-located]/L2S-M/K8s/provision/vxlans.txt
     ```
 
 * You may want to manually create the VXLANs instead. **Note: We highly suggest to use the reccomended option described in 2. to keep the configuration across reboots**. To that purpose, you can use the following command for every VXLAN in most Linux distributions:
