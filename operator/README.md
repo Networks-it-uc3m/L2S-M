@@ -10,7 +10,7 @@ This guide details the necessary steps to install the L2S-M Kubernetes operator 
 
     This repository contains a script to generate all the necessary interfaces with their respective names. (this is the **recommended option**).
 
-    To use this script, firstly it is neccessary to write the destinations that each IP tunnel will have for every VXLAN interface in each host. To perfom this action, **open the vxlans.txt file (located in ./L2S-M/K8s/provision/vxlan.txt) with your prefered text editor and assign each vxlan interface an IP address of the neighboring K8s node used in each VXLAN tunnel**.
+    To use this script, firstly it is neccessary to write the destinations that each IP tunnel will have for every VXLAN interface in each host. To perfom this action, **open the vxlans.txt file (located in ./L2S-M/K8s/provision/vxlans.txt) with your prefered text editor and assign each vxlan interface an IP address of the neighboring K8s node used in each VXLAN tunnel**.
 
     **WARNING:**  Make sure that the VXLAN network identifier (VNI) is the same at every pair of k8s nodes terminating an IP tunnel. In case that you use the script for automatic VXLAN configuration, the VXLAN interface names and their corresponding VNIs are indicated in the table below. 
 
