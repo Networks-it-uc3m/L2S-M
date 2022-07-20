@@ -39,3 +39,6 @@ Do you have any doubts about L2S-M or its installation? Do you want to provide f
 - Ivan Vidal : ividal@it.uc3m.es (Universidad Carlos III de Madrid)
 - Francisco Valera: fvalera@it.uc3m.es (Universidad Carlos III de Madrid
 - Diego R. Lopez: diego.r.lopez@telefonica.com (Telefónica I+D)
+
+### Acknowledment
+The work in this open-source project has partially been supported by the European H2020 FISHY Project (grant agreement 952644).
