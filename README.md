@@ -22,7 +22,7 @@ If you want more information about the original idea of L2S-M and its initial de
 Did you like L2S-M and want to use it in your K8s infrastructure or project? Please, feel free to do so, and don't forget to cite us! 
 
 ### Projects where L2S-M is being used:
-- H2020 FISHY Project: https://fishy-project.eu (H2020-MG-2019-TwoStages-861696) 
+- H2020 FISHY Project: https://fishy-project.eu (grant agreement 952644) 
 - True5G Project: (PID2019-108713RB-C52 / AEI / 10.13039/501100011033)
 
 ### Additional information about L2S-M
