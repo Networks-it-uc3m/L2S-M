@@ -41,4 +41,4 @@ Do you have any doubts about L2S-M or its installation? Do you want to provide f
 - Diego R. Lopez: diego.r.lopez@telefonica.com (Telefónica I+D)
 
 ### Acknowledment
-The work in this open-source project has partially been supported by the European H2020 FISHY Project (grant agreement 952644) and by thethe H2020 Labyrinth project (grant agreement 861696).
+The work in this open-source project has partially been supported by the European H2020 FISHY Project (grant agreement 952644) and by the H2020 Labyrinth project (grant agreement 861696).
