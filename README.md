@@ -24,6 +24,7 @@ Did you like L2S-M and want to use it in your K8s infrastructure or project? Ple
 ### Projects where L2S-M is being used:
 - H2020 FISHY Project: https://fishy-project.eu (grant agreement 952644) 
 - True5G Project: (PID2019-108713RB-C52 / AEI / 10.13039/501100011033)
+- H2020 Labyrinth project: https://labyrinth2020.eu/ (grant agreement 861696).
 
 ### Additional information about L2S-M
 In the [following section](https://github.com/Networks-it-uc3m/L2S-M/tree/main/additional%20info) of the repository, you can find a series of documents and slides that provide additional information about L2S-M, including presentations where our solution has been showcased to the public in various events.
