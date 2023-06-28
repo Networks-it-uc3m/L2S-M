@@ -1,7 +1,7 @@
 # L2S-M 
 Welcome to the official repository of L2S-M, a **Kubernetes operator** that enables virtual networking in K8s clusters.
 
-Link-Layer Secure connectivity for Microservice platforms (L2S-M) is a K8s networking solution that complements the CNI plugin approach of K8s to create and manage virtual networks in K8s clusters. These virtual networks allow workloads (pods) to have isolated link-layer connectivity with other pods in a K8s cluster, regardless of the k8s node where they are actually deployed. L2S-M enables the creation/deletion of virtual networks on-demand, as well as attaching/detaching pods to that networks. The solution is seamlessly integrated within the K8s environment, through a K8s operator.
+Link-Layer Secure connectivity for Microservice platforms (L2S-M) is a K8s networking solution that complements the CNI plugin approach of K8s to create and manage virtual networks in K8s clusters. These virtual networks allow workloads (pods) to have isolated link-layer connectivity with other pods in a K8s cluster, regardless of the k8s node where they are actually deployed. L2S-M enables the creation/deletion of virtual networks on-demand, as well as attaching/detaching pods to that networks. The solution is seamlessly integrated within the K8s environment, through a K8s operator:
 
 ![alt text](https://github.com/Networks-it-uc3m/L2S-M/blob/main/v1_architecture.png?raw=true)
 
@@ -31,6 +31,8 @@ In the [following section](https://github.com/Networks-it-uc3m/L2S-M/tree/main/a
 L2S-M has been presented in the following events:
 
 * [Open Source Mano (OSM) #13 plenary meeting (01/06/2022)](https://github.com/Networks-it-uc3m/L2S-M/blob/main/additional%20info/OSM%2313%20Plenary%20Meeting.pdf): In this meeting, L2S-M was presented as a solution to enable virtual networking to deploy Cloud Network Functions (CNFs) in K8s clusters. Moreover, the potential use of L2S-M to become the basis for a feature to be introduced in OSM's code was discussed as well.
+
+* [FIHY Summer Camp (20/04/2023)](https://drcn2023.upc.edu/FISHYSummerCamp.html). In this summer camp, we described the utilization of L2S-M in next-generation secured communication scenarios, which are covered in the H2020 FIHSY and Labyrinth projects (see Acnkowledgemnt sections).
 
 ### How to reach us
 
