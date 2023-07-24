@@ -29,7 +29,7 @@ Did you like L2S-M and want to use it in your K8s infrastructure or project? Ple
 ### Inter-cluster communications
 We are currently working on a solution to enable communications among workloads deployed on differente Kubernetes clusters. The solution enables the creation and deletion of virtual link-layer networks to connect application workloads running in different virtualization domains. This way, it supports inter-domain link-layer communications among remote workloads.  
 
-The solution can work jointly with L2S-M or be used standalone through the [Multus CNI](https://github.com/k8snetworkplumbingwg/multus-cni). Details can be checked [here](https://github.com/Networks-it-uc3m/snd-based-inter-cluster-communications/blob/main/README.md)
+The solution can work jointly with L2S-M or be used standalone through the [Multus CNI](https://github.com/k8snetworkplumbingwg/multus-cni). Details can be checked [here](https://github.com/Networks-it-uc3m/snd-based-inter-cluster-communications/blob/main/README.md).
 
 The solution enables the creation and deletion of virtual link-layer networks to connect application workloads running in different virtualization domains. This way, it supports inter-domain link-layer communications among remote workloads.
 
