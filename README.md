@@ -26,6 +26,13 @@ Did you like L2S-M and want to use it in your K8s infrastructure or project? Ple
 - True5G Project: (PID2019-108713RB-C52 / AEI / 10.13039/501100011033)
 - H2020 Labyrinth project: https://labyrinth2020.eu/ (grant agreement 861696).
 
+### Inter-cluster communications
+We are currently working on a solution to enable communications among workloads deployed on differente Kubernetes clusters. The solution enables the creation and deletion of virtual link-layer networks to connect application workloads running in different virtualization domains. This way, it supports inter-domain link-layer communications among remote workloads.  
+
+The solution can work jointly with L2S-M or be used standalone through the [Multus CNI](https://github.com/k8snetworkplumbingwg/multus-cni). Details can be checked [here](https://github.com/Networks-it-uc3m/snd-based-inter-cluster-communications/blob/main/README.md)
+
+The solution enables the creation and deletion of virtual link-layer networks to connect application workloads running in different virtualization domains. This way, it supports inter-domain link-layer communications among remote workloads.
+
 ### Additional information about L2S-M
 In the [following section](https://github.com/Networks-it-uc3m/L2S-M/tree/main/additional%20info) of the repository, you can find a series of documents and slides that provide additional information about L2S-M, including presentations where our solution has been showcased to the public in various events.
 
