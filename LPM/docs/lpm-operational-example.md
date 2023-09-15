@@ -18,7 +18,7 @@ In summary this deployment will be done following these steps:
 
 As an L2S-M module, LPM requires a running installation of L2S-M in the cluster, prior to start running. 
 
-The Cluster should have two or more Nodes to run the module, as the measurements are going to be on each end. These nodes must be interconnected according to the L2S-M [installation guide](https://github.com/Networks-it-uc3m/L2S-M/tree/main/operator), with VXLANs tunnels. 
+The cluster should have two or more Nodes to run the module, as the measurements are going to be on each end. These nodes must be interconnected according to the L2S-M [installation guide](https://github.com/Networks-it-uc3m/L2S-M/tree/main/operator), with VXLANs tunnels. 
 
 In this example, an installation has been done of L2S-M with three nodes: NodeA, NodeB and NodeC, so each will have its own Programmable L2S-M Switch. NodeA will act as the master node.
 
