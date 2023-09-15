@@ -65,7 +65,7 @@ This section presents a conceptual (step-by-step) workflow to better understand 
    So in this scenario, if a metric being measured between Node A and Node B occurs every 30 minutes, the LPM Collector will store 120 entries (60 seconds/minute / 15 seconds * 30 minutes). This is done this way to exploit the characteristics of the time-series database, where each entry has a timestamp assigned to it, and can be compared in time with other metrics from other links.
 
 
-In the [documentation folder](docs/lpm-operational-example.md), we have included an LPM operational where we detail the steps involved workflow from a technical perspective. In particular, we specify the commands and configuration files so that the deployment of the LPM module can be reproduced and its functionality tested in an environment similar to the one presented in our reference scenario. 
+In the [documentation folder](docs/lpm-operational-example.md), we have included an LPM operational example where we detail the steps involved workflow from a technical perspective. In particular, we specify the commands and configuration files so that the deployment of the LPM module can be reproduced and its functionality tested in an environment similar to the one presented in our reference scenario. 
 
 ## Adding tailored metrics
 TBD
