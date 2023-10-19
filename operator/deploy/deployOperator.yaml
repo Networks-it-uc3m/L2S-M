@@ -18,7 +18,7 @@ spec:
       containers:
       - image: lewisfelix24/l2sm-operator:latest
         name: l2sm-opt-pod
-      - image: mysql/mysql-server:latest
+      - image: mysql/mysql-server:5.7
         name: mysql
         env:
           - name: MYSQL_ROOT_PASSWORD
