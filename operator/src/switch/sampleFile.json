@@ -1,0 +1,17 @@
+[
+    {
+        "name": "l2sm1",
+        "nodeIP": "10.1.14.46",
+        "neighborNodes": ["l2sm2"]
+    },
+    {
+        "name": "l2sm2",
+        "nodeIP": "10.1.72.79",
+        "neighborNodes": ["l2sm1"]
+    },
+    {
+        "name": "NodeC",
+        "nodeIP": "10.0.2.4",
+        "neighborNodes": ["NodeA"]
+    }
+]
