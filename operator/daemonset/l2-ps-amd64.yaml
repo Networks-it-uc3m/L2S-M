@@ -25,14 +25,14 @@ spec:
       containers:
       - name: l2-ps
         image: alexdecb/l2-ps:latest
-        command: ["/bin/sh", "-c"]
-        args: ["ovsdb-server --remote=punix:/var/run/openvswitch/db.sock --remote=db:Open_vSwitch,Open_vSwitch,manager_options --pidfile=/var/run/openvswitch/ovsdb-server.pid 
-         --detach && ovs-vsctl --db=unix:/var/run/openvswitch/db.sock --no-wait init && ovs-vswitchd --pidfile=/var/run/openvswitch/ovs-vswitchd.pid --detach && 
-         ip link set vhost1 up && ip link set vhost2 up && ip link set vhost3 up && ip link set vhost4 up && ip link set vhost5 up && ip link set vhost6 up && ip link set vhost7 up && ip link set vhost8 up && 
-         ip link set vhost9 up && ip link set vhost10 up && ovs-vsctl add-br brtun && ip link set brtun up &&
-         ovs-vsctl add-port brtun vhost1 && ovs-vsctl add-port brtun vhost2 && ovs-vsctl add-port brtun vhost3 && ovs-vsctl add-port brtun vhost4 && ovs-vsctl add-port brtun vhost5 &&
-         ovs-vsctl add-port brtun vhost6 && ovs-vsctl add-port brtun vhost7 && ovs-vsctl add-port brtun vhost8 && ovs-vsctl add-port brtun vhost9 && ovs-vsctl add-port brtun vhost10 &&
-         /bin/sleep 3650d"]
+        command: ["sleep","infinity"]
+        env:
+        - name: NODENAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: NVPODS
+          value: "10"  
         imagePullPolicy: Always
         securityContext:
           capabilities:
