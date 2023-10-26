@@ -1,4 +1,14 @@
-FROM golang:1.20
+FROM golang:1.20 AS build
+
+WORKDIR /usr/src/bin
+
+COPY ./main.go ./go.mod ./
+
+RUN go build -v -o /usr/local/bin/l2sm-br ./... 
+
+FROM ubuntu:latest 
+
+COPY --from=build /usr/src/bin/ /usr/src/bin/
 
 COPY ./vswitch.ovsschema /tmp/
 
@@ -8,17 +18,10 @@ RUN apt-get update && \
 
 COPY ./setup_switch.sh /usr/local/bin/
 
-WORKDIR /usr/src/bin
-
-COPY ./main.go ./go.mod ./
-
-RUN go build -v -o /usr/local/bin/l2sm-br ./... && \
-    chmod +x /usr/local/bin/setup_switch.sh && \
+RUN chmod +x /usr/local/bin/setup_switch.sh && \
     mkdir /etc/l2sm/
 
 WORKDIR /usr/local/bin
 
 
 CMD [ "./setup_switch.sh" ]
-
-  
