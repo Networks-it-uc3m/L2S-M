@@ -24,7 +24,7 @@ spec:
         effect: NoSchedule
       containers:
       - name: l2-ps
-        image: alexdecb/l2-ps:latest
+        image: alexdecb/l2sm-ovs:latest
         command: ["sleep","infinity"]
         env:
         - name: NODENAME
@@ -33,6 +33,8 @@ spec:
               fieldPath: spec.nodeName
         - name: NVPODS
           value: "10"  
+        - name: CONTROLLERIP
+          value: "10.1.14.8"
         imagePullPolicy: Always
         securityContext:
           capabilities:
