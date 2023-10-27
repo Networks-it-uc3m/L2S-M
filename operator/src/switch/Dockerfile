@@ -8,7 +8,9 @@ RUN go build -v -o /usr/local/bin/l2sm-br ./...
 
 FROM ubuntu:latest 
 
-COPY --from=build /usr/src/bin/ /usr/src/bin/
+WORKDIR /usr/local/bin
+
+COPY --from=build /usr/local/bin/ .
 
 COPY ./vswitch.ovsschema /tmp/
 
@@ -16,12 +18,11 @@ RUN apt-get update && \
   apt-get install -y net-tools iproute2 netcat-openbsd dnsutils curl iputils-ping iptables nmap tcpdump openvswitch-switch && \
   mkdir /var/run/openvswitch && mkdir -p /etc/openvswitch && ovsdb-tool create /etc/openvswitch/conf.db /tmp/vswitch.ovsschema 
 
-COPY ./setup_switch.sh /usr/local/bin/
+COPY ./setup_switch.sh .
 
-RUN chmod +x /usr/local/bin/setup_switch.sh && \
+RUN chmod +x ./setup_switch.sh && \
     mkdir /etc/l2sm/
 
-WORKDIR /usr/local/bin
 
 
 CMD [ "./setup_switch.sh" ]

@@ -1,12 +1,12 @@
 [
     {
         "name": "l2sm1",
-        "nodeIP": "10.1.14.46",
+        "nodeIP": "10.1.14.48",
         "neighborNodes": ["l2sm2"]
     },
     {
         "name": "l2sm2",
-        "nodeIP": "10.1.72.79",
+        "nodeIP": "10.1.72.108",
         "neighborNodes": ["l2sm1"]
     },
     {

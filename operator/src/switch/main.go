@@ -25,14 +25,15 @@ func main() {
 	configDir, vhostNumber, nodeName, controllerIP, err := takeArguments()
 
 	if err != nil {
-		fmt.Println("Error:", err)
+		fmt.Println("Error with the arguments. Error:", err)
 		return
 	}
 
+	fmt.Println("initializing switch, connected to controller: ", controllerIP)
 	err = initializeSwitch(controllerIP)
 
 	if err != nil {
-		fmt.Println("Error:", err)
+		fmt.Println("Could not initialize switch. Error:", err)
 		return
 	}
 
@@ -51,7 +52,7 @@ func main() {
 	err = createVxlans(configDir, nodeName)
 
 	if err != nil {
-		fmt.Println("Error:", err)
+		fmt.Println("Vxlans not created. Error:", err)
 		return
 	}
 }
@@ -84,19 +85,19 @@ func initializeSwitch(controllerIP string) error {
 	err = exec.Command("ovs-vsctl", "add-br", "brtun").Run()
 
 	if err != nil {
-		return err
+		return errors.New("Could not create brtun interface")
 	}
 
 	err = exec.Command("ip", "link", "set", "brtun", "up").Run()
 
 	if err != nil {
-		return err
+		return errors.New("Could not set brtun interface up")
 	}
 
-	err = exec.Command("ovs-vsctl", "set", "bridge", "brtun", "OpenFlow13").Run()
+	err = exec.Command("ovs-vsctl", "set", "bridge", "brtun", "protocols=OpenFlow13").Run()
 
 	if err != nil {
-		return err
+		return errors.New("Couldnt set brtun messaing protocol to OpenFlow13")
 	}
 
 	target := fmt.Sprintf("tcp:%s:6633", controllerIP)
@@ -104,7 +105,7 @@ func initializeSwitch(controllerIP string) error {
 	err = exec.Command("ovs-vsctl", "set-controller", "brtun", target).Run()
 
 	if err != nil {
-		return err
+		return errors.New("Could not connect to controller")
 	}
 	return nil
 }
