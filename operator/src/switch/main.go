@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"regexp"
 	"strings"
 )
 
@@ -80,6 +81,12 @@ func takeArguments() (string, int, string, string, error) {
 
 func initializeSwitch(controllerIP string) error {
 
+	re := regexp.MustCompile(`\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b`)
+	if !re.MatchString(controllerIP) {
+		out, _ := exec.Command("host", controllerIP).Output()
+		controllerIP = re.FindString(string(out))
+	}
+
 	var err error
 
 	err = exec.Command("ovs-vsctl", "add-br", "brtun").Run()
@@ -139,13 +146,13 @@ func createVxlans(configDir, nodeName string) error {
 				neighborVniRef := 5
 				for _, n := range nodes {
 					if n.Name == neighbor {
-						var vni string
-						if nodeVniRef < neighborVniRef {
-							vni = fmt.Sprintf("%d00%d", nodeVniRef, neighborVniRef)
+						//var vni string
+						//if nodeVniRef < neighborVniRef {
+						//	vni = fmt.Sprintf("%d00%d", nodeVniRef, neighborVniRef)
 
-						} else {
-							vni = fmt.Sprintf("%d00%d", neighborVniRef, nodeVniRef)
-						}
+						//} else {
+						//	vni = fmt.Sprintf("%d00%d", neighborVniRef, nodeVniRef)
+						//}
 						neighborIP := strings.TrimSpace(n.NodeIP)
 						commandArgs := []string{
 							"add-port",
@@ -155,7 +162,7 @@ func createVxlans(configDir, nodeName string) error {
 							"set", "interface",
 							fmt.Sprintf("vxlan%d", neighborVniRef),
 							"type=vxlan",
-							fmt.Sprintf("options:key=%s", vni),
+							fmt.Sprintf("options:key=flow"),
 							fmt.Sprintf("options:remote_ip=%s", neighborIP),
 							fmt.Sprintf("options:local_ip=%s", nodeIP),
 							"options:dst_port=7000",
