@@ -6,31 +6,14 @@ This guide details the necessary steps to install the L2S-M Kubernetes operator 
 
 1. Clone the L2S-M repository in your host. This guide will assume that all commands are executed in the directory where L2S-M was downloaded.
 
-2. As a prerequisite to start with the installation of L2S-M, it is necessary to set up an IP tunnel overlay among the nodes of your k8s cluster (see  [how L2S works](https://github.com/Networks-it-uc3m/L2S-M/tree/main/K8s). To do so, **the installation needs 10 VXLAN interfaces (named vxlan1 up to vxlan10) in the host namespace, as well as 10 vEth pairs in order to support the attachment of pods to virtual networks.**
+2. As a prerequisite to start with the installation of L2S-M, it is necessary to set up an IP tunnel overlay among the nodes of your k8s cluster (see  [how L2S works](https://github.com/Networks-it-uc3m/L2S-M/tree/main/K8s). To do so, **the installation needs 10 vEth pairs in order to support the attachment of pods to virtual networks.**
 
     This repository contains a script to generate all the necessary interfaces with their respective names. (this is the **recommended option**).
 
-    To use this script, firstly it is neccessary to write the destinations that each IP tunnel will have for every VXLAN interface in each host. To perfom this action, **open the vxlans.txt file (located in ./L2S-M/K8s/provision/vxlans.txt) with your prefered text editor and assign each vxlan interface an IP address of the neighboring K8s node used in each VXLAN tunnel**.
-
-    **WARNING:**  Make sure that the VXLAN network identifier (VNI) is the same at every pair of k8s nodes terminating an IP tunnel. In case that you use the script for automatic VXLAN configuration, the VXLAN interface names and their corresponding VNIs are indicated in the table below. 
-
-    | **VXLAN Name** |**ID**  |
-    |--|--|
-    | vxlan1 | 1961 |
-    | vxlan2 |  1962 |
-    | vxlan3 |  1963 |
-    | vxlan4 |  1964|
-    | vxlan5 |  1965 |
-    | vxlan6 |  1966|
-    | vxlan7 |  1967|
-    | vxlan8 |  1968|
-    | vxlan9 |  1969|
-    | vxlan10 |  1970|
-
-    After modifying the vxlan.txt file, you can create all the interfaces (VXLAN and vEth) with the provided script using the following command:
+    You can create all the vEth interfaces with the provided script using the following command:
 
     ```bash
-    sudo sh ./L2S-M/K8s/provision/set-interfaces.sh [interface_to_use_for_vxlan_tunnel] ./L2S-M/K8s/provision/vxlans.txt
+    sudo sh ./L2S-M/K8s/provision/veth.sh 
     ```
 
     **IMPORTANT** In order to keep the configuration after the host has been rebooted, a cron job should be written in order to use this script to create and configure the virtual interfaces. To enable its use, open (or create) a new crontab in the host:
@@ -42,28 +25,7 @@ This guide details the necessary steps to install the L2S-M Kubernetes operator 
     Once opened, append the following line at the end of the file:
 
     ```bash
-    @reboot sh [directory-where-L2S-M-is-located]/L2S-M/K8s/provision/set-interfaces.sh [interface_to_use] [directory-where-L2S-M-is-located]/L2S-M/K8s/provision/vxlans.txt
-    ```
-
-* You may want to manually create the VXLANs instead. **Note: We highly suggest to use the reccomended option described in 2. to keep the configuration across reboots**. To that purpose, you can use the following command for every VXLAN in most Linux distributions:
-
-    ```bash
-    sudo ip link add [vxlan_Name] type vxlan id [id] dev [interface_to_use] dstport [dst_port]
-    ```
-
-    **WARNING:** Make sure that the VXLAN network identifier (VNI) is the same at every pair of k8s nodes terminating an IP tunnel, if you are manually creating the interfaces. In case that you use the script mentioned above for automatic VXLAN configuration, the VXLAN interface names and their corresponding VNIs are indicated in the table above.
-
-    To finish the configuration of a VXLAN tunnel between two neighboring k8s nodes, you can execute the following command at each K8s nodes:
-
-    ```bash
-    sudo bridge fdb append to 00:00:00:00:00:00 dst [dst_IP] dev [vxlan_Name]
-    ```
-    where *dst_IP* must be replaced by the IP address of the neighboring K8s node in the VXLAN tunnel.
-
-    To create the set of vEth virtual interfaces in every host of the K8s cluster, you can use the following script:
-
-    ```bash
-    sudo ./L2S-M/K8s/provision/veth.bash
+    @reboot sh [directory-where-L2S-M-is-located]/L2S-M/K8s/provision/veth.sh
     ```
 
 3. Install the Multus CNI Plugin in your K8s cluster. For more information on how to install Multus in your cluster, check their [official GitHub repository](https://github.com/k8snetworkplumbingwg/multus-cni).
@@ -117,18 +79,87 @@ kubectl create -f ./L2S-M/operator/deploy/mysql/
 kubectl get nodes
 kubectl label nodes [your-master-node] dedicated=master
 ```
+5. Deploy the L2S-M Controller by using the following command: 
 
-5. After the previous preparation, you can deploy the operator in your cluster using the YAML deployment file:
+```bash
+kubectl create -f ./L2S-M/operator/deploy/controller/
+```
+ You can check that the deployment was successful if the pod enters the "running" state using the *kubectl get pods* command.
+
+6. After the previous preparation, (make sure the controller is running) you can deploy the operator in your cluster using the YAML deployment file:
  ```bash
 kubectl create -f ./L2S-M/operator/deploy/deployOperator.yaml
 ```
 
- You can check that the deployment was successful if the pod enters the "running" state using the *kubectl get pods* command.
+Once these two pods are in running state, you can finally deploy the virtual switches
 
-6. Deploy the virtual OVS Daemonset using the following .yaml:
+7. This is done by:
+
+**First deploying the virtual OVS Daemonset:**
 ```bash
 kubectl create -f ./L2S-M/operator/daemonset
 ```
-**NOTE:** If you have introduced new interfaces in your cluster besides the VXLANs, you will need to modify the descriptor to introduce those as well (modify both MULTUS annotations and the commands to attach the interface to the OVS switch). 
+
+And check there is a pod running in each node, with ```kubectl get pods -o wide```
+
+**Lastly, we configure the Vxlans:**
+
+In order to connect the switches between themselves, an additional configuarion must be done. A configuration file specifying which nodes we want to connect and which IP addresses their switches have will be made, and then a script will be run in each l2sm switch, using this configuration file. 
+
+  a. Create a file anywhere or use the reference in ./L2S-M/operator/src/switch/sampleFile.json. In this installation, this file will be used as a reference.
+  b. In this file, you will specify, using the template shown in the reference file, the name of the nodes in the cluster and the IP addresses of **the switches** running on them. For example:
+  ```bash
+  $ kubectl get pods -o wide
+  >NAME                                               READY   STATUS    RESTARTS   AGE     IP            NODE    NOMINATED NODE   READINESS GATES
+  >l2sm-controller-d647b7fb5-lpp2h                    1/1     Running   0          30m     10.1.14.55    l2sm1   <none>           <none>
+  >l2sm-operator-7d487d8468-lhgkx                     2/2     Running   0          2m11s   10.1.14.56    l2sm1   <none>           <none>
+  >l2sm-switch-8p5td                                  1/1     Running   0          71s     10.1.14.58    l2sm1   <none>           <none>
+  >l2sm-switch-xdkvz                                  1/1     Running   0          71s     10.1.72.111   l2sm2   <none>           <none>
+
+  ```
+  In this example we have two nodes: l2sm1 and l2sm2, with two switches, with IP addresses 10.1.14.58 and 10.1.72.111.
+  We want to connect them directly, so we modify the reference file, ./L2S-M/operator/src/switch/sampleFile.json:
+```json
+[
+    {
+        "name": "l2sm1",
+        "nodeIP": "10.1.14.58",
+        "neighborNodes": ["l2sm2"]
+    },
+    {
+        "name": "l2sm2",
+        "nodeIP": "10.1.72.111",
+        "neighborNodes": ["l2sm1"]
+    }
+]
+
+```
+Note: Any number of nodes can be configured, as long as the entry is in this file. The desired connections are under the neighborNodes field, in an array, such as this other example, where we add a neighbor to l2sm2: ["l2sm1","l2sm3"]
+
+Once this file is created, we inject it to each node using the kubectl cp command:
+
+```bash
+kubectl cp ./L2S-M/operator/src/switch/sampleFile.json <pod-name>:/etc/l2sm/switchConfig.json 
+```
+And then executing the script in the pod:
+```bash
+kubectl exec -it <pod-name> -- setup_switch.sh
+```
+
+This must be done in each pod. In the provided example, using two nodes, l2sm1 and l2sm2, we have to do it twice, in l2-ps-8p5td and l2-ps-xdkvz.
+When the exec command is done, we should see an output like this:
+
+```bash
+$ kubectl exec -it l2-ps-xdkvz -- setup_switch.sh
+2023-10-30T10:22:18Z|00001|ovs_numa|INFO|Discovered 1 CPU cores on NUMA node 0
+2023-10-30T10:22:18Z|00002|ovs_numa|INFO|Discovered 1 NUMA nodes and 1 CPU cores
+2023-10-30T10:22:18Z|00003|reconnect|INFO|unix:/var/run/openvswitch/db.sock: connecting...
+2023-10-30T10:22:18Z|00004|netlink_socket|INFO|netlink: could not enable listening to all nsid (Operation not permitted)
+2023-10-30T10:22:18Z|00005|reconnect|INFO|unix:/var/run/openvswitch/db.sock: connected
+initializing switch, connected to controller:  10.1.14.8
+Switch initialized and connected to the controller.
+Created vxlan between node l2sm2 and node l2sm1.
+```
+
 
 You are all set! If you want to learn how to create virtual networks and use them in your applications, [check the following section of the repository](https://github.com/Networks-it-uc3m/L2S-M/tree/main/descriptors)

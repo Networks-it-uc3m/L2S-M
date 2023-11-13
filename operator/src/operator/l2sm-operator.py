@@ -11,42 +11,138 @@ from kubernetes import client, config
 import pymysql
 import random
 import time
+import requests
+import re
+import sys
+from requests.auth import HTTPBasicAuth
 
-ip = "127.0.0.1"
+databaseIP = "127.0.0.1"
+baseControllerUrl = 'http://' + os.environ['CONTROLLER_IP'] + ':8181' + '/onos/v1'
+def beginSessionController(baseControllerUrl,username,password):
 
+  # Create a session with basic authentication
+  auth = HTTPBasicAuth(username, password)
+
+  session = requests.Session()
+  session.auth = auth
+
+  #Check if connection is possible
+  response = session.get(baseControllerUrl + '/l2sm/networks/status')
+  if response.status_code == 200:
+    # Successful request
+    print("Initialized session between operator and controller.")
+    return session
+  else:
+    print("Could not initialize session with l2sm-controller")
+    sys.exit()
+    return None
+  
+
+  
+session = beginSessionController(baseControllerUrl,"karaf","karaf")
+
+def getSwitchId(cur, node):
+    switchQuery = "SELECT * FROM switches WHERE node = '%s'" % (node)
+    cur.execute(switchQuery)
+    switchRecord = cur.fetchone()
+
+    if switchRecord is not None:
+        switchId = switchRecord[0]
+
+        if switchId is not None:
+            return switchId  # If openflowId is already set, return it
+
+    # If openflowId is not set, make a request to get the information from the API
+    response = session.get(baseControllerUrl + '/devices')
+    devices = response.json().get('devices', [])
+
+    for device in devices:
+        if 'id' in device and 'annotations' in device and 'managementAddress' in device['annotations']:
+            if device['annotations']['managementAddress'] == switchRecord[1]:
+                openflowId = device['id']
+                switchId = openflowId
+
+                # Save the openflowId in the database
+                updateQuery = "UPDATE switches SET openflowId = '%s' WHERE node = '%s'" % (switchId, node)
+                cur.execute(updateQuery)
+
+                return switchId  # Return the openflowId
+    return None  # Return None if no matching device is found
+  
 #POPULATE DATABASE ENTRIES WHEN A NEW L2SM POD IS CREATED (A NEW NODE APPEARS)
-@kopf.on.create('pods.v1', labels={'l2sm-component': 'l2-ps'})
+@kopf.on.create('pods.v1', labels={'l2sm-component': 'l2sm-switch'})
 def build_db(body, logger, annotations, **kwargs):
-    db = pymysql.connect(host=ip,user="l2sm",password="l2sm;",db="L2SM")
+    db = pymysql.connect(host=databaseIP,user="l2sm",password="l2sm;",db="L2SM")
     cur = db.cursor()
+    
     #CREATE TABLES IF THEY DO NOT EXIST
     table1 = "CREATE TABLE IF NOT EXISTS networks (network TEXT NOT NULL, id TEXT NOT NULL);"
     table2 = "CREATE TABLE IF NOT EXISTS interfaces (interface TEXT NOT NULL, node TEXT NOT NULL, network TEXT, pod TEXT);"
+    table3 = "CREATE TABLE IF NOT EXISTS switches (openflowId TEXT, ip TEXT, node TEXT NOT NULL);"
     cur.execute(table1)
     cur.execute(table2)
+    cur.execute(table3)
     db.commit()
-    values = []
+    
     #MODIFY THE END VALUE TO ADD MORE INTERFACES
+    values = []
     for i in range(1,11):
       values.append(['vpod'+str(i), body['spec']['nodeName'], '-1', ''])
-    sql = "INSERT INTO interfaces (interface, node, network, pod) VALUES (%s, %s, %s, %s)"
-    cur.executemany(sql, values)
+    sqlInterfaces = "INSERT INTO interfaces (interface, node, network, pod) VALUES (%s, %s, %s, %s)"
+    cur.executemany(sqlInterfaces, values)
     db.commit()
+
+    #ADD The switch identification to the database, without the of13 id yet, as it may not be connected yet.
+    sqlSwitch = "INSERT INTO switches (node) VALUES ('" + body['spec']['nodeName'] + "')"
+    cur.execute(sqlSwitch)
+    db.commit()
+    
     db.close()
     logger.info(f"Node {body['spec']['nodeName']} has been registered in the operator")
+
+@kopf.on.update('pods.v1', labels={'l2sm-component': 'l2sm-switch'})
+def update_db(body, logger, annotations, **kwargs):
+    if 'status' in body and 'podIP' in body['status']:
+      db = pymysql.connect(host=databaseIP,user="l2sm",password="l2sm;",db="L2SM")
+      cur = db.cursor()
+      updateQuery = "UPDATE switches SET ip = '%s' WHERE node = '%s'" % (body['status']['podIP'], body['spec']['nodeName'])
+      cur.execute(updateQuery)
+      db.commit()
+      db.close()
+      logger.info(f"Updated switch ip")
+
 
 #UPDATE DATABASE WHEN NETWORK IS CREATED, I.E: IS A MULTUS CRD WITH OUR DUMMY INTERFACE PRESENT IN ITS CONFIG
 #@kopf.on.create('NetworkAttachmentDefinition', field="spec.config['device']", value='l2sm-vNet')
 @kopf.on.create('NetworkAttachmentDefinition', when=lambda spec, **_: '"device": "l2sm-vNet"' in spec['config'])
 def create_vn(spec, name, namespace, logger, **kwargs):
-    db = pymysql.connect(host=ip,user="l2sm",password="l2sm;",db="L2SM")
+  
+    db = pymysql.connect(host=databaseIP,user="l2sm",password="l2sm;",db="L2SM")
     cur = db.cursor()
     id = secrets.token_hex(32)
     sql = "INSERT INTO networks (network, id) VALUES ('%s', '%s')" % (name.strip(), id.strip())
     cur.execute(sql)
     db.commit()
     db.close()
-    logger.info(f"Network has been created")
+    
+    # Create the network in the controller, using a post request
+    data = {
+        "networkId": name.strip()
+    }
+    # json_payload = {
+    #     "Content-Type": "application/json",
+    #     "data": payload
+    # }
+    response = session.post(baseControllerUrl + '/l2sm/networks', json=data)
+
+    # Check the response status
+    if response.status_code == 204:
+        logger.info(f"Network has been created")
+        #print("Response:", response.json())
+    else:
+        # Handle errors
+        logger.info(f"Network could not be created, check controller status")
+
 
 
 #ASSIGN POD TO NETWORK (TRIGGERS ONLY IF ANNOTATION IS PRESENT)
@@ -83,7 +179,7 @@ def pod_vn(body, name, namespace, logger, annotations, **kwargs):
     ret = v1.read_namespaced_pod(name, namespace)
     node = body['spec']['nodeName']
 
-    db = pymysql.connect(host=ip,user="l2sm",password="l2sm;",db="L2SM")
+    db = pymysql.connect(host=databaseIP,user="l2sm",password="l2sm;",db="L2SM")
     nsql = "SELECT * FROM interfaces WHERE node = '%s' AND network = '-1'" % (node.strip())
     cur = db.cursor()
     cur.execute(nsql)
@@ -116,20 +212,50 @@ def pod_vn(body, name, namespace, logger, annotations, **kwargs):
     #    networkN = retrieve[0].strip()
     #    break
 
+    switchId = getSwitchId(cur, node)
+
+    if switchId is None:
+      logger.info(f"The l2sm switch is not connected to controller. Not connecting the pod")
+      return
+    vpodPattern = re.compile(r'\d+$')
+    portNumbers = [int(vpodPattern.search(interface).group()) for interface in interface_to_attach]
+
     for m in range(len(network)):
       sql = "UPDATE interfaces SET network = '%s', pod = '%s' WHERE interface = '%s' AND node = '%s'" % (network_array[m], name, interface_to_attach[m], node)
       cur.execute(sql)
 
+      payload = {
+        "networkId": network_array[m],
+        "networkEndpoints": [switchId + '/' + str(portNumbers[m])]
+      }
+    
+     
+      
+      response = session.post(baseControllerUrl + '/l2sm/networks/port', json=payload)
+
+
+
     db.commit()
     db.close()
-    #HERE GOES SDN, THIS IS WHERE THE FUN BEGINS
+    
+   
+    
+
+
+    # Check the response status
+    if response.status_code == 200:
+        # Successful request
+        print("Request successful!")
+    else:
+        # Handle errors
+        print(f"Error: {response.status_code}")
     logger.info(f"Pod {name} attached to network {network_array}")
 
 
 #UPDATE DATABASE WHEN POD IS DELETED
 @kopf.on.delete('pods.v1', annotations={'k8s.v1.cni.cncf.io/networks': kopf.PRESENT})
 def dpod_vn(name, logger, **kwargs):
-    db = pymysql.connect(host=ip,user="l2sm",password="l2sm;",db="L2SM")
+    db = pymysql.connect(host=databaseIP,user="l2sm",password="l2sm;",db="L2SM")
     cur = db.cursor()
     sql = "UPDATE interfaces SET network = '-1', pod = '' WHERE pod = '%s'" % (name)
     cur.execute(sql)
@@ -140,7 +266,7 @@ def dpod_vn(name, logger, **kwargs):
 #UPDATE DATABASE WHEN NETWORK IS DELETED
 @kopf.on.delete('NetworkAttachmentDefinition', when=lambda spec, **_: '"device": "l2sm-vNet"' in spec['config'])
 def delete_vn(spec, name, logger, **kwargs):
-    db = pymysql.connect(host=ip,user="l2sm",password="l2sm;",db="L2SM")
+    db = pymysql.connect(host=databaseIP,user="l2sm",password="l2sm;",db="L2SM")
     cur = db.cursor()
     sql = "DELETE FROM networks WHERE network = '%s'" % (name)
     cur.execute(sql)
@@ -149,9 +275,9 @@ def delete_vn(spec, name, logger, **kwargs):
     logger.info(f"Network has been deleted")
 
 #DELETE DATABASE ENTRIES WHEN A NEW L2SM POD IS DELETED (A NEW NODE GETS OUT OF THE CLUSTER)
-@kopf.on.delete('pods.v1', labels={'l2sm-component': 'l2-ps'})
+@kopf.on.delete('pods.v1', labels={'l2sm-component': 'l2sm-switch'})
 def remove_node(body, logger, annotations, **kwargs):
-    db = pymysql.connect(host=ip,user="l2sm",password="l2sm;",db="L2SM")
+    db = pymysql.connect(host=databaseIP,user="l2sm",password="l2sm;",db="L2SM")
     cur = db.cursor()
     sql = "DELETE FROM interfaces WHERE node = '%s'" % (body['spec']['nodeName'])
     cur.execute(sql)

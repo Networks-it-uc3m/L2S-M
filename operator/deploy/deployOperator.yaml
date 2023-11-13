@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: l2sm-operator-deployment
+  name: l2sm-operator
 spec:
   replicas: 1
   strategy:
@@ -16,9 +16,13 @@ spec:
     spec:
       serviceAccountName: l2sm-operator
       containers:
-      - image: lewisfelix24/l2sm-operator:latest
+      - image: alexdecb/l2sm-operator:latest
         name: l2sm-opt-pod
-      - image: mysql/mysql-server:latest
+        env:
+          - name: CONTROLLER_IP
+            value: l2sm-controller-service
+        #command: ["sleep","infinity"]
+      - image: mysql/mysql-server:5.7
         name: mysql
         env:
           - name: MYSQL_ROOT_PASSWORD
