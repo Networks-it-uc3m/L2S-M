@@ -1,4 +1,4 @@
-FROM onosproject/onos:2.7.0
+FROM onosproject/onos:2.7-latest
 
 COPY . ./
 

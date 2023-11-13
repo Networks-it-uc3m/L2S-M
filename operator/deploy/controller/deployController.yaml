@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: l2sm-controller-deployment
+  name: l2sm-controller
 spec:
   replicas: 1
   selector:

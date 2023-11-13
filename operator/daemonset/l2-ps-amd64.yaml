@@ -1,18 +1,18 @@
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
-  name: l2-ps
+  name: l2sm-switch
   #namespace: kube-system
   labels:
-    l2sm-component: l2-ps
+    l2sm-component: l2sm-switch
 spec:
   selector:
     matchLabels:
-      l2sm-component: l2-ps
+      l2sm-component: l2sm-switch
   template:
     metadata:
       labels:
-        l2sm-component: l2-ps
+        l2sm-component: l2sm-switch
       annotations:
         k8s.v1.cni.cncf.io/networks: vhost1@vhost1, vhost2@vhost2, vhost3@vhost3, vhost4@vhost4, vhost5@vhost5, vhost6@vhost6, vhost7@vhost7, vhost8@vhost8, vhost9@vhost9, vhost10@vhost10
     spec:
@@ -23,7 +23,7 @@ spec:
         operator: Exists
         effect: NoSchedule
       containers:
-      - name: l2-ps
+      - name: l2sm-switch
         image: alexdecb/l2sm-ovs:test
         command: ["sleep","infinity"]
         env:

@@ -22,12 +22,12 @@ done
 
 
 # Start the configuration
-./bin/onos-app localhost install idco-app-1.0.oar
-./bin/onos-app localhost activate org.idco.app
+
 ./bin/onos-app localhost activate org.onosproject.drivers
 ./bin/onos-app localhost activate org.onosproject.lldpprovider
 ./bin/onos-app localhost activate org.onosproject.openflow-base
 ./bin/onos-app localhost activate org.onosproject.optical-model
+./bin/onos-app localhost install! l2sm-controller-app-1.0.oar
 
 
 
