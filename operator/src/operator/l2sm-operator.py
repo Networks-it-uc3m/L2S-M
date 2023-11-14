@@ -270,9 +270,18 @@ def delete_vn(spec, name, logger, **kwargs):
     cur = db.cursor()
     sql = "DELETE FROM networks WHERE network = '%s'" % (name)
     cur.execute(sql)
-    db.commit()
+    
+    
+    response = session.delete(baseControllerUrl + '/l2sm/networks/' + name)
+    
+    if response.status_code == 204:
+        # Successful request
+      logger.info(f"Network has been deleted")
+      db.commit()
+    else:
+        # Handle errors
+      logger.info(f"Error: {response.status_code}")
     db.close()
-    logger.info(f"Network has been deleted")
 
 #DELETE DATABASE ENTRIES WHEN A NEW L2SM POD IS DELETED (A NEW NODE GETS OUT OF THE CLUSTER)
 @kopf.on.delete('pods.v1', labels={'l2sm-component': 'l2sm-switch'})
