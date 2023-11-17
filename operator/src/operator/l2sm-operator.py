@@ -100,7 +100,7 @@ def build_db(body, logger, annotations, **kwargs):
     db.close()
     logger.info(f"Node {body['spec']['nodeName']} has been registered in the operator")
 
-@kopf.on.update('pods.v1', labels={'l2sm-component': 'l2sm-switch'})
+@kopf.on.field('pods.v1', labels={'l2sm-component': 'l2sm-switch'}, field='status.podIP')
 def update_db(body, logger, annotations, **kwargs):
     if 'status' in body and 'podIP' in body['status']:
       db = pymysql.connect(host=databaseIP,user="l2sm",password="l2sm;",db="L2SM")
