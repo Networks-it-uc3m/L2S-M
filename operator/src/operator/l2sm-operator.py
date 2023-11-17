@@ -105,7 +105,7 @@ def update_db(body, logger, annotations, **kwargs):
     if 'status' in body and 'podIP' in body['status']:
       db = pymysql.connect(host=databaseIP,user="l2sm",password="l2sm;",db="L2SM")
       cur = db.cursor()
-      updateQuery = "UPDATE switches SET ip = '%s' WHERE node = '%s'" % (body['status']['podIP'], body['spec']['nodeName'])
+      updateQuery = "UPDATE switches SET ip = '%s', OpenFlowId = NULL WHERE node = '%s'" % (body['status']['podIP'], body['spec']['nodeName'])
       cur.execute(updateQuery)
       db.commit()
       db.close()
