@@ -283,13 +283,15 @@ def delete_vn(spec, name, logger, **kwargs):
       logger.info(f"Error: {response.status_code}")
     db.close()
 
-#DELETE DATABASE ENTRIES WHEN A NEW L2SM POD IS DELETED (A NEW NODE GETS OUT OF THE CLUSTER)
+#DELETE DATABASE ENTRIES WHEN A NEW L2SM SWITCH IS DELETED (A NEW NODE GETS OUT OF THE CLUSTER)
 @kopf.on.delete('pods.v1', labels={'l2sm-component': 'l2sm-switch'})
 def remove_node(body, logger, annotations, **kwargs):
     db = pymysql.connect(host=databaseIP,user="l2sm",password="l2sm;",db="L2SM")
     cur = db.cursor()
     sql = "DELETE FROM interfaces WHERE node = '%s'" % (body['spec']['nodeName'])
+    switchSql = "DELETE FROM switches WHERE node = '%s'" % (body['spec']['nodeName'])
     cur.execute(sql)
+    cur.execute(switchSql)
     db.commit()
     db.close()
     logger.info(f"Node {body['spec']['nodeName']} has been deleted from the cluster")
