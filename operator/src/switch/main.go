@@ -53,7 +53,7 @@ func main() {
 	err = createVxlans(configDir, nodeName)
 
 	if err != nil {
-		fmt.Println("Vxlans not created. Error:", err)
+		fmt.Println("Vxlans not created: ", err)
 		return
 	}
 }
@@ -122,7 +122,7 @@ func createVxlans(configDir, nodeName string) error {
 	/// Read file and save in memory the JSON info
 	data, err := ioutil.ReadFile(configDir)
 	if err != nil {
-		fmt.Println("Error reading input file:", err)
+		fmt.Println("No input file was found.", err)
 		return err
 	}
 
@@ -134,33 +134,22 @@ func createVxlans(configDir, nodeName string) error {
 
 	// Search for the corresponding node in the configuration, according to the first passed parameter.
 	// Once the node is found, create a bridge for every neighbour node defined.
-	// The bridge is created with the nodeIp, neighborNodeIP and VNI. The VNI is generated according to the position of the node in the Json file. The first node will have the number 5
-	// as a reference, the second a 6, and so on. And if a bridge between node 1 and node 2 is generated, it will have a vni of 5006, the two references with two 0s in between.
-	// Another example would be node 3 of the cluster and node 9. Node 3 will have the reference 7 (5+3-1), and the Node 9 the reference 13(5 + 9 -1), resulting in the VNI 70013.
-	// There's up to 2 ^ 24 possible vnis that are reduced to (2 ^24)/100 because of this measure (2 decimal digits are lost). So in total, a number of 167.772 virtual networks can be created.
-	nodeVniRef := 5
+	// The bridge is created with the nodeIp and neighborNodeIP and VNI. The VNI is generated in the l2sm-controller thats why its set to 'flow'.
 	for _, node := range nodes {
 		if node.Name == nodeName {
 			nodeIP := strings.TrimSpace(node.NodeIP)
 			for _, neighbor := range node.NeighborNodes {
-				neighborVniRef := 5
+				vxlanNumber := 1
 				for _, n := range nodes {
 					if n.Name == neighbor {
-						//var vni string
-						//if nodeVniRef < neighborVniRef {
-						//	vni = fmt.Sprintf("%d00%d", nodeVniRef, neighborVniRef)
-
-						//} else {
-						//	vni = fmt.Sprintf("%d00%d", neighborVniRef, nodeVniRef)
-						//}
 						neighborIP := strings.TrimSpace(n.NodeIP)
 						commandArgs := []string{
 							"add-port",
 							"brtun",
-							fmt.Sprintf("vxlan%d", neighborVniRef),
+							fmt.Sprintf("vxlan%d", vxlanNumber),
 							"--",
 							"set", "interface",
-							fmt.Sprintf("vxlan%d", neighborVniRef),
+							fmt.Sprintf("vxlan%d", vxlanNumber),
 							"type=vxlan",
 							fmt.Sprintf("options:key=flow"),
 							fmt.Sprintf("options:remote_ip=%s", neighborIP),
@@ -174,12 +163,11 @@ func createVxlans(configDir, nodeName string) error {
 							fmt.Println(fmt.Sprintf("Created vxlan between node %s and node %s.", node.Name, neighbor))
 						}
 					}
-					neighborVniRef++
+					vxlanNumber++
 				}
 
 			}
 		}
-		nodeVniRef++
 	}
 	return nil
 }

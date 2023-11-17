@@ -100,12 +100,12 @@ def build_db(body, logger, annotations, **kwargs):
     db.close()
     logger.info(f"Node {body['spec']['nodeName']} has been registered in the operator")
 
-@kopf.on.update('pods.v1', labels={'l2sm-component': 'l2sm-switch'})
+@kopf.on.field('pods.v1', labels={'l2sm-component': 'l2sm-switch'}, field='status.podIP')
 def update_db(body, logger, annotations, **kwargs):
     if 'status' in body and 'podIP' in body['status']:
       db = pymysql.connect(host=databaseIP,user="l2sm",password="l2sm;",db="L2SM")
       cur = db.cursor()
-      updateQuery = "UPDATE switches SET ip = '%s' WHERE node = '%s'" % (body['status']['podIP'], body['spec']['nodeName'])
+      updateQuery = "UPDATE switches SET ip = '%s', OpenFlowId = NULL WHERE node = '%s'" % (body['status']['podIP'], body['spec']['nodeName'])
       cur.execute(updateQuery)
       db.commit()
       db.close()
@@ -270,17 +270,28 @@ def delete_vn(spec, name, logger, **kwargs):
     cur = db.cursor()
     sql = "DELETE FROM networks WHERE network = '%s'" % (name)
     cur.execute(sql)
-    db.commit()
+    
+    
+    response = session.delete(baseControllerUrl + '/l2sm/networks/' + name)
+    
+    if response.status_code == 204:
+        # Successful request
+      logger.info(f"Network has been deleted")
+      db.commit()
+    else:
+        # Handle errors
+      logger.info(f"Error: {response.status_code}")
     db.close()
-    logger.info(f"Network has been deleted")
 
-#DELETE DATABASE ENTRIES WHEN A NEW L2SM POD IS DELETED (A NEW NODE GETS OUT OF THE CLUSTER)
+#DELETE DATABASE ENTRIES WHEN A NEW L2SM SWITCH IS DELETED (A NEW NODE GETS OUT OF THE CLUSTER)
 @kopf.on.delete('pods.v1', labels={'l2sm-component': 'l2sm-switch'})
 def remove_node(body, logger, annotations, **kwargs):
     db = pymysql.connect(host=databaseIP,user="l2sm",password="l2sm;",db="L2SM")
     cur = db.cursor()
     sql = "DELETE FROM interfaces WHERE node = '%s'" % (body['spec']['nodeName'])
+    switchSql = "DELETE FROM switches WHERE node = '%s'" % (body['spec']['nodeName'])
     cur.execute(sql)
+    cur.execute(switchSql)
     db.commit()
     db.close()
     logger.info(f"Node {body['spec']['nodeName']} has been deleted from the cluster")

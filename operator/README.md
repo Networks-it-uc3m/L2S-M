@@ -4,7 +4,7 @@ This guide details the necessary steps to install the L2S-M Kubernetes operator 
 
 # Prerequisites
 
-1. Clone the L2S-M repository in your host. This guide will assume that all commands are executed in the directory where L2S-M was downloaded.
+1. Clone the L2S-M repository in your host. This guide will assume that all commands are executed insideo the L2S-M directory.
 
 2. As a prerequisite to start with the installation of L2S-M, it is necessary to set up an IP tunnel overlay among the nodes of your k8s cluster (see  [how L2S works](https://github.com/Networks-it-uc3m/L2S-M/tree/main/K8s). To do so, **the installation needs 10 vEth pairs in order to support the attachment of pods to virtual networks.**
 
@@ -13,7 +13,7 @@ This guide details the necessary steps to install the L2S-M Kubernetes operator 
     You can create all the vEth interfaces with the provided script using the following command:
 
     ```bash
-    sudo sh ./L2S-M/K8s/provision/veth.sh 
+    sudo sh ./K8s/provision/veth.sh 
     ```
 
     **IMPORTANT** In order to keep the configuration after the host has been rebooted, a cron job should be written in order to use this script to create and configure the virtual interfaces. To enable its use, open (or create) a new crontab in the host:
@@ -42,7 +42,7 @@ kubectl taint nodes --all node-role.kubernetes.io/control-plane- node-role.kuber
 
 1. Create the virtual interface definitions using the following command:
  ```bash
-kubectl create -f ./L2S-M/K8s/interfaces_definitions
+kubectl create -f ./K8s/interfaces_definitions
 ```
 
 **NOTE:** If you are using interfaces whose definitions are not present in the virtual interfaces definitions in the folder, you must create the corresponding virtual definition in the same fashion as the VXLANs. For example, if you want to use a VPN interface called "tun0", first write the descriptor "tun0.yaml":
@@ -65,12 +65,12 @@ kubectl create -f tun0.yaml
 ```
 2. Create the Kubernetes account Service Account and apply their configuration by applying the following command:
  ```bash
-kubectl create -f ./L2S-M/operator/deploy/config/
+kubectl create -f ./operator/deploy/config/
 ```
 
 3. Create the Kubernetes Persistent Volume by using the following kubectl command:
  ```bash
-kubectl create -f ./L2S-M/operator/deploy/mysql/
+kubectl create -f ./operator/deploy/mysql/
 ```
 
 4. Before deploying the L2S-M operator, it is neccessary to label your master node as the "master" of the cluster. To do so, get the names of your Kubernetes nodes, select the master and apply the "master" label with the following command:
@@ -82,13 +82,13 @@ kubectl label nodes [your-master-node] dedicated=master
 5. Deploy the L2S-M Controller by using the following command: 
 
 ```bash
-kubectl create -f ./L2S-M/operator/deploy/controller/
+kubectl create -f ./operator/deploy/controller/
 ```
  You can check that the deployment was successful if the pod enters the "running" state using the *kubectl get pods* command.
 
 6. After the previous preparation, (make sure the controller is running) you can deploy the operator in your cluster using the YAML deployment file:
  ```bash
-kubectl create -f ./L2S-M/operator/deploy/deployOperator.yaml
+kubectl create -f ./operator/deploy/deployOperator.yaml
 ```
 
 Once these two pods are in running state, you can finally deploy the virtual switches
@@ -97,7 +97,7 @@ Once these two pods are in running state, you can finally deploy the virtual swi
 
 **First deploying the virtual OVS Daemonset:**
 ```bash
-kubectl create -f ./L2S-M/operator/daemonset
+kubectl create -f ./operator/daemonset
 ```
 
 And check there is a pod running in each node, with ```kubectl get pods -o wide```
@@ -106,7 +106,7 @@ And check there is a pod running in each node, with ```kubectl get pods -o wide`
 
 In order to connect the switches between themselves, an additional configuarion must be done. A configuration file specifying which nodes we want to connect and which IP addresses their switches have will be made, and then a script will be run in each l2sm switch, using this configuration file. 
 
-  a. Create a file anywhere or use the reference in ./L2S-M/operator/src/switch/sampleFile.json. In this installation, this file will be used as a reference.
+  a. Create a file anywhere or use the reference in ./operator/src/switch/sampleFile.json. In this installation, this file will be used as a reference.
   b. In this file, you will specify, using the template shown in the reference file, the name of the nodes in the cluster and the IP addresses of **the switches** running on them. For example:
   ```bash
   $ kubectl get pods -o wide
@@ -118,7 +118,7 @@ In order to connect the switches between themselves, an additional configuarion 
 
   ```
   In this example we have two nodes: l2sm1 and l2sm2, with two switches, with IP addresses 10.1.14.58 and 10.1.72.111.
-  We want to connect them directly, so we modify the reference file, ./L2S-M/operator/src/switch/sampleFile.json:
+  We want to connect them directly, so we modify the reference file, ./operator/src/switch/sampleFile.json:
 ```json
 [
     {
@@ -139,7 +139,7 @@ Note: Any number of nodes can be configured, as long as the entry is in this fil
 Once this file is created, we inject it to each node using the kubectl cp command:
 
 ```bash
-kubectl cp ./L2S-M/operator/src/switch/sampleFile.json <pod-name>:/etc/l2sm/switchConfig.json 
+kubectl cp ./operator/src/switch/sampleFile.json <pod-name>:/etc/l2sm/switchConfig.json 
 ```
 And then executing the script in the pod:
 ```bash
