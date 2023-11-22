@@ -4,7 +4,7 @@ This guide details the necessary steps to install the L2S-M Kubernetes operator 
 
 # Prerequisites
 
-1. Clone the L2S-M repository in your host. This guide will assume that all commands are executed insideo the L2S-M directory.
+1. Clone the L2S-M repository in your host. This guide will assume that all commands are executed within the L2S-M directory.
 
 2. As a prerequisite to start with the installation of L2S-M, it is necessary to set up an IP tunnel overlay among the nodes of your k8s cluster (see  [how L2S works](https://github.com/Networks-it-uc3m/L2S-M/tree/main/K8s). To do so, **the installation needs 10 vEth pairs in order to support the attachment of pods to virtual networks.**
 
