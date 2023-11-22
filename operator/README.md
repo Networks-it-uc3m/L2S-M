@@ -118,7 +118,26 @@ In order to connect the switches between themselves, an additional configuarion 
 
   ```
   In this example we have two nodes: l2sm1 and l2sm2, with two switches, with IP addresses 10.1.14.58 and 10.1.72.111.
+  
   We want to connect them directly, so we modify the reference file, ./operator/src/switch/sampleFile.json:
+```json
+[
+    {
+        "name": "<NODE_SWITCH_1>",
+        "nodeIP": "<IP_SWITCH_1>",
+        "neighborNodes": ["<NODE_SWITCH_2>"]
+    },
+    {
+        "name": "<NODE_SWITCH_2>",
+        "nodeIP": "<IP_SWITCH_2>",
+        "neighborNodes": ["<NODE_SWITCH_1>"]
+    }
+]
+
+```
+Note: The parameters to be changed are shown in the NODE and IP columns of the table above.
+
+Example of how it looks:
 ```json
 [
     {
@@ -141,12 +160,12 @@ Once this file is created, we inject it to each node using the kubectl cp comman
 ```bash
 kubectl cp ./operator/src/switch/sampleFile.json <pod-name>:/etc/l2sm/switchConfig.json 
 ```
-And then executing the script in the pod:
+And then executing the script in the switch-pod:
 ```bash
-kubectl exec -it <pod-name> -- setup_switch.sh
+kubectl exec -it <switch-pod-name> -- setup_switch.sh
 ```
 
-This must be done in each pod. In the provided example, using two nodes, l2sm1 and l2sm2, we have to do it twice, in l2-ps-8p5td and l2-ps-xdkvz.
+This must be done in each switch-pod. In the provided example, using two nodes, l2sm1 and l2sm2, we have to do it twice, in l2-ps-8p5td and l2-ps-xdkvz.
 When the exec command is done, we should see an output like this:
 
 ```bash
