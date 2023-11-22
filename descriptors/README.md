@@ -1,7 +1,9 @@
 # L2S-M Ping Pong example
-This section of L2S-M documentation provides an example that you can use in order to learn how to create virtual networks and attach pods to them. To do so, we are going to deploy a simple ping-pong application, where we will deploy two pods attached into a virtual network and test their connectivity.
+This section of L2S-M documentation provides an example that you can use in order to learn how to create virtual networks and attach pods to them. To do so, we are going to deploy a simple ping-pong application, where we will deploy two pods attached to a virtual network and test their connectivity.
 
-All the neccessary descriptors can be found in the *'./L2S-M/descriptors'* directory of this repository.
+All the necessary descriptors can be found in the *'./L2S-M/descriptors'* directory of this repository.
+
+This guide will assume that all commands are executed within the L2S-M directory.
 
 ### Creating our first virtual network
 
@@ -26,31 +28,31 @@ As you can see, L2S-M virtual networks are a [NetworkAttachmentDefinition](https
 To create the virtual network in your cluster, use the appropriate *kubectl* command as if you were building any other K8s resource:
 
 ```bash
-kubectl create -f ./L2S-M/descriptors/
+kubectl create -f ./descriptors/networks/myfirstnetwork.yaml
 ```
 
-Et voilá! You have succcesfully created your first virtual network in your K8s cluster.
+Et voilá! You have successfully created your first virtual network in your K8s cluster.
 
 ### Deploying our application in the cluster
 
 After creating our first virtual network, it is time to attach some pods to it. To do so, it is as simple as adding an annotation to your deployment/pod file, just like you would do when attaching into a multus NetworkAttachmentDefinition. 
 
-For example, to add a deployment to my-first-network, introduce in your descriptor the following annotation in its metadata:
+For example, to add one deployment to my-first-network, enter the following annotation in your descriptor in its metadata:
 
 ```yaml
 annotations:
   k8s.v1.cni.cncf.io/networks: my-first-network
 ```
 
-If you want to add your own Multus annotations, you are free to do so! L2S-M will not interfere with the standard Multus behaviour, so feel free to add your addittional annotations if you need them.
+If you want to add your own Multus annotations, you are free to do so! L2S-M will not interfere with the standard Multus behavior, so feel free to add your additional annotations if you need them.
 
-To assist you with the dpeloyment of your first application with L2S-M, you can use the deployments available in this repository. To deploy both "ping-pong" pods (which are simple Ubuntu alpine containers), use the following command:
+To assist you with the deployment of your first application with L2S-M, you can use the deployments available in this repository. To deploy both "ping-pong" pods (which are simple Ubuntu alpine containers), use the following command:
 
 ```bash
-kubectl create -f ./L2S-M/descriptors/deployments/
+kubectl create -f ./descriptors/deployments/
 ```
 
-After a bit of time, check that both deployments were succesfully instantiated in your cluster.
+After a bit of time, check that both deployments were successfully instantiated in your cluster.
 
 ### Testing the connectivity
 
@@ -91,7 +93,7 @@ See if they can ping each using the ping command (e.g., in the "pong" pod):
 ping 192.168.12.1
 ```
 
-If you have ping betwen them, congratulations! You are now able to deploy your applications attached to the virtual network "my-fist-network" at your K8s cluster. You will notice that the *ttl* of these packets is 64: this is the case because they see each other as if they were in the same broadcast domain (i.e., in the same LAN). You can further test this fact by installing and using the *traceroute* command:
+If you have ping between them, congratulations! You are now able to deploy your applications attached to the virtual network "my-fist-network" at your K8s cluster. You will notice that the *ttl* of these packets is 64: this is the case because they see each other as if they were in the same broadcast domain (i.e., in the same LAN). You can further test this fact by installing and using the *traceroute* command:
 
 ```bash
 apk update
