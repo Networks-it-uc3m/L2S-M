@@ -1,7 +1,7 @@
 # L2S-M Ping Pong example
 This section of L2S-M documentation provides an example that you can use in order to learn how to create virtual networks and attach pods to them. To do so, we are going to deploy a simple ping-pong application, where we will deploy two pods attached to a virtual network and test their connectivity.
 
-All the necessary descriptors can be found in the *'./L2S-M/descriptors'* directory of this repository.
+All the necessary descriptors can be found in the *'./descriptors'* directory of this repository.
 
 This guide will assume that all commands are executed within the L2S-M directory.
 
