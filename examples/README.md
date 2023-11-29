@@ -1,23 +1,23 @@
 # L2S-M Ping Pong example
 This section of L2S-M documentation provides an example that you can use in order to learn how to create virtual networks and attach pods to them. To do so, we are going to deploy a simple ping-pong application, where we will deploy two pods attached to a virtual network and test their connectivity.
 
-All the necessary descriptors can be found in the *'./descriptors'* directory of this repository.
+All the necessary descriptors can be found in the *'./examples/ping-pong/'* directory of this repository.
 
 This guide will assume that all commands are executed within the L2S-M directory.
 
 ### Creating our first virtual network
 
-First of all, let's see the details of an L2S-M virtual network. This is the descriptor corresponding to the virtual network that will be used in this example: my-first-network
+First of all, let's see the details of an L2S-M virtual network. This is the descriptor corresponding to the virtual network that will be used in this example: ping-network
 
 ```yaml
 apiVersion: "k8s.cni.cncf.io/v1"
 kind: NetworkAttachmentDefinition
 metadata:
-  name: my-first-network
+  name: ping-network
 spec:
   config: '{
       "cniVersion": "0.3.0",
-      "type": "host-device",
+      "type": "dummy",
       "device": "l2sm-vNet"
     }'
 ```
@@ -28,7 +28,7 @@ As you can see, L2S-M virtual networks are a [NetworkAttachmentDefinition](https
 To create the virtual network in your cluster, use the appropriate *kubectl* command as if you were building any other K8s resource:
 
 ```bash
-kubectl create -f ./descriptors/networks/myfirstnetwork.yaml
+kubectl create -f ./examples/ping-pong/network.yaml
 ```
 
 Et voilá! You have successfully created your first virtual network in your K8s cluster.
@@ -37,22 +37,23 @@ Et voilá! You have successfully created your first virtual network in your K8s 
 
 After creating our first virtual network, it is time to attach some pods to it. To do so, it is as simple as adding an annotation to your deployment/pod file, just like you would do when attaching into a multus NetworkAttachmentDefinition. 
 
-For example, to add one deployment to my-first-network, enter the following annotation in your descriptor in its metadata:
+For example, to add one deployment to ping-network, enter the following annotation in your descriptor in its metadata:
 
 ```yaml
 annotations:
-  k8s.v1.cni.cncf.io/networks: my-first-network
+  k8s.v1.cni.cncf.io/networks: ping-network
 ```
 
 If you want to add your own Multus annotations, you are free to do so! L2S-M will not interfere with the standard Multus behavior, so feel free to add your additional annotations if you need them.
 
-To assist you with the deployment of your first application with L2S-M, you can use the deployments available in this repository. To deploy both "ping-pong" pods (which are simple Ubuntu alpine containers), use the following command:
+To assist you with the deployment of your first application with L2S-M, you can use the pod definitions available in this repository. To deploy both "ping-pong" pods (which are simple Ubuntu alpine containers), use the following commands:
 
 ```bash
-kubectl create -f ./descriptors/deployments/
+kubectl create -f ./examples/ping-pong/ping.yaml
+kubectl create -f ./examples/ping-pong/pong.yaml
 ```
 
-After a bit of time, check that both deployments were successfully instantiated in your cluster.
+After a bit of time, check that both pods were successfully instantiated in your cluster.
 
 ### Testing the connectivity
 
@@ -109,7 +110,7 @@ ping 192.168.12.1 -I eth0
 If you are tired of experimenting with the app, you can proceed to delete both deployments from the cluster:
 
 ```bash
-kubectl delete deploy/ping-l2sm
-kubectl delete deploy/pong-l2sm
+kubectl delete ping
+kubectl delete pong
 ```
 
