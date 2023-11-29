@@ -16,7 +16,7 @@ spec:
     spec:
       serviceAccountName: l2sm-operator
       containers:
-      - image: alexdecb/l2sm-operator:latest
+      - image: alexdecb/l2sm-operator:2.0
         name: l2sm-opt-pod
         env:
           - name: CONTROLLER_IP

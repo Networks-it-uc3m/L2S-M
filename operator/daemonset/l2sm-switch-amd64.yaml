@@ -24,7 +24,7 @@ spec:
         effect: NoSchedule
       containers:
       - name: l2sm-switch
-        image: alexdecb/l2sm-ovs:test
+        image: alexdecb/l2sm-switch:2.0
         command: ["sleep","infinity"]
         env:
         - name: NODENAME

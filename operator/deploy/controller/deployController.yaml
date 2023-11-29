@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: l2sm-controller
-        image: alexdecb/l2sm-controller:latest
+        image: alexdecb/l2sm-controller:2.0
         ports:
         - containerPort: 6633
         - containerPort: 8181
