@@ -2,10 +2,10 @@
 apiVersion: "k8s.cni.cncf.io/v1"
 kind: NetworkAttachmentDefinition
 metadata:
-  name: vhost1
+  name: veth1
 spec:
   config: '{
       "cniVersion": "0.3.0",
-      "type": "host-device",
-      "device": "vhost1"
+      "type": "bridge",
+      "device": "veth1"
     }'

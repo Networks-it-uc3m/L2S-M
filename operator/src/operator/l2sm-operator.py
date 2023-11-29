@@ -87,7 +87,7 @@ def build_db(body, logger, annotations, **kwargs):
     #MODIFY THE END VALUE TO ADD MORE INTERFACES
     values = []
     for i in range(1,11):
-      values.append(['vpod'+str(i), body['spec']['nodeName'], '-1', ''])
+      values.append(['veth'+str(i), body['spec']['nodeName'], '-1', ''])
     sqlInterfaces = "INSERT INTO interfaces (interface, node, network, pod) VALUES (%s, %s, %s, %s)"
     cur.executemany(sqlInterfaces, values)
     db.commit()
@@ -212,13 +212,13 @@ def pod_vn(body, name, namespace, logger, annotations, **kwargs):
     #    networkN = retrieve[0].strip()
     #    break
 
-    switchId = getSwitchId(cur, node)
+    switchId = getSwitchId(cur, node) # TODO: diferenciar caso en el que es un veth el conectado y el de que es una red de vdd.
 
     if switchId is None:
       logger.info(f"The l2sm switch is not connected to controller. Not connecting the pod")
       return
-    vpodPattern = re.compile(r'\d+$')
-    portNumbers = [int(vpodPattern.search(interface).group()) for interface in interface_to_attach]
+    vethPattern = re.compile(r'\d+$')
+    portNumbers = [int(vethPattern.search(interface).group()) for interface in interface_to_attach]
 
     for m in range(len(network)):
       sql = "UPDATE interfaces SET network = '%s', pod = '%s' WHERE interface = '%s' AND node = '%s'" % (network_array[m], name, interface_to_attach[m], node)

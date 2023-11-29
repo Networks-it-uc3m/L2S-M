@@ -18,6 +18,7 @@ spec:
       containers:
       - image: alexdecb/l2sm-operator:latest
         name: l2sm-opt-pod
+        imagePullPolicy: Always
         env:
           - name: CONTROLLER_IP
             value: l2sm-controller-service

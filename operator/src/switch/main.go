@@ -23,7 +23,7 @@ type Node struct {
 // the second one is the path to the configuration file, in reference to the code.
 func main() {
 
-	configDir, vhostNumber, nodeName, controllerIP, err := takeArguments()
+	configDir, vethNumber, nodeName, controllerIP, err := takeArguments()
 
 	if err != nil {
 		fmt.Println("Error with the arguments. Error:", err)
@@ -41,13 +41,13 @@ func main() {
 	fmt.Println("Switch initialized and connected to the controller.")
 
 	// Set all virtual interfaces up, and connect them to the tunnel bridge:
-	for i := 1; i <= vhostNumber; i++ {
-		vhost := fmt.Sprintf("vhost%d", i)
-		cmd := exec.Command("ip", "link", "set", vhost, "up") // i.e: ip link set vhost1 up
+	for i := 1; i <= vethNumber; i++ {
+		veth := fmt.Sprintf("net%d", i)
+		cmd := exec.Command("ip", "link", "set", veth, "up") // i.e: ip link set veth1 up
 		if err := cmd.Run(); err != nil {
 			fmt.Println("Error:", err)
 		}
-		exec.Command("ovs-vsctl", "add-port", "brtun", vhost).Run() // i.e: ovs-vsctl add-port brtun vhost1
+		exec.Command("ovs-vsctl", "add-port", "brtun", veth).Run() // i.e: ovs-vsctl add-port brtun veth1
 	}
 
 	err = createVxlans(configDir, nodeName)
@@ -61,7 +61,7 @@ func main() {
 func takeArguments() (string, int, string, string, error) {
 	configDir := os.Args[len(os.Args)-1]
 
-	vhostNumber := flag.Int("n_vpods", 0, "number of pod interfaces that are going to be attached to the switch")
+	vethNumber := flag.Int("n_veths", 0, "number of pod interfaces that are going to be attached to the switch")
 	nodeName := flag.String("node_name", "", "name of the node the script is executed in. Required.")
 	controllerIP := flag.String("controller_ip", "", "ip where the SDN controller is listening using the OpenFlow13 protocol. Required")
 
@@ -76,7 +76,7 @@ func takeArguments() (string, int, string, string, error) {
 		return "", 0, "", "", errors.New("Controller IP is not defined")
 	}
 
-	return configDir, *vhostNumber, *nodeName, *controllerIP, nil
+	return configDir, *vethNumber, *nodeName, *controllerIP, nil
 }
 
 func initializeSwitch(controllerIP string) error {

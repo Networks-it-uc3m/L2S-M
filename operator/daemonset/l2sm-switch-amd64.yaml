@@ -14,7 +14,7 @@ spec:
       labels:
         l2sm-component: l2sm-switch
       annotations:
-        k8s.v1.cni.cncf.io/networks: vhost1@vhost1, vhost2@vhost2, vhost3@vhost3, vhost4@vhost4, vhost5@vhost5, vhost6@vhost6, vhost7@vhost7, vhost8@vhost8, vhost9@vhost9, vhost10@vhost10
+        k8s.v1.cni.cncf.io/networks: veth1, veth2, veth3, veth4, veth5, veth6, veth7, veth8, veth9, veth10
     spec:
       tolerations:
       # this toleration is to have the daemonset runnable on master nodes
@@ -24,21 +24,21 @@ spec:
         effect: NoSchedule
       containers:
       - name: l2sm-switch
-        image: alexdecb/l2sm-ovs:test
+        image: alexdecb/l2sm-switch:2.1
         command: ["sleep","infinity"]
+        #args: ["setup_switch.sh && sleep infinity"]
         env:
         - name: NODENAME
           valueFrom:
             fieldRef:
               fieldPath: spec.nodeName
-        - name: NVPODS
+        - name: NVETHS
           value: "10"  
         - name: CONTROLLERIP
           value: "l2sm-controller-service"
-
-        imagePullPolicy: Always
         securityContext:
           capabilities:
             add: ["NET_ADMIN"]
       nodeSelector:
         kubernetes.io/arch: amd64
+
