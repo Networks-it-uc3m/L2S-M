@@ -1,0 +1,298 @@
+
+apiVersion: "k8s.cni.cncf.io/v1"
+kind: NetworkAttachmentDefinition
+metadata:
+  name: veth1
+spec:
+  config: '{
+      "cniVersion": "0.3.0",
+      "type": "bridge",
+      "device": "veth1"
+    }'
+---
+apiVersion: "k8s.cni.cncf.io/v1"
+kind: NetworkAttachmentDefinition
+metadata:
+  name: veth2
+spec:
+  config: '{
+      "cniVersion": "0.3.0",
+      "type": "bridge",
+      "device": "veth2"
+    }'
+---
+apiVersion: "k8s.cni.cncf.io/v1"
+kind: NetworkAttachmentDefinition
+metadata:
+  name: veth3
+spec:
+  config: '{
+      "cniVersion": "0.3.0",
+      "type": "bridge",
+      "device": "veth3"
+    }'
+---
+apiVersion: "k8s.cni.cncf.io/v1"
+kind: NetworkAttachmentDefinition
+metadata:
+  name: veth4
+spec:
+  config: '{
+      "cniVersion": "0.3.0",
+      "type": "bridge",
+      "device": "veth4"
+    }'
+---
+apiVersion: "k8s.cni.cncf.io/v1"
+kind: NetworkAttachmentDefinition
+metadata:
+  name: veth5
+spec:
+  config: '{
+      "cniVersion": "0.3.0",
+      "type": "bridge",
+      "device": "veth5"
+    }'
+---
+apiVersion: "k8s.cni.cncf.io/v1"
+kind: NetworkAttachmentDefinition
+metadata:
+  name: veth6
+spec:
+  config: '{
+      "cniVersion": "0.3.0",
+      "type": "bridge",
+      "device": "veth6"
+    }'
+---
+
+apiVersion: "k8s.cni.cncf.io/v1"
+kind: NetworkAttachmentDefinition
+metadata:
+  name: veth7
+spec:
+  config: '{
+      "cniVersion": "0.3.0",
+      "type": "bridge",
+      "device": "veth7"
+    }'
+---
+apiVersion: "k8s.cni.cncf.io/v1"
+kind: NetworkAttachmentDefinition
+metadata:
+  name: veth8
+spec:
+  config: '{
+      "cniVersion": "0.3.0",
+      "type": "bridge",
+      "device": "veth8"
+    }'
+---
+apiVersion: "k8s.cni.cncf.io/v1"
+kind: NetworkAttachmentDefinition
+metadata:
+  name: veth9
+spec:
+  config: '{
+      "cniVersion": "0.3.0",
+      "type": "bridge",
+      "device": "veth9"
+    }'
+---
+apiVersion: "k8s.cni.cncf.io/v1"
+kind: NetworkAttachmentDefinition
+metadata:
+  name: veth10
+spec:
+  config: '{
+      "cniVersion": "0.3.0",
+      "type": "bridge",
+      "device": "veth10"
+    }'
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: l2sm-operator
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: l2sm-operator
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+  - kind: ServiceAccount
+    name: l2sm-operator
+    namespace: default
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: mysql-pv
+  labels:
+    type: local
+spec:
+  storageClassName: manual
+  capacity:
+    storage: 2Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/mnt/data"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-pv-claim
+spec:
+  storageClassName: manual
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: l2sm-controller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: l2sm-controller
+  template:
+    metadata:
+      labels:
+        app: l2sm-controller
+    spec:
+      containers:
+      - name: l2sm-controller
+        image: alexdecb/l2sm-controller:latest
+        # readinessProbe:
+        #   httpGet:
+        #     path: /onos/v1/l2sm/networks/status   
+        #     port: 8181   
+        ports:
+        - containerPort: 6633
+        - containerPort: 8181
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: l2sm-controller-service
+spec:
+  selector:
+    app: l2sm-controller
+  ports:
+  - name: of13-port
+    protocol: TCP
+    port: 6633
+    targetPort: 6633
+  - name: http-port
+    protocol: TCP
+    port: 8181
+    targetPort: 8181
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: l2sm-operator
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      l2sm-component: l2sm-opt
+  template:
+    metadata:
+      labels:
+        l2sm-component: l2sm-opt
+    spec:
+      serviceAccountName: l2sm-operator
+      containers:
+      - image: alexdecb/l2sm-operator:2.1
+        name: l2sm-opt-pod
+        env:
+          - name: CONTROLLER_IP
+            value: l2sm-controller-service
+        #command: ["sleep","infinity"]
+      - image: mysql/mysql-server:5.7
+        name: mysql
+        env:
+          - name: MYSQL_ROOT_PASSWORD
+            value: password
+          - name: MYSQL_DATABASE
+            value: L2SM
+          - name: MYSQL_USER
+            value: l2sm
+          - name: MYSQL_PASSWORD
+            value: l2sm;
+        ports:
+          - containerPort: 3306
+            name: mysql
+        volumeMounts:
+          - name: mysql-persistent-storage
+            mountPath: /var/lib/mysql
+      volumes:
+        - name: mysql-persistent-storage
+          persistentVolumeClaim:
+            claimName: mysql-pv-claim
+      nodeSelector:
+        dedicated: master
+      tolerations:
+      - key: dedicated
+        operator: Equal
+        value: master
+        effect: NoSchedule
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: l2sm-switch
+  #namespace: kube-system
+  labels:
+    l2sm-component: l2sm-switch
+spec:
+  selector:
+    matchLabels:
+      l2sm-component: l2sm-switch
+  template:
+    metadata:
+      labels:
+        l2sm-component: l2sm-switch
+      annotations:
+        k8s.v1.cni.cncf.io/networks: veth1, veth2, veth3, veth4, veth5, veth6, veth7, veth8, veth9, veth10
+    spec:
+      tolerations:
+      # this toleration is to have the daemonset runnable on master nodes
+      # remove it if your masters can't run pods
+      - key: node-role.kubernetes.io/master
+        operator: Exists
+        effect: NoSchedule
+      containers:
+      - name: l2sm-switch
+        image: alexdecb/l2sm-switch:2.1
+        command: ["/bin/sh","-c"]
+        args: ["setup_switch.sh && sleep infinity"]
+        env:
+        - name: NODENAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: NVETHS
+          value: "10"  
+        - name: CONTROLLERIP
+          value: "l2sm-controller-service"
+        securityContext:
+          capabilities:
+            add: ["NET_ADMIN"]
+      nodeSelector:
+        kubernetes.io/arch: amd64
+
+
