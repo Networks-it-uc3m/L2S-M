@@ -7,6 +7,8 @@ spec:
   config: '{
       "cniVersion": "0.3.0",
       "type": "bridge",
+      "bridge": "br1",
+      "mtu": 1400,
       "device": "veth1"
     }'
 ---
@@ -18,6 +20,8 @@ spec:
   config: '{
       "cniVersion": "0.3.0",
       "type": "bridge",
+      "bridge": "br1",
+      "mtu": 1400,
       "device": "veth2"
     }'
 ---
@@ -29,6 +33,8 @@ spec:
   config: '{
       "cniVersion": "0.3.0",
       "type": "bridge",
+      "bridge": "br1",
+      "mtu": 1400,
       "device": "veth3"
     }'
 ---
@@ -40,6 +46,8 @@ spec:
   config: '{
       "cniVersion": "0.3.0",
       "type": "bridge",
+      "bridge": "br1",
+      "mtu": 1400,
       "device": "veth4"
     }'
 ---
@@ -51,6 +59,8 @@ spec:
   config: '{
       "cniVersion": "0.3.0",
       "type": "bridge",
+      "bridge": "br1",
+      "mtu": 1400,
       "device": "veth5"
     }'
 ---
@@ -62,6 +72,8 @@ spec:
   config: '{
       "cniVersion": "0.3.0",
       "type": "bridge",
+      "bridge": "br1",
+      "mtu": 1400,
       "device": "veth6"
     }'
 ---
@@ -74,6 +86,8 @@ spec:
   config: '{
       "cniVersion": "0.3.0",
       "type": "bridge",
+      "bridge": "br1",
+      "mtu": 1400,
       "device": "veth7"
     }'
 ---
@@ -85,6 +99,8 @@ spec:
   config: '{
       "cniVersion": "0.3.0",
       "type": "bridge",
+      "bridge": "br1",
+      "mtu": 1400,
       "device": "veth8"
     }'
 ---
@@ -96,6 +112,8 @@ spec:
   config: '{
       "cniVersion": "0.3.0",
       "type": "bridge",
+      "bridge": "br1",
+      "mtu": 1400,
       "device": "veth9"
     }'
 ---
@@ -107,6 +125,8 @@ spec:
   config: '{
       "cniVersion": "0.3.0",
       "type": "bridge",
+      "bridge": "br1",
+      "mtu": 1400,
       "device": "veth10"
     }'
 ---

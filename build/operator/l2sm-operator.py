@@ -200,8 +200,7 @@ def pod_vn(body, name, namespace, logger, annotations, **kwargs):
 
     ret.metadata.annotations['k8s.v1.cni.cncf.io/networks'] = ', '.join(multusInt)
 
-    #PATCH NETWORK WITH ANNOTATION
-    v1.patch_namespaced_pod(name, namespace, ret)
+  
 
     #GET NETWORK ID'S
     #for j in items:
@@ -233,7 +232,8 @@ def pod_vn(body, name, namespace, logger, annotations, **kwargs):
       
       response = session.post(baseControllerUrl + '/l2sm/networks/port', json=payload)
 
-
+    #PATCH NETWORK WITH ANNOTATION
+    v1.patch_namespaced_pod(name, namespace, ret)
 
     db.commit()
     db.close()
