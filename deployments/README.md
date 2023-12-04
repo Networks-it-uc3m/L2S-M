@@ -25,7 +25,7 @@ kubectl create -f ./deployments/custom-installation/interfaces_definitions
 
 2. Create the Kubernetes account Service Account and apply their configuration by applying the following command:
  ```bash
-kubectl create -f ./deployments/custom-installation/config/
+kubectl create -f ./deployments/config/
 ```
 
 3. Create the Kubernetes Persistent Volume by using the following kubectl command:
@@ -42,7 +42,7 @@ kubectl label nodes [your-master-node] dedicated=master
 5. Deploy the L2S-M Controller by using the following command: 
 
 ```bash
-kubectl create -f ./deployments/custom-installation/deployController.yanl
+kubectl create -f ./deployments/custom-installation/deployController.yaml
 ```
  You can check that the deployment was successful if the pod enters the "running" state using the *kubectl get pods* command.
 
