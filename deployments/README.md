@@ -141,4 +141,4 @@ Created vxlan between node l2sm2 and node l2sm1.
 ```
 
 
-You are all set! If you want to learn how to create virtual networks and use them in your applications, [check the following section of the repository](https://github.com/Networks-it-uc3m/L2S-M/tree/main/examples/ping-pong)
+You are all set! If you want to learn how to create virtual networks and use them in your applications, [check the following section of the repository](https://github.com/Networks-it-uc3m/L2S-M/tree/release-2.0/examples/ping-pong/)
