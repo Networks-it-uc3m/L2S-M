@@ -20,17 +20,17 @@ kubectl taint nodes --all node-role.kubernetes.io/control-plane- node-role.kuber
 
 1. Create the virtual interface definitions using the following command:
  ```bash
-kubectl create -f ./deployments/custom_installation/interfaces_definitions
+kubectl create -f ./deployments/custom-installation/interfaces_definitions
 ```
 
 2. Create the Kubernetes account Service Account and apply their configuration by applying the following command:
  ```bash
-kubectl create -f ./deployments/custom_installation/config/
+kubectl create -f ./deployments/config/
 ```
 
 3. Create the Kubernetes Persistent Volume by using the following kubectl command:
  ```bash
-kubectl create -f ./deployments/custom_installation/mysql/
+kubectl create -f ./deployments/custom-installation/mysql/
 ```
 
 4. Before deploying the L2S-M operator, it is neccessary to label your master node as the "master" of the cluster. To do so, get the names of your Kubernetes nodes, select the master and apply the "master" label with the following command:
@@ -42,13 +42,13 @@ kubectl label nodes [your-master-node] dedicated=master
 5. Deploy the L2S-M Controller by using the following command: 
 
 ```bash
-kubectl create -f ./deployments/custom_installation/deployController.yanl
+kubectl create -f ./deployments/custom-installation/deployController.yaml
 ```
  You can check that the deployment was successful if the pod enters the "running" state using the *kubectl get pods* command.
 
 6. After the previous preparation, (make sure the controller is running) you can deploy the operator in your cluster using the YAML deployment file:
  ```bash
-kubectl create -f ./deployments/custom_installation/deployOperator.yaml
+kubectl create -f ./deployments/custom-installation/deployOperator.yaml
 ```
 
 Once these two pods are in running state, you can finally deploy the virtual switches
@@ -57,7 +57,7 @@ Once these two pods are in running state, you can finally deploy the virtual swi
 
 **First deploying the virtual OVS Daemonset:**
 ```bash
-kubectl create -f ./deployments/custom_installation/deploySwitch.yaml
+kubectl create -f ./deployments/custom-installation/deploySwitch.yaml
 ```
 
 And check there is a pod running in each node, with ```kubectl get pods -o wide```
@@ -141,4 +141,4 @@ Created vxlan between node l2sm2 and node l2sm1.
 ```
 
 
-You are all set! If you want to learn how to create virtual networks and use them in your applications, [check the following section of the repository](https://github.com/Networks-it-uc3m/L2S-M/tree/main/examples/ping-pong)
+You are all set! If you want to learn how to create virtual networks and use them in your applications, [check the following section of the repository](https://github.com/Networks-it-uc3m/L2S-M/tree/release-2.0/examples/)
