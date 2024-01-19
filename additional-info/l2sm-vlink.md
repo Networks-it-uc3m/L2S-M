@@ -87,7 +87,9 @@ path --> networkPath. (the array should be mapped as network 'links', while the 
 
 To further understand the creation of a vlink network, and the L2S-M cluster example topology, the following figure is presented:
 
-<img src="l2sm-f.svg" width="200">
+<img src="l2sm-f.svg" width="400">
+
+This figure demonstrates a Cluster with 5 nodes, node-a, node-b, node-c, node-d and node-e, that are connected like shown in the image. The switches apply rules that are instructed by the L2S-M Controller, following the SDN approach. In this example there is a pod in node-a and another one in node-e that are going to be connected using an L2S-M network, of type vlink.
 
 ### Vlink sample path
 
@@ -128,7 +130,7 @@ spec:
 
 ### Network Topology
 
-Additionally, we present using this example, how this topology could be defined using the NetworkTopology CRD, using the metrics  from L2S-M. 
+Additionally, we present using this example, how this topology could be defined using the NetworkTopology CRD, using the metrics from L2S-M. 
 
 ```yaml
 apiVersion: qos-scheduler.siemens.com/v1alpha1
