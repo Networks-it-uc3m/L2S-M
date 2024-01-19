@@ -78,16 +78,20 @@ The config field is a JSON string with the following fields defined:
 - `path`(list,required): List of nodes representing the path.
 
 In the context of the CODECO project, vlink networks can be mapped to the channel resource type in the SWM project through the overlay paths, where each overlay-path corresponds to a channel:
-FromEnpoint --> channelFrom.
-ToEnpoint --> channelTo.
-path --> networkPath. (the array should be mapped as network 'links', while the FromEndpoint and ToEndpoint to the 'start' and 'end' fields.)
+
+- FromEnpoint --> channelFrom.
+- ToEnpoint --> channelTo.
+- path --> networkPath. (the array should be mapped as network 'links', while the FromEndpoint and ToEndpoint to the 'start' and 'end' fields.)
 
 
 ## Example
 
 To further understand the creation of a vlink network, and the L2S-M cluster example topology, the following figure is presented:
 
-<img src="l2sm-f.svg" width="400">
+<p align="center">
+  <img src="l2sm-f.svg" width="400">
+</p>
+
 
 This figure demonstrates a Cluster with 5 nodes, node-a, node-b, node-c, node-d and node-e, that are connected like shown in the image. The switches apply rules that are instructed by the L2S-M Controller, following the SDN approach. In this example there is a pod in node-a and another one in node-e that are going to be connected using an L2S-M network, of type vlink.
 
