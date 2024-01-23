@@ -84,7 +84,7 @@ The config field is a JSON string with the following fields defined:
 - `FromEndpoint`(string,required): Source endpoint for the path.
 - `ToEndpoint`(string,required): Destination endpoint for the path.
 - `path`(list,required): List of nodes representing the path.
-- `capabilities` (dictionary,required): overlay path QoS capabilities, there are two, the bandwidth in bit per second and the latency in nanoseconds.
+- `capabilities` (dictionary,required): overlay path performance metric capabilities, there are two, the bandwidth in bits per second and the latency in nanoseconds.
 
 In the context of the CODECO project, a vlink would be mapped to a pair of channels (channel resource type in the SWM project):
 
