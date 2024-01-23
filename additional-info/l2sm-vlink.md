@@ -45,13 +45,21 @@ spec:
             "name": "<pathName1>",
             "FromEndpoint": "<endpointNodeA>",
             "ToEndpoint": "<endpointNodeB>",
-            "path": ["<pathNodeA1>", "<pathNodeA2>", "...", "<pathNodeAN>"]
+            "path": ["<pathNodeA1>", "<pathNodeA2>", "...", "<pathNodeAN>"],
+            "capabilities": {
+              "bandwidthBits": "<bps>",
+              "latencyNanos": "<ns>"
+            }
           },
           {
             "name": "<pathName2>",
             "fromEndpoint": "<endpointNodeB>",
             "toEndpoint": "<endpointNodeA>",
-            "path": ["<pathNodeB1>", "<pathNodeB2>","...", "<pathNodeBN>"]
+            "path": ["<pathNodeB1>", "<pathNodeB2>","...", "<pathNodeBN>"],
+            "capabilities": {
+              "bandwidthBits": "<bps>",
+              "latencyNanos": "<ns>"
+            }
           }
         ]
       }
@@ -76,6 +84,7 @@ The config field is a JSON string with the following fields defined:
 - `FromEndpoint`(string,required): Source endpoint for the path.
 - `ToEndpoint`(string,required): Destination endpoint for the path.
 - `path`(list,required): List of nodes representing the path.
+- `capabilities` (dictionary,required): overlay path QoS capabilities, there are two, the bandwidth in bit per second and the latency in nanoseconds.
 
 In the context of the CODECO project, a vlink would be mapped to a pair of channels (channel resource type in the SWM project):
 
@@ -118,13 +127,21 @@ spec:
             "name": "first-path",
             "FromEndpoint": "node-a",
             "ToEndpoint": "node-e",
-            "path": ["node-c", "node-d"]
+            "path": ["node-c", "node-d"],
+            "capabilities": {
+              "bandwidthBits": "20M",
+              "latencyNanos": "1e6"
+            }
           },
           {
             "name": "second-path",
             "fromEndpoint": "node-e",
             "toEndpoint": "node-a",
-            "path": ["node-d","node-b"]
+            "path": ["node-d","node-b"],
+            "capabilities": {
+              "bandwidthBits": "20M",
+              "latencyNanos": "8e5"
+            }
           }
         ]
       }
