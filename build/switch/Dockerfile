@@ -1,28 +1,26 @@
 FROM golang:1.20 AS build
 
-WORKDIR /usr/src/bin
+WORKDIR /usr/src/l2sm-switch
 
-COPY ./main.go ./go.mod ./
+COPY ./src/switch/ ./build/switch/build-go.sh ./
 
-RUN go build -v -o /usr/local/bin/l2sm-br ./... 
+RUN ./build-go.sh
 
 FROM ubuntu:latest 
 
 WORKDIR /usr/local/bin
 
-COPY --from=build /usr/local/bin/ .
+COPY ./src/switch/vswitch.ovsschema /tmp/
 
-COPY ./vswitch.ovsschema /tmp/
+COPY --from=build /usr/local/bin/ .
 
 RUN apt-get update && \
   apt-get install -y net-tools iproute2 netcat-openbsd dnsutils curl iputils-ping iptables nmap tcpdump openvswitch-switch && \
   mkdir /var/run/openvswitch && mkdir -p /etc/openvswitch && ovsdb-tool create /etc/openvswitch/conf.db /tmp/vswitch.ovsschema 
 
-COPY ./setup_switch.sh .
+COPY ./src/switch/setup_switch.sh .
 
 RUN chmod +x ./setup_switch.sh && \
     mkdir /etc/l2sm/
-
-
 
 CMD [ "./setup_switch.sh" ]
