@@ -6,4 +6,7 @@ ovs-vsctl --db=unix:/var/run/openvswitch/db.sock --no-wait init
 
 ovs-vswitchd --pidfile=/var/run/openvswitch/ovs-vswitchd.pid --detach 
 
-l2sm-br --n_veths=$NVETHS --node_name=$NODENAME --controller_ip=$CONTROLLERIP /etc/l2sm/switchConfig.json
+l2sm-init --n_veths=$NVETHS --controller_ip=$CONTROLLERIP 
+
+#l2sm-vxlans --node_name=$NODENAME /etc/l2sm/switchConfig.json
+sleep infinity
