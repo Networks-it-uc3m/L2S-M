@@ -24,7 +24,7 @@ spec:
         effect: NoSchedule
       containers:
       - name: l2sm-switch
-        image: alexdecb/l2sm-switch:2.1
+        image: alexdecb/l2sm-switch:2.2
         command: ["sleep","infinity"]
         #args: ["setup_switch.sh && sleep infinity"]
         env:

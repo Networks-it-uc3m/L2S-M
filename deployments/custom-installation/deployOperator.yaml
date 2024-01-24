@@ -15,13 +15,19 @@ spec:
         l2sm-component: l2sm-opt
     spec:
       serviceAccountName: l2sm-operator
+      initContainers:
+      - name: wait-for-l2sm-controller
+        image: busybox:1.31
+        command: ["/bin/sh", "-c", "set -x; while true; do status_code=$(wget --spider -S http://l2sm-controller-service:8181/onos/ui 2>&1 | grep 'HTTP/' | awk '{print $2}'); [ -z $status_code ] && sleep 15 || [ $status_code -eq 200 ] && break || sleep 15; done"]     
       containers:
-      - image: alexdecb/l2sm-operator:2.1
+      - name: wait-test
+        image: busybox:1.31
+        command: ["sleep","infinity"]
+      - image: alexdecb/l2sm-operator:2.2
         name: l2sm-opt-pod
         env:
           - name: CONTROLLER_IP
             value: l2sm-controller-service
-        #command: ["sleep","infinity"]
       - image: mysql/mysql-server:5.7
         name: mysql
         env:
