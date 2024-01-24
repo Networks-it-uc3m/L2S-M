@@ -4,7 +4,7 @@ WORKDIR /usr/src/l2sm-switch
 
 COPY ./src/switch/ ./build/switch/build-go.sh ./
 
-RUN ./build-go.sh
+RUN chmod +x ./build-go.sh  && ./build-go.sh
 
 FROM ubuntu:latest 
 
