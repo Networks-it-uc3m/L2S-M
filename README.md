@@ -9,11 +9,11 @@ L2S-M provides its intended functionalities using a programmable data-plane base
 
 The main K8s interface of pods remains intact (provided by a CNI plugin), retaining the compatibility with all the standard K8s elements (e.g., services, connectivity through the main interface, etc.). Moreover, the solution has the potential to be used for inter-cluster communications to support scenarios where network functions are spread through multiple distributed infrastructures (this is still a work in progress).  
 
-The figure outlines the design of L2S-M. See [how L2S-M works](https://github.com/Networks-it-uc3m/L2S-M/tree/main/additional-info) to read further details on the L2S-M solution.
+The figure outlines the design of L2S-M. See [how L2S-M works](./additional-info/) to read further details on the L2S-M solution.
 
-If you want to learn how to install L2S-M in your cluster, see the [installation guide](https://github.com/Networks-it-uc3m/L2S-M/tree/main/deployments) of this repository to start its installation.
+If you want to learn how to install L2S-M in your cluster, see the [installation guide](./deployments) of this repository to start its installation.
 
-Did you already install the operator and  you cannot wait to start building your own virtual networks in your K8s cluster? Check out our [ping-pong](https://github.com/Networks-it-uc3m/L2S-M/tree/main/examples/ping-pong) example!
+Did you already install the operator and  you cannot wait to start building your own virtual networks in your K8s cluster? Check out our [ping-pong](./examples/ping-pong) example!
 
 If you want more information about the original idea of L2S-M and its initial design, you can check our latest publication in the [IEEE Network journal](https://ieeexplore.ieee.org/document/9740640):
 
@@ -34,7 +34,7 @@ The solution can work jointly with L2S-M or be used standalone through the [Mult
 The solution enables the creation and deletion of virtual link-layer networks to connect application workloads running in different virtualization domains. This way, it supports inter-domain link-layer communications among remote workloads.
 
 ### Additional information about L2S-M
-In the [following section](https://github.com/Networks-it-uc3m/L2S-M/tree/main/additional-info) of the repository, you can find a series of documents and slides that provide additional information about L2S-M, including presentations where our solution has been showcased to the public in various events.
+In the [following section](./additional-info) of the repository, you can find a series of documents and slides that provide additional information about L2S-M, including presentations where our solution has been showcased to the public in various events.
 
 L2S-M has been presented in the following events:
 
@@ -45,11 +45,13 @@ L2S-M has been presented in the following events:
 ### How to reach us
 
 Do you have any doubts about L2S-M or its installation? Do you want to provide feedback about the solution? Please, do not hesitate to contact us out through e-mail!
-- Alex T. de Cock Buning: 100383348@alumnos.uc3m.es (Universidad Carlos III de Madrid)
+
 - Luis F. Gonzalez: luisfgon@it.uc3m.es (Universidad Carlos III de Madrid)
 - Ivan Vidal : ividal@it.uc3m.es (Universidad Carlos III de Madrid)
 - Francisco Valera: fvalera@it.uc3m.es (Universidad Carlos III de Madrid
 - Diego R. Lopez: diego.r.lopez@telefonica.com (Telefónica I+D)
+- Alex T. de Cock Buning: 100383348@alumnos.uc3m.es (Universidad Carlos III de Madrid)
+
 
 ### Acknowledment
 The work in this open-source project has partially been supported by the European H2020 FISHY Project (grant agreement 952644) and by the H2020 Labyrinth project (grant agreement 861696).
