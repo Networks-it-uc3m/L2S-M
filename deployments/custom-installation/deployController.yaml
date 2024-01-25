@@ -14,11 +14,13 @@ spec:
     spec:
       containers:
       - name: l2sm-controller
-        image: alexdecb/l2sm-controller:latest
-        # readinessProbe:
-        #   httpGet:
-        #     path: /onos/v1/l2sm/networks/status   
-        #     port: 8181   
+        image: alexdecb/l2sm-controller:2.2
+        readinessProbe:
+          httpGet:
+            path: /onos/ui
+            port: 8181   
+          initialDelaySeconds: 30
+          periodSeconds: 10
         ports:
         - containerPort: 6633
         - containerPort: 8181

@@ -1,6 +1,6 @@
 FROM onosproject/onos:2.7-latest
 
-COPY . ./
+COPY ./src/controller ./
 
 RUN apt-get update && \
     apt-get install wget && \

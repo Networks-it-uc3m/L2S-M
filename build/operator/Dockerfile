@@ -1,4 +1,10 @@
 FROM python:3.11.6
-RUN pip install kopf kubernetes PyMySQL cryptography requests
-COPY l2sm-operator.py /l2sm-operator.py
-CMD kopf run --standalone --all-namespaces /l2sm-operator.py
+
+WORKDIR /usr/src/app
+
+COPY ./src/operator/requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY ./src/operator/l2sm-operator.py .
+
+CMD kopf run --liveness=http://0.0.0.0:8080/healthz --standalone --all-namespaces ./l2sm-operator.py
