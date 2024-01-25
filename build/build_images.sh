@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 # Set environment variables
 export VERSION="2.2"
