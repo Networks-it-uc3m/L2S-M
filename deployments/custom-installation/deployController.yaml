@@ -19,6 +19,8 @@ spec:
           httpGet:
             path: /onos/ui
             port: 8181   
+          initialDelaySeconds: 30
+          periodSeconds: 10
         ports:
         - containerPort: 6633
         - containerPort: 8181

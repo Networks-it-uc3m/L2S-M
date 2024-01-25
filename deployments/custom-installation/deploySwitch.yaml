@@ -22,10 +22,21 @@ spec:
       - key: node-role.kubernetes.io/master
         operator: Exists
         effect: NoSchedule
+      initContainers:
+      - name: wait-for-l2sm-operator
+        image: curlimages/curl
+        args:
+        - /bin/sh
+        - -c
+        - >
+          set -x;
+          while [ $(curl -sw '%{http_code}' "http://l2sm-operator-service:8080/healthz" -o /dev/null) -ne 200 ]; do
+            sleep 15;
+          done;
+          sleep 5;
       containers:
       - name: l2sm-switch
         image: alexdecb/l2sm-switch:2.2
-        command: ["sleep","infinity"]
         #args: ["setup_switch.sh && sleep infinity"]
         env:
         - name: NODENAME
