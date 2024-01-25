@@ -5,7 +5,7 @@ metadata:
 spec:
   config: '{
       "cniVersion": "0.3.0",
-      "type": "dummy",
+      "type": "l2sm",
       "device": "l2sm-vNet"
     }'
 
