@@ -1,5 +1,4 @@
 kopf==1.37.0
 kubernetes==28.1.0
 PyMySQL==1.1.0
-cryptography==3.4.8
 requests==2.25.1
