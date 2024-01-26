@@ -1,11 +1,10 @@
 # Example: Isolating an NGINX server from a CDN with Custom L2SM networks
-
 ## Overview
 
-This example demonstrates the isolation of traffic between pods using custom networks with L2S-M In this scenario, two networks, v-network-1 and v-network-2, are created, and three pods (cdn-server, router, and content-server) are connected. The objective is to showcase how traffic can be isolated through a router (router) connecting the two networks.
+This example demonstrates the isolation of traffic between pods using custom networks with L2S-M. In this scenario, two networks, v-network-1 and v-network-2, are created, and three pods (cdn-server, router, and content-server) are connected. The objective is to showcase how traffic can be isolated through a router connecting the two networks.
 
 ## Topology
-The example video shows a Cluster scenario with three nodes, where a pod will be deployed in each Node, as shown in the following figure.
+This example can be seen in action [in the screencast provided](#procedure), where it's presented a Cluster scenario with three nodes, where a Pod will be deployed in each Node, as shown in the following figure:
 
 <p align="center">
   <img src="../../assets/video-server-example.svg" width="400">
@@ -42,7 +41,13 @@ Note: The configurations specified can be seen in each Pod YAML specification.
 
 ## Procedure
 
-Follow the steps below to demonstrate the isolation of traffic between pods using custom networks with L2S-M:
+Follow the steps below to demonstrate the isolation of traffic between pods using custom networks with L2S-M. You can watch a screencast of how this operates and how it should follow through this youtube video: 
+
+<p align="center">
+  <a href="https://www.youtube.com/watch?v=Oj2gzm-YxYE" target="_blank">
+    <img src="https://img.youtube.com/vi/Oj2gzm-YxYE/maxresdefault.jpg" width="400">
+  </a>
+</p>
 
 ### 1. Create Virtual Networks
 
@@ -57,7 +62,7 @@ kubectl create -f ./examples/cdn/v-network-2.yaml
 
 ### 2. Verify Network Creation
 
-   - This step is optional, but it will help you understand how L2S-M internally work, if you already know a bit about SDN and network overlays. 
+Note: This step is optional, but it will help you understand how L2S-M internally work, if you already know a bit about SDN and network overlays. 
    - Check the logs in the `l2sm-controller` and `l2sm-operator` to ensure that the virtual networks have been successfully created.
 
 ```bash
@@ -100,19 +105,18 @@ kubectl get pods
 ### 5. Inspect Content Server
 
    - Enter the `content-server` pod and check its IP configuration.
-   - Start the server to serve the video content.
-
+     
 ```bash
 kubectl exec -it content-server /bin/bash  
 ```
-In the Content-Server pod, execute the following commands:
-
 ```bash
 ip a s          # Show IP addresses
 ```
 ```bash
 ip r s          # Display routing table
 ```
+   - Start the server to serve the video content.
+
 ```bash
 nginx           # Start the server
 ```
