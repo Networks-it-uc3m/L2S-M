@@ -72,4 +72,4 @@ Defaulted container "l2sm-switch" out of: l2sm-switch, wait-for-l2sm-controller 
 Created vxlan between node l2sm1 and node l2sm2.
 ```
 
-You are all set! If you want to learn how to create virtual networks and use them in your applications, [check the following section of the repository](https://github.com/Networks-it-uc3m/L2S-M/tree/release-2.0/examples/)
+You are all set! If you want to learn how to create virtual networks and use them in your applications, [check the following section of the repository](../examples)
