@@ -46,11 +46,11 @@ L2S-M has been presented in the following events:
 
 Do you have any doubts about L2S-M or its installation? Do you want to provide feedback about the solution? Please, do not hesitate to contact us out through e-mail!
 
+- Alex T. de Cock Buning: 100383348@alumnos.uc3m.es (Universidad Carlos III de Madrid)
 - Luis F. Gonzalez: luisfgon@it.uc3m.es (Universidad Carlos III de Madrid)
 - Ivan Vidal : ividal@it.uc3m.es (Universidad Carlos III de Madrid)
-- Francisco Valera: fvalera@it.uc3m.es (Universidad Carlos III de Madrid
+- Francisco Valera: fvalera@it.uc3m.es (Universidad Carlos III de Madrid)
 - Diego R. Lopez: diego.r.lopez@telefonica.com (Telefónica I+D)
-- Alex T. de Cock Buning: 100383348@alumnos.uc3m.es (Universidad Carlos III de Madrid)
 
 
 ### Acknowledment
