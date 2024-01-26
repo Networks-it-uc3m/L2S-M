@@ -4,7 +4,7 @@ L2S-M takes a different approach to K8s networking in comparison with other solu
 
 The following figure outlines a high-level overview of L2S-M, with an illustrative example of a K8s cluster with L2S-M installed and running. L2S-M builds a programmable data plane using SDN switches over a K8s infrastructure. These switches can be either virtual (deployed by the L2S-M operator) or physical (such as those that can be found in a classic datacentre infrastructure). 
 
-![alt text](https://github.com/Networks-it-uc3m/L2S-M/blob/main/v1_architecture.png?raw=true)
+![alt text](../assets/v1_architecture.png?raw=true)
 
 **NOTE**: The current version of L2S-M utilizes an infrastructure of virtual switches based on [Open Virtual Switch (OVS)](http://www.openvswitch.org). The integration of physical switches is currently ongoing.
 
