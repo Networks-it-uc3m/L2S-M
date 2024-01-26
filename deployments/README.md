@@ -39,12 +39,12 @@ l2sm-operator-7794c5f66d-b9nsf     2/2     Running   0          119m   10.1.14.4
 l2sm-switch-49qpq                  1/1     Running   0          129m   10.1.14.63   l2sm1   <none>           <none>
 l2sm-switch-2g696                  1/1     Running   0          129m   10.1.72.73   l2sm2   <none>           <none>
 ```
-With the components: _l2sm-controller_, _l2sm-operator_ and one _l2sm-switch_ for **each** node in the cluster.
+With the components: _l2sm-controller_, _l2sm-operator_ and one _l2sm-switch_ for **each** node in the cluster. 
+
+After the installation, you can start using L2S-M in one Node. If your Cluster has more than one Node, additional steps must be done, to configure which Nodes are connected between themselves as can be seen in the next subsection, configuring the VxLAN tunnels.
 
 ## Configuring VxLANs
 
-Each Node enables the creation of custom L2S-M networks, as can be seen in the [examples section](../../examples/) section. But for communicating pods that are in different Nodes of the cluster, additional configuration must be done, the VxLAN tunnels between them.
+Each Node enables the creation of custom L2S-M networks, as can be seen in the [examples section.](../examples/) But for communicating pods that are in different Nodes of the cluster, additional configuration must be done, the VxLAN tunnels between them.
 
-You can proceed to configure Vxlans by following the steps outlined in [the vxlan configuration guide.](../deployment/vxlans.md)
-
-You are all set! If you want to learn how to create virtual networks and use them in your applications, [check the following section of the repository](https://github.com/Networks-it-uc3m/L2S-M/tree/release-2.0/examples/)
+But don't worry! A guide on how this is configured step by step is outlined in [the vxlan configuration guide.](../deployment/vxlans.md)
