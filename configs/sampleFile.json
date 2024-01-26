@@ -1,18 +1,12 @@
 [
     {
-        "name": "test-l2sm-uc3m-polito-1",
-        "nodeIP": "10.244.0.37",
-        "neighborNodes": ["test-l2sm-uc3m-polito-2","test-l2sm-uc3m-polito-3"]
+        "name": "<NODE_SWITCH_1>",
+        "nodeIP": "<IP_SWITCH_1>",
+        "neighborNodes": ["<NODE_SWITCH_2>"]
     },
     {
-        "name": "test-l2sm-uc3m-polito-2",
-        "nodeIP": "10.244.1.64",
-        "neighborNodes": ["test-l2sm-uc3m-polito-1","test-l2sm-uc3m-polito-3"]
-    },
-    {
-        "name": "test-l2sm-uc3m-polito-3",
-        "nodeIP": "10.244.2.33",
-        "neighborNodes": ["test-l2sm-uc3m-polito-1","test-l2sm-uc3m-polito-2"]
+        "name": "<NODE_SWITCH_2>",
+        "nodeIP": "<IP_SWITCH_2>",
+        "neighborNodes": ["<NODE_SWITCH_1>"]
     }
-
 ]
