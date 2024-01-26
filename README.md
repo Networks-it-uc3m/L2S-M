@@ -8,12 +8,12 @@ Welcome to the official repository of Secure Connectivity, a **NetMA** component
 
 L2S-M provides its intended functionalities using a programmable data-plane based on Software Defined Networking (SDN), which in turn provides a high degree of flexibility to dynamically incorporate new application and/or network configurations into K8s clusters. Moreover, L2S-M has been designed to flexibly accommodate various deployment options, ranging from small K8s clusters to those with a high number of distributed nodes. 
 
-![alt text](docs/images/v1_architecture.png)
+![alt text](./assets/v1_architecture.png)
 
 The main K8s interface of pods remains intact (provided by a CNI plugin such as Flannel), retaining the compatibility with all the standard K8s elements (_e.g._, services, connectivity through the main interface, etc.). Moreover, the solution has the potential to be used for inter-cluster communications to support scenarios where network functions are spread through multiple distributed infrastructures (this is still a work in progress).  
 
-The figure above outlines the design of L2S-M. See [how L2S-M works](https://github.com/Networks-it-uc3m/L2S-M/tree/main/K8s) to find further details on the L2S-M solution.
+The figure above outlines the design of L2S-M. See [how L2S-M works](./additional-info/how-l2sm-works.md) to find further details on the L2S-M solution.
 
-If you want to learn how to install L2S-M in your cluster, see the [installation guide](https://github.com/Networks-it-uc3m/L2S-M/tree/main/operator) of its repository to start with its installation.
+If you want to learn how to install L2S-M in your cluster, see the [installation guide](./deployments/) of its repository to start with its installation.
 
-Did you already install the operator and  you can not wait to start building your own virtual networks in your K8s cluster? Check out our [ping-pong](https://github.com/Networks-it-uc3m/L2S-M/tree/main/descriptors) example!
+Did you already install the operator and  you can not wait to start building your own virtual networks in your K8s cluster? Check out our [ping-pong](./examples/ping-pong/) example!
