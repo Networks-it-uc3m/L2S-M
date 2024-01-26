@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: l2sm-switch
+  #namespace: kube-system
+  labels:
+    l2sm-component: l2sm-switch
+spec:
+  selector:
+    matchLabels:
+      l2sm-component: l2sm-switch
+  template:
+    metadata:
+      labels:
+        l2sm-component: l2sm-switch
+      annotations:
+        k8s.v1.cni.cncf.io/networks: veth1, veth2, veth3, veth4, veth5, veth6, veth7, veth8, veth9, veth10
+    spec:
+      tolerations:
+      # this toleration is to have the daemonset runnable on master nodes
+      # remove it if your masters can't run pods
+      - key: node-role.kubernetes.io/master
+        operator: Exists
+        effect: NoSchedule
+      initContainers:
+      - name: wait-for-l2sm-operator
+        image: curlimages/curl
+        args:
+        - /bin/sh
+        - -c
+        - >
+          set -x;
+          while [ $(curl -sw '%{http_code}' "http://l2sm-operator-service:8080/healthz" -o /dev/null) -ne 200 ]; do
+            sleep 15;
+          done;
+          sleep 5;
+      containers:
+      - name: l2sm-switch
+        image: alexdecb/l2sm-switch:2.2
+        #args: ["setup_switch.sh && sleep infinity"]
+        env:
+        - name: NODENAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: NVETHS
+          value: "10"  
+        - name: CONTROLLERIP
+          value: "l2sm-controller-service"
+        securityContext:
+          capabilities:
+            add: ["NET_ADMIN"]
+      nodeSelector:
+        kubernetes.io/arch: amd64
+
