@@ -40,8 +40,8 @@ spec:
   "kind": {
     "vlink": {
       "overlay-parameters": {
-        "overlay-paths": [
-          {
+        "overlay-paths": {
+          "first-path": {
             "name": "<pathName1>",
             "FromEndpoint": "<endpointNodeA>",
             "ToEndpoint": "<endpointNodeB>",
@@ -51,7 +51,7 @@ spec:
               "latencyNanos": "<ns>"
             }
           },
-          {
+          "second-path": {
             "name": "<pathName2>",
             "fromEndpoint": "<endpointNodeB>",
             "toEndpoint": "<endpointNodeA>",
@@ -61,7 +61,7 @@ spec:
               "latencyNanos": "<ns>"
             }
           }
-        ]
+        }
       }
     }
   }
@@ -79,7 +79,8 @@ The config field is a JSON string with the following fields defined:
 - `kind`(dictionary, required): type of network. In this case, vlink, a point to point network between two pods.
 - `vlink`(dictionary, required): specification of the kind field, as a vlink, has parameters that will specify the path the network should use.
 - `overlay-parameters`(dictionary, required): parameters of this vlink network.
-- `overlay-paths`(list,required): List of paths configured in this vlink. It's expected to be a bidirectional path, so two paths should be provided.
+- `first-path`(dictionary,required): First path configured in this vlink. It's expected that at least this field is provided.
+- `second-path`(dictionary,optional): Second path configured in this vlink. If not specified, the vlink will be unidirectional.
 - `name`(string,required): Name of the path.
 - `FromEndpoint`(string,required): Source endpoint for the path.
 - `ToEndpoint`(string,required): Destination endpoint for the path.
@@ -122,28 +123,26 @@ spec:
   "kind": {
     "vlink": {
       "overlay-parameters": {
-        "overlay-paths": [
-          {
-            "name": "first-path",
-            "FromEndpoint": "node-a",
-            "ToEndpoint": "node-e",
-            "path": ["node-c", "node-d"],
-            "capabilities": {
-              "bandwidthBits": "20M",
-              "latencyNanos": "1e6"
-            }
-          },
-          {
-            "name": "second-path",
-            "fromEndpoint": "node-e",
-            "toEndpoint": "node-a",
-            "path": ["node-d","node-b"],
-            "capabilities": {
-              "bandwidthBits": "20M",
-              "latencyNanos": "8e5"
-            }
+        "first-path": {
+          "name": "first-path",
+          "FromEndpoint": "node-a",
+          "ToEndpoint": "node-e",
+          "path": ["node-c", "node-d"],
+          "capabilities": {
+            "bandwidthBits": "20M",
+            "latencyNanos": "1e6"
           }
-        ]
+        },
+        "second-path": {
+          "name": "second-path",
+          "fromEndpoint": "node-e",
+          "toEndpoint": "node-a",
+          "path": ["node-d","node-b"],
+          "capabilities": {
+            "bandwidthBits": "20M",
+            "latencyNanos": "8e5"
+          }
+        }
       }
     }
   }
