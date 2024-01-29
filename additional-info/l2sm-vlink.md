@@ -41,25 +41,11 @@ spec:
     "vlink": {
       "overlay-parameters": {
         "overlay-paths": {
-          "path": {
+          "direct-path": {
             "name": "<pathName1>",
             "FromEndpoint": "<endpointNodeA>",
             "ToEndpoint": "<endpointNodeB>",
-            "links": [
-              {
-                "source": "<endpointNodeA>",
-                "target":"<pathNodeA1>"
-              },
-              {
-                "source": "<pathNodeA1>",
-                "target":"<pathNodeA2>"
-              },
-              {"..."},
-              {
-                "source": "<pathNodeAN>",
-                "target":"<endpointNodeB>"
-              }
-            ],
+            "links": ["linkA1","linkA2",...,"linkAN"],
             "capabilities": {
               "bandwidthBits": "<bps>",
               "latencyNanos": "<ns>"
@@ -69,25 +55,7 @@ spec:
             "name": "<pathName2>",
             "fromEndpoint": "<endpointNodeB>",
             "toEndpoint": "<endpointNodeA>",
-            "links": [
-              {
-                "source": "<endpointNodeB>",
-                "target":"<pathNodeB1>"
-              },
-              {
-                "source": "<pathNodeB1>",
-                "target":"<pathNodeB2>"
-              },
-              {"..."},
-              {
-                "source": "<pathNodeBN>",
-                "target":"<endpointNodeA>"
-              }
-            ],
-            "capabilities": {
-              "bandwidthBits": "<bps>",
-              "latencyNanos": "<ns>"
-            }
+            "links": ["linkB1","linkB2",...,"linkBN"]
           }
         }
       }
@@ -112,8 +80,8 @@ The config field is a JSON string with the following fields defined:
 - `name`(string,required): Name of the path.
 - `FromEndpoint`(string,required): Source endpoint for the path.
 - `ToEndpoint`(string,required): Destination endpoint for the path.
-- `links`(list,required): List of links contained in the specified path. Should contain the source and the target in each link, representing the present VxLAN tunnels connecting each Node.
-- `capabilities` (dictionary,optional): overlay path performance metric capabilities, there are two, the bandwidth in bits per second and the latency in nanoseconds.
+- `links`(list,required): List of links contained in the specified path. Should contain the name of each link from one endpoint to the other.
+- `capabilities` (dictionary,optional): overlay path performance metric capabilities, there are two, the bandwidth in bits per second and the latency in nanoseconds. If not defined, the path will be set to "best-effort" by default.
 
 In the context of the CODECO project, a vlink would be mapped to a pair of channels (channel resource type in the SWM project):
 
@@ -155,43 +123,13 @@ spec:
           "name": "first-path",
           "FromEndpoint": "node-a",
           "ToEndpoint": "node-e",
-          "links": [
-              {
-                "source": "node-a",
-                "target":"node-c"
-              },
-              {
-                "source": "node-c",
-                "target":"node-d"
-              },
-              {
-                "source": "node-d",
-                "target":"node-e"
-              }
-            ],
-          "capabilities": {
-            "bandwidthBits": "20M",
-            "latencyNanos": "1e6"
-          }
+          "links": ["link-ac","link-cd","link-de"]
         },
         "reverse-path": {
           "name": "second-path",
           "fromEndpoint": "node-e",
           "toEndpoint": "node-a",
-          "links": [
-              {
-                "source": "node-e",
-                "target": "node-d"
-              },
-              {
-                "source": "node-d",
-                "target": "node-b"
-              },
-              {
-                "source": "node-b",
-                "target":"node-a"
-              }
-            ],
+          "links": ["link-ed","link-db","link-ba"],
           "capabilities": {
             "bandwidthBits": "20M",
             "latencyNanos": "8e5"
@@ -227,62 +165,74 @@ spec:
     - name: node-e
       type: COMPUTE
   links:
-    - source: node-a
+    - name: link-ab
+      source: node-a
       target: node-b
       capabilities:
         bandWidthBits: "1G"
         latencyNanos: "2e6"
-    - source: node-a
+    - name: link-ac
+      source: node-a
       target: node-c
       capabilities:
         bandWidthBits: "500M"
         latencyNanos: "3e6"
-    - source: node-b
+    - name: link-ba
+      source: node-b
       target: node-a
       capabilities:
         bandWidthBits: "1G"
         latencyNanos: "2e6"
-    - source: node-b
+    - name: link-bc
+      source: node-b
       target: node-c
       capabilities:
         bandWidthBits: "2G"
         latencyNanos: "1e6"
-    - source: node-b
+    - name: link-bd
+      source: node-b
       target: node-d
       capabilities:
         bandWidthBits: "1.5G"
         latencyNanos: "2.5e6"
-    - source: node-c
+    - name: link-ca
+      source: node-c
       target: node-a
       capabilities:
         bandWidthBits: "500M"
         latencyNanos: "3e6"
-    - source: node-c
+    - name: link-cb
+      source: node-c
       target: node-b
       capabilities:
         bandWidthBits: "2G"
         latencyNanos: "1e6"
-    - source: node-c
+    - name: link-cd
+      source: node-c
       target: node-d
       capabilities:
         bandWidthBits: "1G"
         latencyNanos: "2e6"
-    - source: node-d
+    - name: link-db
+      source: node-d
       target: node-b
       capabilities:
         bandWidthBits: "1G"
         latencyNanos: "2e6"
-    - source: node-d
+    - name: link-dc
+      source: node-d
       target: node-c
       capabilities:
         bandWidthBits: "1G"
         latencyNanos: "2e6"
-    - source: node-d
+    - name: link-de
+      source: node-d
       target: node-e
       capabilities:
         bandWidthBits: "2G"
         latencyNanos: "2.5e6"
-    - source: node-e
+    - name: link-ed
+      source: node-e
       target: node-d
       capabilities:
         bandWidthBits: "2G"
