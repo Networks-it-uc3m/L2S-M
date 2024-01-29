@@ -41,21 +41,49 @@ spec:
     "vlink": {
       "overlay-parameters": {
         "overlay-paths": {
-          "first-path": {
+          "path": {
             "name": "<pathName1>",
             "FromEndpoint": "<endpointNodeA>",
             "ToEndpoint": "<endpointNodeB>",
-            "path": ["<pathNodeA1>", "<pathNodeA2>", "...", "<pathNodeAN>"],
+            "links": [
+              {
+                "source": "<endpointNodeA>",
+                "target":"<pathNodeA1>"
+              },
+              {
+                "source": "<pathNodeA1>",
+                "target":"<pathNodeA2>"
+              },
+              {"..."},
+              {
+                "source": "<pathNodeAN>",
+                "target":"<endpointNodeB>"
+              }
+            ],
             "capabilities": {
               "bandwidthBits": "<bps>",
               "latencyNanos": "<ns>"
             }
           },
-          "second-path": {
+          "reverse-path": {
             "name": "<pathName2>",
             "fromEndpoint": "<endpointNodeB>",
             "toEndpoint": "<endpointNodeA>",
-            "path": ["<pathNodeB1>", "<pathNodeB2>","...", "<pathNodeBN>"],
+            "links": [
+              {
+                "source": "<endpointNodeB>",
+                "target":"<pathNodeB1>"
+              },
+              {
+                "source": "<pathNodeB1>",
+                "target":"<pathNodeB2>"
+              },
+              {"..."},
+              {
+                "source": "<pathNodeBN>",
+                "target":"<endpointNodeA>"
+              }
+            ],
             "capabilities": {
               "bandwidthBits": "<bps>",
               "latencyNanos": "<ns>"
@@ -79,13 +107,13 @@ The config field is a JSON string with the following fields defined:
 - `kind`(dictionary, required): type of network. In this case, vlink, a point to point network between two pods.
 - `vlink`(dictionary, required): specification of the kind field, as a vlink, has parameters that will specify the path the network should use.
 - `overlay-parameters`(dictionary, required): parameters of this vlink network.
-- `first-path`(dictionary,required): First path configured in this vlink. It's expected that at least this field is provided.
-- `second-path`(dictionary,optional): Second path configured in this vlink. If not specified, the vlink will be unidirectional.
+- `path`(dictionary,required): First path configured in this vlink. It's expected that at least this field is provided. H
+- `reverse-path`(dictionary,optional): Second path configured in this vlink. If not specified, the vlink will be unidirectional.
 - `name`(string,required): Name of the path.
 - `FromEndpoint`(string,required): Source endpoint for the path.
 - `ToEndpoint`(string,required): Destination endpoint for the path.
-- `path`(list,required): List of nodes representing the path.
-- `capabilities` (dictionary,required): overlay path performance metric capabilities, there are two, the bandwidth in bits per second and the latency in nanoseconds.
+- `links`(list,required): List of links contained in the specified path. Should contain the source and the target in each link, representing the present VxLAN tunnels connecting each Node.
+- `capabilities` (dictionary,optional): overlay path performance metric capabilities, there are two, the bandwidth in bits per second and the latency in nanoseconds.
 
 In the context of the CODECO project, a vlink would be mapped to a pair of channels (channel resource type in the SWM project):
 
@@ -123,21 +151,47 @@ spec:
   "kind": {
     "vlink": {
       "overlay-parameters": {
-        "first-path": {
+        "path": {
           "name": "first-path",
           "FromEndpoint": "node-a",
           "ToEndpoint": "node-e",
-          "path": ["node-c", "node-d"],
+          "links": [
+              {
+                "source": "node-a",
+                "target":"node-c"
+              },
+              {
+                "source": "node-c",
+                "target":"node-d"
+              },
+              {
+                "source": "node-d",
+                "target":"node-e"
+              }
+            ],
           "capabilities": {
             "bandwidthBits": "20M",
             "latencyNanos": "1e6"
           }
         },
-        "second-path": {
+        "reverse-path": {
           "name": "second-path",
           "fromEndpoint": "node-e",
           "toEndpoint": "node-a",
-          "path": ["node-d","node-b"],
+          "links": [
+              {
+                "source": "node-e",
+                "target": "node-d"
+              },
+              {
+                "source": "node-d",
+                "target": "node-b"
+              },
+              {
+                "source": "node-b",
+                "target":"node-a"
+              }
+            ],
           "capabilities": {
             "bandwidthBits": "20M",
             "latencyNanos": "8e5"
@@ -163,15 +217,15 @@ spec:
   physicalBase: logical-network
   nodes:
     - name: node-a
-      type: NETWORK
+      type: COMPUTE
     - name: node-b
-      type: NETWORK
+      type: COMPUTE
     - name: node-c
-      type: NETWORK
+      type: COMPUTE
     - name: node-d
-      type: NETWORK
+      type: COMPUTE
     - name: node-e
-      type: NETWORK
+      type: COMPUTE
   links:
     - source: node-a
       target: node-b
@@ -210,6 +264,11 @@ spec:
         latencyNanos: "1e6"
     - source: node-c
       target: node-d
+      capabilities:
+        bandWidthBits: "1G"
+        latencyNanos: "2e6"
+    - source: node-d
+      target: node-b
       capabilities:
         bandWidthBits: "1G"
         latencyNanos: "2e6"
