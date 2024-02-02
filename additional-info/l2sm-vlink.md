@@ -304,7 +304,7 @@ spec:
     nodeName: node-a
 ```
 
-- **Pod Configuration**: Pod 'ping' is defined with the `vlink-sample` annotation and an "ips" argument specifying its IP address.
+- **Pod Configuration**: Pod 'ping' is defined with the `vlink-sample` annotation and an "ips" argument specifying its IP address. It's deployed on node-a.
 - **Connection to L2SM-Switch**: Pod 'ping' is attached via Multus to an L2S.M component known as the l2sm-switch, controlled by the L2S-M controller. This grants 'ping' two network interfaces: the default (provided by Flannel or Calico) and the new vlink interface.
 
 
@@ -333,6 +333,6 @@ spec:
     nodeName: node-e
 ```
 
-- **Node Placement**: Pod 'pong' is created on NodeE with the `vlink-sample` network annotation but uses a different IP address than pod 'ping'.
+- **Pod Configuration**:  Pod 'pong' is created on node-e with the `vlink-sample` network annotation but uses a different IP address than pod 'ping'.
 - **Network Connectivity**: The L2SM controller then establishes the necessary intents and flows, ensuring traffic between 'ping' and 'pong' traverses the predefined nodes. This setup guarantees direct, isolated connectivity between the two pods.
 
