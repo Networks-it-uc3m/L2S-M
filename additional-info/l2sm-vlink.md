@@ -40,32 +40,21 @@ spec:
   "kind": {
     "vlink": {
       "overlay-parameters": {
-        "overlay-paths": [
-          {
-            "name": "<pathName1>",
-            "FromEndpoint": "<endpointNodeA>",
-            "ToEndpoint": "<endpointNodeB>",
-            "path": ["<pathNodeA1>", "<pathNodeA2>", "...", "<pathNodeAN>"],
-            "capabilities": {
-              "bandwidthBits": "<bps>",
-              "latencyNanos": "<ns>"
-            }
-          },
-          {
-            "name": "<pathName2>",
-            "fromEndpoint": "<endpointNodeB>",
-            "toEndpoint": "<endpointNodeA>",
-            "path": ["<pathNodeB1>", "<pathNodeB2>","...", "<pathNodeBN>"],
-            "capabilities": {
-              "bandwidthBits": "<bps>",
-              "latencyNanos": "<ns>"
-            }
+        "overlay-path": {
+          "name": "<pathName1>",
+          "FromEndpoint": "<endpointNodeA>",
+          "ToEndpoint": "<endpointNodeB>",
+          "links": ["linkA1","linkA2",...,"linkAN"],
+          "forward-path-capabilities": {
+            "bandwidthBits": "<bps>",
+            "latencyNanos": "<ns>"
           }
-        ]
+        }
       }
     }
   }
 }'
+
 ```
 
 
@@ -79,12 +68,12 @@ The config field is a JSON string with the following fields defined:
 - `kind`(dictionary, required): type of network. In this case, vlink, a point to point network between two pods.
 - `vlink`(dictionary, required): specification of the kind field, as a vlink, has parameters that will specify the path the network should use.
 - `overlay-parameters`(dictionary, required): parameters of this vlink network.
-- `overlay-paths`(list,required): List of paths configured in this vlink. It's expected to be a bidirectional path, so two paths should be provided.
+- `overlay-path`(dictionary,required): path configured for this vlink
 - `name`(string,required): Name of the path.
 - `FromEndpoint`(string,required): Source endpoint for the path.
 - `ToEndpoint`(string,required): Destination endpoint for the path.
-- `path`(list,required): List of nodes representing the path.
-- `capabilities` (dictionary,required): overlay path performance metric capabilities, there are two, the bandwidth in bits per second and the latency in nanoseconds.
+- `links`(list,required): List of links contained in the specified path. Should contain the name of each link from one endpoint to the other.
+- `forward-path-capabilities` (dictionary,required): overlay path performance metric capabilities, there are two, the bandwidth in bits per second and the latency in nanoseconds.
 
 In the context of the CODECO project, a vlink would be mapped to a pair of channels (channel resource type in the SWM project):
 
@@ -94,65 +83,14 @@ In the context of the CODECO project, a vlink would be mapped to a pair of chann
 
 The identifiers for the endpoints and network nodes that are needed to create a vlink will be provided to the SWM using the NetworkTopology CRD.
 
-## Example
+## Ping-pong Example
 
-To further understand the creation of a vlink network, the following example of a K8s cluster is presented:
+To further understand the creation of a vlink network, the following example is presented. A topology of five nodes is presented, connected through IP Tunnels with L2S-M. Two pods are deployeed, in different Computing Nodes, one is 'ping' and the other 'pong'. In this example, these pods will be connected using a vlink.
 
-<p align="center">
-  <img src="l2sm-f.svg" width="400">
-</p>
-
-
-This figure shows a cluster with 5 nodes, node-a, node-b, node-c, node-d and node-e, that are connected as shown in the image. The L2S-M switches apply rules that are instructed by the L2S-M Controller, following the SDN approach. In this example, there is a pod in node-a and another one in node-e that are going to be connected using an L2S-M network, of type vlink.
-
-### Vlink sample path
-
-In this example, a vlink network definition between the pods in node-a and node-e would be as follows:
-
-```yaml
-apiVersion: "k8s.cni.cncf.io/v1"
-kind: NetworkAttachmentDefinition
-metadata:
-  name: network-sample
-spec:
-  config: '{
-  "cniVersion": "0.3.0",
-  "type": "l2sm",
-  "device": "l2sm-vNet",
-  "kind": {
-    "vlink": {
-      "overlay-parameters": {
-        "overlay-paths": [
-          {
-            "name": "first-path",
-            "FromEndpoint": "node-a",
-            "ToEndpoint": "node-e",
-            "path": ["node-c", "node-d"],
-            "capabilities": {
-              "bandwidthBits": "20M",
-              "latencyNanos": "1e6"
-            }
-          },
-          {
-            "name": "second-path",
-            "fromEndpoint": "node-e",
-            "toEndpoint": "node-a",
-            "path": ["node-d","node-b"],
-            "capabilities": {
-              "bandwidthBits": "20M",
-              "latencyNanos": "8e5"
-            }
-          }
-        ]
-      }
-    }
-  }
-}'
-```
 
 ### Network Topology
 
-Additionally, we present using this example, how this topology could be defined using the NetworkTopology CRD, using the link performance metrics of L2S-M. 
+The topology that's going to be used could be defined using the NetworkTopology CRD, using the link performance metrics of L2S-M. 
 
 ```yaml
 apiVersion: qos-scheduler.siemens.com/v1alpha1
@@ -164,72 +102,212 @@ spec:
   physicalBase: logical-network
   nodes:
     - name: node-a
-      type: NETWORK
+      type: COMPUTE
     - name: node-b
-      type: NETWORK
+      type: COMPUTE
     - name: node-c
-      type: NETWORK
+      type: COMPUTE
     - name: node-d
-      type: NETWORK
+      type: COMPUTE
     - name: node-e
-      type: NETWORK
+      type: COMPUTE
   links:
-    - source: node-a
+    - name: link-ab
+      source: node-a
       target: node-b
       capabilities:
         bandWidthBits: "1G"
         latencyNanos: "2e6"
-    - source: node-a
+    - name: link-ac
+      source: node-a
       target: node-c
       capabilities:
         bandWidthBits: "500M"
         latencyNanos: "3e6"
-    - source: node-b
+    - name: link-ba
+      source: node-b
       target: node-a
       capabilities:
         bandWidthBits: "1G"
         latencyNanos: "2e6"
-    - source: node-b
+    - name: link-bc
+      source: node-b
       target: node-c
       capabilities:
         bandWidthBits: "2G"
         latencyNanos: "1e6"
-    - source: node-b
+    - name: link-bd
+      source: node-b
       target: node-d
       capabilities:
         bandWidthBits: "1.5G"
         latencyNanos: "2.5e6"
-    - source: node-c
+    - name: link-ca
+      source: node-c
       target: node-a
       capabilities:
         bandWidthBits: "500M"
         latencyNanos: "3e6"
-    - source: node-c
+    - name: link-cb
+      source: node-c
       target: node-b
       capabilities:
         bandWidthBits: "2G"
         latencyNanos: "1e6"
-    - source: node-c
+    - name: link-cd
+      source: node-c
       target: node-d
       capabilities:
         bandWidthBits: "1G"
         latencyNanos: "2e6"
-    - source: node-d
+    - name: link-db
+      source: node-d
+      target: node-b
+      capabilities:
+        bandWidthBits: "1G"
+        latencyNanos: "2e6"
+    - name: link-dc
+      source: node-d
       target: node-c
       capabilities:
         bandWidthBits: "1G"
         latencyNanos: "2e6"
-    - source: node-d
+    - name: link-de
+      source: node-d
       target: node-e
       capabilities:
         bandWidthBits: "2G"
         latencyNanos: "2.5e6"
-    - source: node-e
+    - name: link-ed
+      source: node-e
       target: node-d
       capabilities:
         bandWidthBits: "2G"
         latencyNanos: "2.5e6"
 ```
 
+This topology represents the following scenario:
 
+<p align="center">
+  <img src="l2sm-f.svg" width="400">
+</p>
+
+
+In this figure it's presented a cluster with 5 nodes, node-a, node-b, node-c, node-d and node-e, that are connected as shown in the image. The L2S-M switches apply rules that are instructed by the L2S-M Controller, following the SDN approach. 
+
+In this example, there is a pod in node-a, 'ping' and another one in node-e, 'pong' that are going to be connected using an L2S-M network, of type vlink.
+
+The L2S-M Components in the L2S-M installation are as follows:
+
+- **L2S-M Operator**: A Kubernetes operator that listens for Kubernetes events and manages network configurations programmatically. It interacts with the L2S-M Controller and uses a database to store network configurations and state.
+- **L2S-M Controller**: An SDN controller based on ONOS, leveraging OpenFlow 1.3 to communicate with L2S-M Switches and manage network flows.
+- **L2S-M Switch**: Pods that facilitate traffic flows as per the L2S-M Controller's instructions, ensuring isolated and direct connectivity between specific pods.
+
+### Step by step vlink usage
+
+The steps involving the creation of a vlink and connecting two pods through it goes as follows:
+
+<p align="center">
+  <img src="vlink-diagram.svg">
+</p>
+
+#### Creating a Vlink
+
+The first step involves creating a `vlink` network, named "network-sample", using the NetworkAttachmentDefinition CRD from Multus. This network facilitates direct, isolated communication between pods across different nodes, through custom paths. 
+
+The defined path is selected as an example, but in a real case scenario it may be another one.
+
+
+```yaml
+apiVersion: "k8s.cni.cncf.io/v1"
+kind: NetworkAttachmentDefinition
+metadata:
+  name: vlink-sample
+spec:
+  config: '{
+  "cniVersion": "0.3.0",
+  "type": "l2sm",
+  "device": "l2sm-vNet",
+  "kind": {
+    "vlink": {
+      "overlay-parameters": {
+          "overlay-path":{
+            "name": "first-path",
+            "FromEndpoint": "node-a",
+            "ToEndpoint": "node-e",
+            "links": ["link-ac","link-cd","link-de"]
+        }
+      }
+    }
+  }
+}'
+
+```
+
+
+
+The creation of a vlink network begins with deploying the 'network-sample' YAML configuration, which outlines the specifications for the desired network. Following this deployment, the L2SM operator is activated, recognizing the new network configuration and subsequently initiating contact with the L2SM controller. This step involves the operator saving the network path information for future reference. 
+
+The L2SM controller, upon being informed of the new network, holds off on initiating any traffic flow immediately, opting instead to wait until pods are connected to the network, ensuring a streamlined process for establishing network connectivity.
+
+#### Deploying Pods with Network Annotations
+
+Deployment involves creating pods with specific annotations to connect them to the `network-sample` network. This section explains how PodA and PodB are deployed and managed within the network.
+
+##### Deploying pod 'ping'
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: ping
+  labels:
+    app: ping-pong
+  annotations:
+    k8s.v1.cni.cncf.io/networks:  '[
+            { "name": "network-sample",
+              "ips": ["192.168.1.2/24"]
+            }]'
+spec:
+  containers:
+  - name: router
+    command: ["/bin/ash", "-c", "trap : TERM INT; sleep infinity & wait"]
+    image: alpine:latest
+    securityContext:
+      capabilities:
+        add: ["NET_ADMIN"]
+    nodeName: NodeA
+```
+
+- **Pod Configuration**: Pod 'ping' is defined with the `network-sample` annotation and an "ips" argument specifying its IP address. If no IP address is specified, the connection defaults to layer 2.
+- **Connection to L2SM-Switch**: Pod 'ping' is attached via Multus to an L2S.M component known as the l2sm-switch, controlled by the L2S-M controller. This grants 'ping' two network interfaces: the default (provided by Flannel or Calico) and the new vlink interface.
+
+
+##### Deploying PodB
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pong
+  labels:
+    app: ping-pong
+  annotations:
+    k8s.v1.cni.cncf.io/networks:  '[
+            { "name": "network-sample",
+              "ips": ["192.168.1.3/24"]
+            }]'
+spec:
+  containers:
+  - name: router
+    command: ["/bin/ash", "-c", "trap : TERM INT; sleep infinity & wait"]
+    image: alpine:latest
+    securityContext:
+      capabilities:
+        add: ["NET_ADMIN"]
+    nodeName: NodeE
+```
+
+- **Node Placement**: Pod 'pong' is created on NodeE with the `network-sample` network annotation but uses a different IP address than pod 'ping'.
+- **Network Connectivity**: The L2SM controller then establishes the necessary intents and flows, ensuring traffic between 'ping' and 'pong' traverses the predefined nodes. This setup guarantees direct, isolated connectivity between the two pods.
 
