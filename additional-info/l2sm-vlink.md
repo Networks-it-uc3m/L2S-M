@@ -10,9 +10,10 @@ Additionally, an example network topology of a five nodes Cluster with L2S-M ins
   - [Overview](#overview)
   - [Sample File](#sample-file)
   - [Fields](#fields)
-- [Example](#example)
-  - [Vlink Sample Path](#vlink-sample-path)
+- [Example](#ping-pong-example)
   - [Network Topology](#network-topology)
+  - [Step by step vlink instructions](#Step-by-step-vlink-instructions)
+  
 
 ## Vlink L2S-M Configuration
 
@@ -21,7 +22,7 @@ L2S-M networks are implemented using the multus CRD, NetworkAttachmentDefinition
 
 The sample file below shows how the Vlink network is defined, in the context of the CODECO project.
 
-The fields represent how this network is going to be implemented. The cni type is l2sm, so the operator knows which Net-Attacht-Definition corresponds to L2S-M and should be handled. This specific L2S-M network is type 'vlink'. This means it's a point-to-point virtual link between two pods in the Cluster, where it's specified which Nodes should the communication pass through. This is further explained in the 'fields' subsection.
+The fields represent how this network is going to be implemented. The cni type is l2sm, so the operator knows which Network-Attachment-Definition corresponds to L2S-M and should be handled. This specific L2S-M network is type 'vlink'. This means it's a point-to-point virtual link between two pods in the Cluster, where it's specified which Nodes should the communication pass through. This is further explained in the 'fields' subsection.
 
 ### Sample file
 
@@ -76,7 +77,7 @@ The config field is a JSON string with the following fields defined:
 - `kind`(dictionary, required): type of network. In this case, vlink, a point to point network between two pods.
 - `vlink`(dictionary, required): specification of the kind field, as a vlink, has parameters that will specify the path the network should use.
 - `overlay-parameters`(dictionary, required): parameters of this vlink network.
-- `overlay-path`(dictionary,required): path configured for this vlink
+- `overlay-paths`(dictionary,required): path configured for this vlink
 - `direct-path`(dictionary,required): First path configured in this vlink. It's expected that at least this field is provided. 
 - `reverse-path`(dictionary,optional): Second path configured in this vlink. If not specified, the vlink will be unidirectional.
 - `name`(string,required): Name of the path.
@@ -216,7 +217,7 @@ The L2S-M Components in the L2S-M installation are as follows:
 - **L2S-M Controller**: An SDN controller based on ONOS, leveraging OpenFlow 1.3 to communicate with L2S-M Switches and manage network flows.
 - **L2S-M Switch**: Pods that facilitate traffic flows as per the L2S-M Controller's instructions, ensuring isolated and direct connectivity between specific pods. There's a switch per computing Node, and they're connected through IP tunnels.
 
-### Step by step vlink usage
+### Step by step vlink instructions
 
 The steps involving the creation of a vlink and connecting two pods through it goes as follows:
 
