@@ -40,14 +40,22 @@ spec:
   "kind": {
     "vlink": {
       "overlay-parameters": {
-        "overlay-path": {
-          "name": "<pathName1>",
-          "FromEndpoint": "<endpointNodeA>",
-          "ToEndpoint": "<endpointNodeB>",
-          "links": ["linkA1","linkA2",...,"linkAN"],
-          "forward-path-capabilities": {
-            "bandwidthBits": "<bps>",
-            "latencyNanos": "<ns>"
+        "overlay-paths": {
+          "direct-path": {
+            "name": "<pathName1>",
+            "FromEndpoint": "<endpointNodeA>",
+            "ToEndpoint": "<endpointNodeB>",
+            "links": ["linkA1","linkA2",...,"linkAN"],
+            "capabilities": {
+              "bandwidthBits": "<bps>",
+              "latencyNanos": "<ns>"
+            }
+          },
+          "reverse-path": {
+            "name": "<pathName2>",
+            "fromEndpoint": "<endpointNodeB>",
+            "toEndpoint": "<endpointNodeA>",
+            "links": ["linkB1","linkB2",...,"linkBN"]
           }
         }
       }
@@ -69,17 +77,22 @@ The config field is a JSON string with the following fields defined:
 - `vlink`(dictionary, required): specification of the kind field, as a vlink, has parameters that will specify the path the network should use.
 - `overlay-parameters`(dictionary, required): parameters of this vlink network.
 - `overlay-path`(dictionary,required): path configured for this vlink
+- `direct-path`(dictionary,required): First path configured in this vlink. It's expected that at least this field is provided. 
+- `reverse-path`(dictionary,optional): Second path configured in this vlink. If not specified, the vlink will be unidirectional.
 - `name`(string,required): Name of the path.
 - `FromEndpoint`(string,required): Source endpoint for the path.
 - `ToEndpoint`(string,required): Destination endpoint for the path.
 - `links`(list,required): List of links contained in the specified path. Should contain the name of each link from one endpoint to the other.
-- `forward-path-capabilities` (dictionary,required): overlay path performance metric capabilities, there are two, the bandwidth in bits per second and the latency in nanoseconds.
+- `capabilities` (dictionary,optional): overlay path performance metric capabilities, there are two, the bandwidth in bits per second and the latency in nanoseconds. If not defined, the path will be set to "best-effort" by default.
 
 In the context of the CODECO project, a vlink would be mapped to a pair of channels (channel resource type in the SWM project):
 
-- FromEnpoint (L2S-M vlink) --> channelFrom (SWM channel).
-- ToEnpoint (L2S-M vlink) --> channelTo (SWM channel).
-- path (L2S-M vlink) --> networkPath (SWM channel). 
+| Project NetMA Concept | Project SWM Concept   |
+|-----------------------|-----------------------|
+| vlink                 | One or two channels   |
+| links (IP tunnels)    | NetworkLinks          |
+
+
 
 The identifiers for the endpoints and network nodes that are needed to create a vlink will be provided to the SWM using the NetworkTopology CRD.
 
@@ -201,7 +214,7 @@ The L2S-M Components in the L2S-M installation are as follows:
 
 - **L2S-M Operator**: A Kubernetes operator that listens for Kubernetes events and manages network configurations programmatically. It interacts with the L2S-M Controller and uses a database to store network configurations and state.
 - **L2S-M Controller**: An SDN controller based on ONOS, leveraging OpenFlow 1.3 to communicate with L2S-M Switches and manage network flows.
-- **L2S-M Switch**: Pods that facilitate traffic flows as per the L2S-M Controller's instructions, ensuring isolated and direct connectivity between specific pods.
+- **L2S-M Switch**: Pods that facilitate traffic flows as per the L2S-M Controller's instructions, ensuring isolated and direct connectivity between specific pods. There's a switch per computing Node, and they're connected through IP tunnels.
 
 ### Step by step vlink usage
 
@@ -211,7 +224,7 @@ The steps involving the creation of a vlink and connecting two pods through it g
   <img src="vlink-diagram.svg" width="500">
 </p>
 
-#### Creating a Vlink
+#### 1. Creating a Vlink
 
 The first step involves creating a `vlink` network, named "vlink-sample", using the NetworkAttachmentDefinition CRD from Multus. This network facilitates direct, isolated communication between pods across different nodes, through custom paths. 
 
@@ -231,16 +244,27 @@ spec:
   "kind": {
     "vlink": {
       "overlay-parameters": {
-          "overlay-path":{
-            "name": "first-path",
-            "FromEndpoint": "node-a",
-            "ToEndpoint": "node-e",
-            "links": ["link-ac","link-cd","link-de"]
+        "path": {
+          "name": "first-path",
+          "FromEndpoint": "node-a",
+          "ToEndpoint": "node-e",
+          "links": ["link-ac","link-cd","link-de"],
+          "capabilities": {
+            "bandwidthBits": "20M",
+            "latencyNanos": "8e5"
+          }
+        },
+        "reverse-path": {
+          "name": "second-path",
+          "fromEndpoint": "node-e",
+          "toEndpoint": "node-a",
+          "links": ["link-ed","link-db","link-ba"]
         }
       }
     }
   }
 }'
+
 
 ```
 
@@ -250,11 +274,11 @@ The creation of a vlink network begins with deploying the 'vlink-sample' YAML co
 
 The L2SM controller, upon being informed of the new network, holds off on initiating any traffic flow immediately, opting instead to wait until pods are connected to the network, ensuring a streamlined process for establishing network connectivity.
 
-#### Deploying Pods with Network Annotations
+#### 2. Deploying Pods with Network Annotations
 
 Deployment involves creating pods with specific annotations to connect them to the `vlink-sample` network. This section explains how pod 'ping' in node-a and pod 'pong' in node-e are deployed and managed within the network.
 
-##### Deploying pod 'ping'
+##### A. Deploying pod 'ping'
 
 ```yaml
 apiVersion: v1
@@ -279,11 +303,11 @@ spec:
     nodeName: node-a
 ```
 
-- **Pod Configuration**: Pod 'ping' is defined with the `vlink-sample` annotation and an "ips" argument specifying its IP address. If no IP address is specified, the connection defaults to layer 2.
+- **Pod Configuration**: Pod 'ping' is defined with the `vlink-sample` annotation and an "ips" argument specifying its IP address.
 - **Connection to L2SM-Switch**: Pod 'ping' is attached via Multus to an L2S.M component known as the l2sm-switch, controlled by the L2S-M controller. This grants 'ping' two network interfaces: the default (provided by Flannel or Calico) and the new vlink interface.
 
 
-##### Deploying pod 'pong'
+##### B. Deploying pod 'pong'
 
 ```yaml
 apiVersion: v1
