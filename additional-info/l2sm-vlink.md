@@ -207,8 +207,8 @@ The L2S-M Components in the L2S-M installation are as follows:
 
 The steps involving the creation of a vlink and connecting two pods through it goes as follows:
 
-<p align="center">
-  <img src="vlink-diagram.svg">
+<p align="center" >
+  <img src="vlink-diagram.svg" width="500">
 </p>
 
 #### Creating a Vlink
