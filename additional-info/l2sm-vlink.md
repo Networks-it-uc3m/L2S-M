@@ -189,7 +189,7 @@ spec:
 This topology represents the following scenario:
 
 <p align="center">
-  <img src="l2sm-f.svg" width="400">
+  <img src="diagrama-l2sm-ping.svg" width="400">
 </p>
 
 
@@ -213,7 +213,7 @@ The steps involving the creation of a vlink and connecting two pods through it g
 
 #### Creating a Vlink
 
-The first step involves creating a `vlink` network, named "network-sample", using the NetworkAttachmentDefinition CRD from Multus. This network facilitates direct, isolated communication between pods across different nodes, through custom paths. 
+The first step involves creating a `vlink` network, named "vlink-sample", using the NetworkAttachmentDefinition CRD from Multus. This network facilitates direct, isolated communication between pods across different nodes, through custom paths. 
 
 The defined path is selected as an example, but in a real case scenario it may be another one.
 
@@ -246,13 +246,13 @@ spec:
 
 
 
-The creation of a vlink network begins with deploying the 'network-sample' YAML configuration, which outlines the specifications for the desired network. Following this deployment, the L2SM operator is activated, recognizing the new network configuration and subsequently initiating contact with the L2SM controller. This step involves the operator saving the network path information for future reference. 
+The creation of a vlink network begins with deploying the 'vlink-sample' YAML configuration, which outlines the specifications for the desired network. Following this deployment, the L2SM operator is activated, recognizing the new network configuration and subsequently initiating contact with the L2SM controller. This step involves the operator saving the network path information for future reference. 
 
 The L2SM controller, upon being informed of the new network, holds off on initiating any traffic flow immediately, opting instead to wait until pods are connected to the network, ensuring a streamlined process for establishing network connectivity.
 
 #### Deploying Pods with Network Annotations
 
-Deployment involves creating pods with specific annotations to connect them to the `network-sample` network. This section explains how PodA and PodB are deployed and managed within the network.
+Deployment involves creating pods with specific annotations to connect them to the `vlink-sample` network. This section explains how pod 'ping' in node-a and pod 'pong' in node-e are deployed and managed within the network.
 
 ##### Deploying pod 'ping'
 
@@ -265,7 +265,7 @@ metadata:
     app: ping-pong
   annotations:
     k8s.v1.cni.cncf.io/networks:  '[
-            { "name": "network-sample",
+            { "name": "vlink-sample",
               "ips": ["192.168.1.2/24"]
             }]'
 spec:
@@ -276,14 +276,14 @@ spec:
     securityContext:
       capabilities:
         add: ["NET_ADMIN"]
-    nodeName: NodeA
+    nodeName: node-a
 ```
 
-- **Pod Configuration**: Pod 'ping' is defined with the `network-sample` annotation and an "ips" argument specifying its IP address. If no IP address is specified, the connection defaults to layer 2.
+- **Pod Configuration**: Pod 'ping' is defined with the `vlink-sample` annotation and an "ips" argument specifying its IP address. If no IP address is specified, the connection defaults to layer 2.
 - **Connection to L2SM-Switch**: Pod 'ping' is attached via Multus to an L2S.M component known as the l2sm-switch, controlled by the L2S-M controller. This grants 'ping' two network interfaces: the default (provided by Flannel or Calico) and the new vlink interface.
 
 
-##### Deploying PodB
+##### Deploying pod 'pong'
 
 ```yaml
 apiVersion: v1
@@ -294,7 +294,7 @@ metadata:
     app: ping-pong
   annotations:
     k8s.v1.cni.cncf.io/networks:  '[
-            { "name": "network-sample",
+            { "name": "vlink-sample",
               "ips": ["192.168.1.3/24"]
             }]'
 spec:
@@ -305,9 +305,9 @@ spec:
     securityContext:
       capabilities:
         add: ["NET_ADMIN"]
-    nodeName: NodeE
+    nodeName: node-e
 ```
 
-- **Node Placement**: Pod 'pong' is created on NodeE with the `network-sample` network annotation but uses a different IP address than pod 'ping'.
+- **Node Placement**: Pod 'pong' is created on NodeE with the `vlink-sample` network annotation but uses a different IP address than pod 'ping'.
 - **Network Connectivity**: The L2SM controller then establishes the necessary intents and flows, ensuring traffic between 'ping' and 'pong' traverses the predefined nodes. This setup guarantees direct, isolated connectivity between the two pods.
 
