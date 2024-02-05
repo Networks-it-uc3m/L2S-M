@@ -22,7 +22,7 @@ L2S-M networks are implemented using the multus CRD, *NetworkAttachmentDefinitio
 
 The sample file below shows how a L2S-M *vlink* is defined in the context of the CODECO project.
 
-The fields represent how this type of L2S-M virtual network is going to be implemented. The CNI type is l2sm, so the operator knows which Network-Attachment-Definition corresponds to L2S-M and should be handled. This specific L2S-M network is type 'vlink'. This means it's a point-to-point virtual link between two pods in the Cluster. The definicion of the *vlink*'* also specifies which Nodes should the communication pass through. This is further explained in the 'fields' subsection.
+The fields represent how this type of L2S-M virtual network is going to be implemented. The CNI type is l2sm, so the operator knows which Network-Attachment-Definition corresponds to L2S-M and should be handled. This specific L2S-M network is type 'vlink'. This means it's a point-to-point virtual link between two pods in the Cluster. The definition of the *vlink*'* also specifies which Nodes should the communication pass through. This is further explained in the 'fields' subsection.
 
 ### Sample file
 
