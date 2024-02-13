@@ -47,4 +47,4 @@ After the installation, you can start using L2S-M in one Node. If your Cluster h
 
 Each Node enables the creation of custom L2S-M networks, as can be seen in the [examples section.](../examples/) But for communicating pods that are in different Nodes of the cluster, additional configuration must be done, the VxLAN tunnels between them.
 
-But don't worry! A guide on how this is configured step by step is outlined in [the vxlan configuration guide.](../deployment/vxlans.md)
+But don't worry! A guide on how this is configured step by step is outlined in [the vxlan configuration guide.](../deployments/vxlans.md)
