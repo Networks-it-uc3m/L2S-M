@@ -1,4 +1,4 @@
-# L2S-M Application Development Guide
+# L2S-M Development Guide
 
 Welcome to the L2S-M development guide. This README provides detailed instructions for setting up and developing L2S-M, which consists of four main components: `l2sm-controller`, `l2sm-operator`, `l2sm-switch`, and `l2sm-ned`. Follow the steps below to set up your development environment and deploy each component.
 
