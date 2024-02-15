@@ -89,7 +89,7 @@ def get_openflow_id(node_name):
                     
     return None  # Return None if no matching device is found
   
-#POPULATE DATABASE ENTRIES WHEN A NEW L2SM POD IS CREATED (A NEW NODE APPEARS)
+#POPULATE DATABASE ENTRIES WHEN A NEW L2SM SWITCH IS CREATED (A NEW NODE APPEARS)
 @kopf.on.create('pods.v1', labels={'l2sm-component': 'l2sm-switch'})
 def build_db(body, logger, annotations, **kwargs):
     connection = pymysql.connect(host=database_ip,
@@ -354,8 +354,17 @@ def delete_vn(spec, name, logger, **kwargs):
                                 cursorclass=pymysql.cursors.DictCursor)
     try:
         with connection.cursor() as cursor:
-            sql = "DELETE FROM networks WHERE name = '%s' AND type = 'vnet'" % (name)
-            cursor.execute(sql)
+             # First, set network_id to NULL in interfaces for the network being deleted
+            update_interfaces_sql = """
+            UPDATE interfaces
+            SET network_id = NULL
+            WHERE network_id = (SELECT id FROM networks WHERE name = %s AND type = 'vnet');
+            """
+            cursor.execute(update_interfaces_sql, (name,))
+
+            # Then, delete the network from networks table
+            delete_network_sql = "DELETE FROM networks WHERE name = %s AND type = 'vnet';"
+            cursor.execute(delete_network_sql, (name,))
             
    
     
@@ -363,14 +372,14 @@ def delete_vn(spec, name, logger, **kwargs):
             
             if response.status_code == 204:
                 # Successful request
-                logger.info(f"Network has been deleted")
+                logger.info(f"Network has been deleted in the SDN Controller")
                 connection.commit()
             else:
                 # Handle errors
                 logger.info(f"Error: {response.status_code}")
     finally:
         connection.close()
-        logger.info(f"Pod {name} removed")
+        logger.info(f"Network {name} removed")
 
 #DELETE DATABASE ENTRIES WHEN A NEW L2SM SWITCH IS DELETED (A NEW NODE GETS OUT OF THE CLUSTER)
 @kopf.on.delete('pods.v1', labels={'l2sm-component': 'l2sm-switch'})
