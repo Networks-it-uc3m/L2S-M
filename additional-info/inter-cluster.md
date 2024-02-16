@@ -46,7 +46,7 @@ metadata:
   name: spain-network-signature
 type: Opaque
 data:
-  public-key.pem: <signature-using-public-key-1>
+  public-key.pem: <signature-using-private-key-1>
 ```
 
 
