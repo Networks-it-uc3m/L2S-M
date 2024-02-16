@@ -43,7 +43,7 @@ spec:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: inter-vnet-example-signature
+  name: spain-network-signature
 type: Opaque
 data:
   public-key.pem: <firma>
@@ -56,7 +56,7 @@ kind: Pod
 metadata:
   name: mypod
   annotations:
-    k8s.v1.cni.cncf.io/networks: "sample-inter-network"
+    l2sm/networks: spain-network
 spec:
   containers:
   - name: ping
@@ -64,7 +64,7 @@ spec:
   volumes:
   - name: inter-vnet-signature
     secret:
-      secretName: inter-vnet-example-signature
+      secretName: spain-network-signature
 ```
 
 
