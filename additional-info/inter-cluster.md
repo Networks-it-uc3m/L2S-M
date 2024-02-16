@@ -1,6 +1,4 @@
-
-
-## Work in progress
+## Work in progress :wrench::wrench:
 ## Components in inter-cluster scenario:
 
 <p align="center">
