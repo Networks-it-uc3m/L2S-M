@@ -3,7 +3,7 @@
 ## Introduction
 This Markdown document provides an overview and documentation for the configuration of a virtual link (*vlink*) using the L2S-M (Link-Layer Secure connectivity for Microservice platforms) component of the NetMA.
 
-Additionally, an example network topology of a five nodes Cluster with L2S-M installed is presented. This example will be used to discuss an example of creation of a L2S-M *vlink* and the attachment of pods to that *vlink*, followed by a YAML definition of the SWM *NetworkTopology* CRD, illustrating the practical application of the configuration and interoperability with the SWM component. 
+Additionally, an example network topology of a five nodes Cluster with L2S-M installed is presented. This example will be used to discuss an example of creation of a L2S-M *vlink* and the attachment of pods to that *vlink*, according to the I-SWM-NET-1 CODECO interface. 
 
 ## Table of Contents
 - [Vlink L2S-M Configuration](#vlink-l2s-m-configuration)
@@ -18,64 +18,53 @@ Additionally, an example network topology of a five nodes Cluster with L2S-M ins
 ## Vlink L2S-M Configuration
 
 ### Overview
-L2S-M networks are implemented using the multus CRD, *NetworkAttachmentDefinition*. The main component of L2S-M, the L2S-M operator will manage this resource and will configure the network to reach a desired behavior.
+L2S-M networks are implemented using the l2sm CRD, *L2SMNetworks*. The main component of L2S-M, the L2S-M operator will manage this resource and will configure the network to reach a desired behavior.
 
 The sample file below shows how a L2S-M *vlink* is defined in the context of the CODECO project.
 
-The fields represent how this type of L2S-M virtual network is going to be implemented. The CNI type is l2sm, so the operator knows which Network-Attachment-Definition corresponds to L2S-M and should be handled. This specific L2S-M network is type 'vlink'. This means it's a point-to-point virtual link between two pods in the Cluster. The definition of the *vlink*'* also specifies which Nodes should the communication pass through. This is further explained in the 'fields' subsection.
+The fields represent how this type of L2S-M virtual network is going to be implemented. This specific L2S-M network is type 'vlink'. This means it's a point-to-point virtual link between two pods in the Cluster. The definition of the *vlink*'* also specifies which Nodes should the communication pass through. This is further explained in the 'fields' subsection.
 
 ### Sample file
 
 A L2S-M vlink should be specified according to the followibng YAML description:
 
 ```yaml
-apiVersion: "k8s.cni.cncf.io/v1"
-kind: NetworkAttachmentDefinition
+apiVersion: l2sm.k8s.local/v1
+kind: L2SMNetwork
 metadata:
-  name: <name>
+  name: vlink-sample
 spec:
-  config: '{
-  "cniVersion": "0.3.0",
-  "type": "l2sm",
-  "device": "l2sm-vNet",
-  "kind": {
-    "vlink": {
+  type: vlink
+  config: |
+    {
       "overlay-parameters": {
-        "overlay-paths": {
-          "direct-path": {
-            "name": "<pathName1>",
-            "FromEndpoint": "<endpointNodeA>",
-            "ToEndpoint": "<endpointNodeB>",
-            "links": ["linkA1","linkA2",...,"linkAN"],
-            "capabilities": {
-              "bandwidthBits": "<bps>",
-              "latencyNanos": "<ns>"
-            }
-          },
-          "reverse-path": {
-            "name": "<pathName2>",
-            "fromEndpoint": "<endpointNodeB>",
-            "toEndpoint": "<endpointNodeA>",
-            "links": ["linkB1","linkB2",...,"linkBN"]
+        "path": {
+          "name": "<pathName1>",
+          "FromEndpoint": "<endpointNodeA>",
+          "ToEndpoint": "<endpointNodeB>",
+          "links": ["linkA1","linkA2",...,"linkAN"],
+          "capabilities": {
+            "bandwidthBits": "<bps>",
+            "latencyNanos": "<ns>"
           }
+        },
+        "reverse-path": {
+          "name": "<pathName2>",
+          "fromEndpoint": "<endpointNodeB>",
+          "toEndpoint": "<endpointNodeA>",
+          "links": ["linkB1","linkB2",...,"linkBN"]
         }
       }
     }
-  }
-}'
 
 ```
 
 
 ### Fields
 
+
 The config field is a JSON string with the following fields defined:
 
-
-- `cniVersion` (string,required): "0.3.0". Current CNI plugin version.
-- `type`(string,required): "l2sm". CNI type, l2sm represents an l2sm network.
-- `kind`(dictionary, required): type of network. In this case, *vlink*, a point to point network between two pods.
-- `vlink`(dictionary, required): specification of the kind field, as a vlink, has parameters that will specify the path the network should use.
 - `overlay-parameters`(dictionary, required): parameters of this *vlink* network.
 - `overlay-paths`(dictionary,required): path configured for this *vlink*
 - `direct-path`(dictionary,required): First path configured in this *vlink*. It's expected that at least this field is provided. 
@@ -227,23 +216,20 @@ The steps involving the creation of a *vlink*, and attaching two pods to it, go 
 
 #### 1. Creating a Vlink
 
-The first step involves creating a `vlink` network, named "vlink-sample" in this example, using the *NetworkAttachmentDefinition* CRD from Multus. This network facilitates direct, isolated communication between pods across different nodes, through custom paths. 
+The first step involves creating a `vlink` network, named "vlink-sample" in this example, using the *L2SMNetwork* CRD. This network facilitates direct, isolated communication between pods across different nodes, through custom paths. 
 
 The defined path is selected as an example, but in a real case scenario it may be another one.
 
 
 ```yaml
-apiVersion: "k8s.cni.cncf.io/v1"
-kind: NetworkAttachmentDefinition
+apiVersion: l2sm.k8s.local/v1
+kind: L2SMNetwork
 metadata:
   name: vlink-sample
 spec:
-  config: '{
-  "cniVersion": "0.3.0",
-  "type": "l2sm",
-  "device": "l2sm-vNet",
-  "kind": {
-    "vlink": {
+  type: vlink
+  config: |
+    {
       "overlay-parameters": {
         "path": {
           "name": "first-path",
@@ -263,10 +249,6 @@ spec:
         }
       }
     }
-  }
-}'
-
-
 ```
 
 
@@ -289,7 +271,7 @@ metadata:
   labels:
     app: ping-pong
   annotations:
-    k8s.v1.cni.cncf.io/networks:  '[
+    l2sm/networks:  '[
             { "name": "vlink-sample",
               "ips": ["192.168.1.2/24"]
             }]'
@@ -318,7 +300,7 @@ metadata:
   labels:
     app: ping-pong
   annotations:
-    k8s.v1.cni.cncf.io/networks:  '[
+      l2sm/networks:  '[
             { "name": "vlink-sample",
               "ips": ["192.168.1.3/24"]
             }]'
