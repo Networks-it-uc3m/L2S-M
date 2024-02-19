@@ -1,9 +1,6 @@
-apiVersion: "k8s.cni.cncf.io/v1"
-kind: NetworkAttachmentDefinition
+apiVersion: l2sm.k8s.local/v1
+kind: L2SMNetwork
 metadata:
   name: ping-network
 spec:
-  config: '{
-      "cniVersion": "0.3.0",
-      "type": "l2sm"
-    }'
+  type: vnet

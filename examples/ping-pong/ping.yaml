@@ -5,7 +5,7 @@ metadata:
   labels:
     app: ping-pong
   annotations:
-    k8s.v1.cni.cncf.io/networks: ping-network
+    l2sm/networks: ping-network
 spec:
   containers:
   - name: router
@@ -15,4 +15,4 @@ spec:
       capabilities:
         add: ["NET_ADMIN"]
   # Use this parameter if you want to place the pod in a specific node
-  #nodeName: masterk8s
+  nodeName: l2sm1
