@@ -17,59 +17,48 @@ This document provides a guide for L2S-M users. It focuses on creating a virtual
 
 ## Creating a Vlink Network
 
-The first step involves creating a `vlink` network, named "network-sample", using the NetworkAttachmentDefinition CRD from Multus. This network facilitates direct, isolated communication between pods across different nodes, through custom paths.
+The first step involves creating a `vlink` network, named "vlink-sample", using our L2SMNetwork CRD. This network facilitates direct, isolated communication between pods across different nodes, through custom paths.
 
 
 ```yaml
-apiVersion: "k8s.cni.cncf.io/v1"
-kind: NetworkAttachmentDefinition
+apiVersion: l2sm.k8s.local/v1
+kind: L2SMNetwork
 metadata:
-  name: network-sample
+  name: vlink-sample
 spec:
-  config: '{
-  "cniVersion": "0.3.0",
-  "type": "l2sm",
-  "device": "l2sm-vNet",
-  "kind": {
-    "vlink": {
+  type: vlink
+  config: |
+    {
       "overlay-parameters": {
-        "overlay-paths": [
-          {
-            "name": "first-path",
-            "FromEndpoint": "node-a",
-            "ToEndpoint": "node-e",
-            "path": ["node-c", "node-d"],
-            "capabilities": {
-              "bandwidthBits": "20M",
-              "latencyNanos": "1e6"
-            }
-          },
-          {
-            "name": "second-path",
-            "fromEndpoint": "node-e",
-            "toEndpoint": "node-a",
-            "path": ["node-d","node-b"],
-            "capabilities": {
-              "bandwidthBits": "20M",
-              "latencyNanos": "8e5"
-            }
+        "path": {
+          "name": "first-path",
+          "FromEndpoint": "node-a",
+          "ToEndpoint": "node-e",
+          "links": ["link-ac","link-cd","link-de"],
+          "capabilities": {
+            "bandwidthBits": "20M",
+            "latencyNanos": "8e5"
           }
-        ]
+        },
+        "reverse-path": {
+          "name": "second-path",
+          "fromEndpoint": "node-e",
+          "toEndpoint": "node-a",
+          "links": ["link-ed","link-db","link-ba"]
+        }
       }
     }
-  }
-}'
 ```
 
 ### Process Overview
 
-1. **Vlink Creation**: Deploy the `network-sample` YAML configuration to define the vlink network.
+1. **Vlink Creation**: Deploy the `vlink-sample` YAML configuration to define the vlink network.
 2. **L2SM Operator Activation**: Upon recognizing the new network configuration, the L2SM operator initiates, contacting the L2SM controller. This process includes saving the network path information for future use.
 3. **L2SM Controller**: The controller is informed about the new network but does not initiate traffic flow immediately. It waits for pods to be connected to the network.
 
 ## Deploying Pods with Network Annotations
 
-Deployment involves creating pods with specific annotations to connect them to the `network-sample` network. This section explains how PodA and PodB are deployed and managed within the network.
+Deployment involves creating pods with specific annotations to connect them to the `vlink-sample` network. This section explains how PodA and PodB are deployed and managed within the network.
 
 ### Deploying pod 'ping'
 
@@ -81,8 +70,8 @@ metadata:
   labels:
     app: ping-pong
   annotations:
-    k8s.v1.cni.cncf.io/networks:  '[
-            { "name": "network-sample",
+    l2sm/networks:  '[
+            { "name": "vlink-sample",
               "ips": ["192.168.1.2/24"]
             }]'
 spec:
@@ -96,7 +85,7 @@ spec:
     nodeName: NodeA
 ```
 
-- **Pod Configuration**: Pod 'ping' is defined with the `network-sample` annotation and an "ips" argument specifying its IP address. If no IP is specified, the connection defaults to layer 2.
+- **Pod Configuration**: Pod 'ping' is defined with the `vlink-sample` annotation and an "ips" argument specifying its IP address. If no IP is specified, the connection defaults to layer 2.
 - **Connection to L2SM-Switch**: Pod 'ping' is attached via Multus to an L2S.M component known as the l2sm-switch, controlled by the L2S-M controller. This grants 'ping' two network interfaces: the default (provided by Flannel or Calico) and the new vlink interface.
 
 
@@ -110,8 +99,8 @@ metadata:
   labels:
     app: ping-pong
   annotations:
-    k8s.v1.cni.cncf.io/networks:  '[
-            { "name": "network-sample",
+    l2sm/networks:  '[
+            { "name": "vlink-sample",
               "ips": ["192.168.1.3/24"]
             }]'
 spec:
@@ -125,7 +114,7 @@ spec:
     nodeName: NodeE
 ```
 
-- **Node Placement**: Pod 'pong' is created on NodeE with the `network-sample` network annotation but uses a different IP address than pod 'ping'.
+- **Node Placement**: Pod 'pong' is created on NodeE with the `vlink-sample` network annotation but uses a different IP address than pod 'ping'.
 - **Network Connectivity**: The L2SM controller then establishes the necessary intents and flows, ensuring traffic between 'ping' and 'pong' traverses the predefined nodes. This setup guarantees direct, isolated connectivity between the two pods.
 
 
