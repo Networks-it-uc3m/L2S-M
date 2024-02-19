@@ -18,7 +18,7 @@ spec:
                 type:
                   type: string
                 config:
-                  type: string # This is now simply a string, intended to hold JSON data.
+                  type: string 
                   nullable: true
                 signature:
                   type: string
