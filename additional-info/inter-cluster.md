@@ -1,7 +1,22 @@
+# Work in progress :wrench::wrench:
 
 
+## Components in inter-cluster scenario:
 
-Ejemplo de network inter: 
+<p align="center">
+  <img src="../assets/inter-cluster-arch.svg" width="600">
+</p>
+
+## Sequence Diagram
+
+<p align="center">
+  <img src="../assets/inter-cluster-diagram.svg" width="600">
+</p>
+
+
+## YAML examples:
+
+### Inter cluster network example:
 
 ```yaml
 apiVersion: l2sm.k8s.local/v1
@@ -21,30 +36,19 @@ spec:
   signature: sxySO0jHw4h1kcqO/LMLDgOoOeH8dOn8vZWv4KMBq0upxz3lcbl+o/36JefpEwSlBJ6ukuKiQ79L4rsmmZgglk6y/VL54DFyLfPw9RJn3mzl99YE4qCaHyEBANSw+d5hPaJ/I8q+AMtjrYpglMTRPf0iMZQMNtMd0CdeX2V8aZOPCQP75PsZkWukPdoAK/++y1vbFQ6nQKagvpUZfr7Ecb4/QY+hIAzepm6N6lNiFNTgj6lGTrFK0qCVfRhMD+vXbBP6xzZjB2N1nIheK9vx7kvj3HORjZ+odVMa+AOU5ShSKpzXTvknrtcRTcWWmXPNUZLoq5k3U+z1g1OTFcjMdQ====
 
 ```
-Hay un NED conectado al L2S-M switch del nodo master con 10 interfaces veth (como el NED es hostNetwork, nos podemos permitir crear las interfaces y conectarlas directamente -> Necesario que l2sm-switch se despliegue más tarde).
 
-Se crea esta red en cada clúster usando el L2S-M k8s Client. Es necesario para esto:
-    - Que cada cluster tenga previamente un cluster role para poder dar permisos de crear network attachment definitions.
-
-Se crea un network con el mismo nombre dentro del host. Operador avisa al idco de que se ha conectado a la interfaz, se dice cual es el veth empleado. El idco anota, pero no añade aún.
-
-
-Se crea una firma (en local, se puede dar un script en conjunto para hacer que esto se haga en una línea de comandos)) en forma secret dentro del cluster con la private key, se pone dentro como anotacion en el pod, en conjunto con el nombre del usuario. el operador puede leerla.
-
-En esta key hay un timestamp, el nombre de la red, identificador del usuario.
-
+### Pod creation and attachment
 
 ```yaml
 apiVersion: v1
 kind: Secret
 metadata:
-  name: sample-one-authorization-key
+  name: spain-network-signature
 type: Opaque
 data:
-  public-key.pem: <firma>
+  public-key.pem: <signature-using-private-key-1>
 ```
 
-Se attachea al pod, en el campo de spec. Quedaría así:
 
 ```yaml
 apiVersion: v1
@@ -52,16 +56,20 @@ kind: Pod
 metadata:
   name: mypod
   annotations:
-    k8s.v1.cni.cncf.io/networks: "sample-inter-network"
+    l2sm/networks: spain-network
 spec:
   containers:
   - name: ping
     image: busybox
   volumes:
-  - name: authorization-key-volume
+  - name: inter-vnet-signature
     secret:
-      secretName: sample-one-authorization-key
+      secretName: spain-network-signature
 ```
+
+
+
+
 
 Se avisa al operador, y este avisa a ambos controladores, siendo estos los que se encargan de comprobar la firma. -> Y ver si hay autorización
 
