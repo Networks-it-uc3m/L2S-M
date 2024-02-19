@@ -8,6 +8,7 @@ import kubernetes
 from subprocess import CalledProcessError
 from random import randrange
 from kubernetes import client, config
+from kubernetes.client import CustomObjectsApi
 import pymysql
 import random
 import time
@@ -151,7 +152,7 @@ def update_db(body, logger, annotations, **kwargs):
 
 #UPDATE DATABASE WHEN NETWORK IS CREATED, I.E: IS A MULTUS CRD WITH OUR L2SM INTERFACE PRESENT IN ITS CONFIG
 #@kopf.on.create('NetworkAttachmentDefinition', field="spec.config['device']", value='l2sm-vNet')
-@kopf.on.create('NetworkAttachmentDefinition', when=lambda spec, **_: '"type": "l2sm"' in spec['config'])
+@kopf.on.create('l2sm.k8s.local', 'v1', 'l2sm-networks')
 def create_vn(spec, name, namespace, logger, **kwargs):
     
     # Database connection setup
@@ -164,21 +165,21 @@ def create_vn(spec, name, namespace, logger, **kwargs):
         # Start database transaction
         with connection.cursor() as cursor:
             sql = "INSERT INTO networks (name, type) VALUES (%s, %s) ON DUPLICATE KEY UPDATE name = VALUES(name), type = VALUES(type)"
-            cursor.execute(sql, (name.strip(), "vnet"))
-      
-        # Prepare data for the REST API call
-        data = {"networkId": name.strip()}
-        response = session.post(base_controller_url + '/l2sm/networks', json=data)
-        
-        # Check the response status
-        if response.status_code == 204:
-            # Commit database changes only if the network is successfully created in the controller
+            cursor.execute(sql, (name.strip(), spec['type']))
             connection.commit()
-            logger.info(f"Network '{name}' has been successfully created in both the database and the L2SM controller.")
-        else:
-            # Roll back the database transaction if the network creation in the controller fails
-            connection.rollback()
-            logger.error(f"Failed to create network '{name}' in the L2SM controller. Database transaction rolled back.")
+        # # Prepare data for the REST API call
+        # data = {"networkId": name.strip()}
+        # response = session.post(base_controller_url + '/l2sm/networks', json=data)
+        
+        # # Check the response status
+        # if response.status_code == 204:
+        #     # Commit database changes only if the network is successfully created in the controller
+        #     connection.commit()
+        #     logger.info(f"Network '{name}' has been successfully created in both the database and the L2SM controller.")
+        # else:
+        #     # Roll back the database transaction if the network creation in the controller fails
+        #     connection.rollback()
+        #     logger.error(f"Failed to create network '{name}' in the L2SM controller. Database transaction rolled back.")
             
     except Exception as e:
         # Roll back the database transaction in case of any error
@@ -191,7 +192,7 @@ def create_vn(spec, name, namespace, logger, **kwargs):
 
 
 #ASSIGN POD TO NETWORK (TRIGGERS ONLY IF ANNOTATION IS PRESENT)
-@kopf.on.create('pods.v1', annotations={'k8s.v1.cni.cncf.io/networks': kopf.PRESENT})
+@kopf.on.create('pods.v1', annotations={'l2sm/networks': kopf.PRESENT})
 def pod_vn(body, name, namespace, logger, annotations, **kwargs):
     """Assign Pod to a network if a specific annotation is present."""
     
@@ -209,6 +210,19 @@ def pod_vn(body, name, namespace, logger, annotations, **kwargs):
     if not target_networks:
         logger.info("No target networks found. Letting Multus handle the network assignment.")
         return
+    
+    api = CustomObjectsApi()
+    l2sm_network = api.get_namespaced_custom_object(
+        group="l2sm.k8s.local",
+        version="v1",
+        namespace=namespace,
+        plural="l2sm-networks",
+        name="ping-network",
+    )
+    print(l2sm_network)
+    for target_network in target_networks:
+        update_network(target_network,name,namespace,api)
+    
     if 'spec' in body and 'nodeName' in body['spec']:
         node_name = body['spec']['nodeName']
            
@@ -222,17 +236,66 @@ def pod_vn(body, name, namespace, logger, annotations, **kwargs):
     else:
         raise kopf.TemporaryError("The Pod is not yet ready", delay=1)
    
+def update_network(l2sm_network_name,pod_name,namespace,api):
+    l2sm_network = api.get_namespaced_custom_object(
+        group="l2sm.k8s.local",
+        version="v1",
+        namespace=namespace,
+        plural="l2sm-networks",
+        name=l2sm_network_name,
+    )
+    connected_pods = l2sm_network.get('status', {}).get('connectedPods', [])
+    if pod_name not in connected_pods:
+        connected_pods.append(pod_name)
+        patch = {'status': {'connectedPods': connected_pods}}
+        # Apply the patch to the L2SMNetwork
+        
+        api.patch_namespaced_custom_object(
+            group="l2sm.k8s.local",
+            version="v1",
+            namespace=namespace,
+            plural="l2sm-networks",
+            name=l2sm_network_name,
+            body=patch
+        )
+        print(f"Updated L2SMNetwork {l2sm_network_name} with connected Pod {pod_name}")
+
+def remove_from_network(l2sm_network_name,pod_name,namespace,api):
+    l2sm_network = api.get_namespaced_custom_object(
+        group="l2sm.k8s.local",
+        version="v1",
+        namespace=namespace,
+        plural="l2sm-networks",
+        name=l2sm_network_name,
+    )
+    connected_pods = l2sm_network.get('status', {}).get('connectedPods', [])
+    if pod_name in connected_pods:
+        connected_pods.remove(pod_name)
+        patch = {'status': {'connectedPods': connected_pods}}
+        # Apply the patch to the L2SMNetwork
+        
+        api.patch_namespaced_custom_object(
+            group="l2sm.k8s.local",
+            version="v1",
+            namespace=namespace,
+            plural="l2sm-networks",
+            name=l2sm_network_name,
+            body=patch
+        )
+        print(f"Updated L2SMNetwork {l2sm_network_name} with disconnected Pod {pod_name}")
+        
+
 
 
 def extract_multus_networks(annotations):
   """Extract and return Multus networks from annotations."""
-  return [network.strip() for network in annotations.get('k8s.v1.cni.cncf.io/networks').split(",")]
+  return [network.strip() for network in annotations.get('l2sm/networks').split(",")]
 
 def get_existing_networks(namespace):
     """Return existing networks in the namespace."""
     api = client.CustomObjectsApi()
-    networks = api.list_namespaced_custom_object('k8s.cni.cncf.io', 'v1', namespace, 'network-attachment-definitions').get('items')
-    return [network['metadata']['name'] for network in networks if '"type": "l2sm"' in network['spec']['config']]
+    networks = api.list_namespaced_custom_object('l2sm.k8s.local', 'v1', namespace, 'l2sm-networks').get('items')
+    return [network['metadata']['name'] for network in networks if "vnet" in network['spec']['type']]
 
 def filter_target_networks(multus_networks, existing_networks):
     """Filter and return networks that are both requested and exist."""
@@ -266,6 +329,7 @@ def update_pod_annotation(pod_name, namespace, interfaces):
     pod_annotations = pod.metadata.annotations or {}
     pod_annotations['k8s.v1.cni.cncf.io/networks'] = ', '.join(interfaces)
     v1.patch_namespaced_pod(pod_name, namespace, {'metadata': {'annotations': pod_annotations}})
+
 
 def update_network_assignments(pod_name, namespace, node_name, free_interfaces, target_networks, logger, openflow_id):
     """Update the network assignments in the database and controller."""
@@ -328,7 +392,7 @@ def post_network_assignment(openflow_id, port_number, network_name):
 
 
 #UPDATE DATABASE WHEN POD IS DELETED
-@kopf.on.delete('pods.v1', annotations={'k8s.v1.cni.cncf.io/networks': kopf.PRESENT})
+@kopf.on.delete('pods.v1', annotations={'l2sm/networks': kopf.PRESENT})
 def dpod_vn(name, logger, **kwargs):
     connection = pymysql.connect(host=database_ip,
                                 user=database_username,
@@ -339,13 +403,15 @@ def dpod_vn(name, logger, **kwargs):
         with connection.cursor() as cursor:
             sql = "UPDATE interfaces SET network_id = NULL, pod = NULL WHERE pod = '%s'" % (name)
             cursor.execute(sql)
+            
             connection.commit()
+            update_network()
     finally:
         connection.close()
         logger.info(f"Pod {name} removed")
 
 #UPDATE DATABASE WHEN NETWORK IS DELETED
-@kopf.on.delete('NetworkAttachmentDefinition', when=lambda spec, **_: '"type": "l2sm"' in spec['config'])
+@kopf.on.delete('l2sm.k8s.local', 'v1', 'l2sm-networks')
 def delete_vn(spec, name, logger, **kwargs):
     connection = pymysql.connect(host=database_ip,
                                 user=database_username,
@@ -358,15 +424,15 @@ def delete_vn(spec, name, logger, **kwargs):
             update_interfaces_sql = """
             UPDATE interfaces
             SET network_id = NULL
-            WHERE network_id = (SELECT id FROM networks WHERE name = %s AND type = 'vnet');
+            WHERE network_id = (SELECT id FROM networks WHERE name = %s AND type = '%s');
             """
-            cursor.execute(update_interfaces_sql, (name,))
+            cursor.execute(update_interfaces_sql, (name,spec['type']))
 
             # Then, delete the network from networks table
-            delete_network_sql = "DELETE FROM networks WHERE name = %s AND type = 'vnet';"
-            cursor.execute(delete_network_sql, (name,))
+            delete_network_sql = "DELETE FROM networks WHERE name = %s AND type = '%s';"
+            cursor.execute(delete_network_sql, (name,spec['type']))
             
-   
+            
     
             response = session.delete(base_controller_url + '/l2sm/networks/' + name)
             
