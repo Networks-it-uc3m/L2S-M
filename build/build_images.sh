@@ -2,7 +2,7 @@
 set -e
 
 # Set environment variables
-export VERSION="2.2"
+export VERSION="2.3"
 export DOCKERHUB_REPO="alexdecb"
 
 # Function to build image
