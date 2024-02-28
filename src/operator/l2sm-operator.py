@@ -167,20 +167,7 @@ def create_vn(spec, name, namespace, logger, **kwargs):
             sql = "INSERT INTO networks (name, type) VALUES (%s, %s) ON DUPLICATE KEY UPDATE name = VALUES(name), type = VALUES(type)"
             cursor.execute(sql, (name.strip(), spec['type']))
             connection.commit()
-        # # Prepare data for the REST API call
-        # data = {"networkId": name.strip()}
-        # response = session.post(base_controller_url + '/l2sm/networks', json=data)
-        
-        # # Check the response status
-        # if response.status_code == 204:
-        #     # Commit database changes only if the network is successfully created in the controller
-        #     connection.commit()
-        #     logger.info(f"Network '{name}' has been successfully created in both the database and the L2SM controller.")
-        # else:
-        #     # Roll back the database transaction if the network creation in the controller fails
-        #     connection.rollback()
-        #     logger.error(f"Failed to create network '{name}' in the L2SM controller. Database transaction rolled back.")
-            
+                 
     except Exception as e:
         # Roll back the database transaction in case of any error
         connection.rollback()
@@ -191,11 +178,9 @@ def create_vn(spec, name, namespace, logger, **kwargs):
 
 
 
-#ASSIGN POD TO NETWORK (TRIGGERS ONLY IF ANNOTATION IS PRESENT)
 @kopf.on.create('pods.v1', annotations={'l2sm/networks': kopf.PRESENT})
 def pod_vn(body, name, namespace, logger, annotations, **kwargs):
     """Assign Pod to a network if a specific annotation is present."""
-    
 
     # Avoid database overlap by introducing a random sleep time
     time.sleep(random.uniform(0, 0.8))
@@ -206,36 +191,32 @@ def pod_vn(body, name, namespace, logger, annotations, **kwargs):
         return
 
     existing_networks = get_existing_networks(namespace)
-    target_networks = filter_target_networks(multus_networks, existing_networks)
-    if not target_networks:
+    # Need to extract just the names from multus_networks for comparison
+    target_networks_info = filter_target_networks([net['name'] for net in multus_networks], existing_networks)
+    if not target_networks_info:
         logger.info("No target networks found. Letting Multus handle the network assignment.")
         return
     
+    # Update `target_networks` to include IP information if available
+    target_networks = [net for net in multus_networks if net['name'] in target_networks_info]
+
     api = CustomObjectsApi()
-    l2sm_network = api.get_namespaced_custom_object(
-        group="l2sm.k8s.local",
-        version="v1",
-        namespace=namespace,
-        plural="l2sm-networks",
-        name="ping-network",
-    )
-    print(l2sm_network)
-    for target_network in target_networks:
-        update_network(target_network,name,namespace,api)
+    # Assign pods to each of the target networks, this part remains unchanged
+    for network in target_networks:
+        update_network(network['name'], name, namespace, api)
     
     if 'spec' in body and 'nodeName' in body['spec']:
         node_name = body['spec']['nodeName']
-           
         free_interfaces = get_free_interfaces(node_name)
         if len(free_interfaces) < len(target_networks):
             raise kopf.PermanentError(f"Node {node_name} has no free interfaces left")
         
         openflow_id = get_openflow_id(node_name)
-
+        # Now pass the full network info including IPs if present
         update_network_assignments(name, namespace, node_name, free_interfaces, target_networks, logger, openflow_id)
     else:
         raise kopf.TemporaryError("The Pod is not yet ready", delay=1)
-   
+    
 def update_network(l2sm_network_name,pod_name,namespace,api):
     l2sm_network = api.get_namespaced_custom_object(
         group="l2sm.k8s.local",
@@ -288,8 +269,17 @@ def remove_from_network(l2sm_network_name,pod_name,namespace,api):
 
 
 def extract_multus_networks(annotations):
-  """Extract and return Multus networks from annotations."""
-  return [network.strip() for network in annotations.get('l2sm/networks').split(",")]
+    """Extract and return Multus networks from annotations."""
+    annotation = annotations.get('l2sm/networks')
+    if annotation.startswith('['):  # New JSON format
+        try:
+            networks = json.loads(annotation)
+            return [{ 'name': net['name'], 'ips': net.get('ips', []) } for net in networks]
+        except json.JSONDecodeError:
+            raise ValueError("Failed to decode JSON from annotations")
+    else:  # Original string format
+        return [{'name': network.strip(), 'ips': []} for network in annotation.split(",")]
+
 
 def get_existing_networks(namespace):
     """Return existing networks in the namespace."""
@@ -322,12 +312,24 @@ def get_free_interfaces(node_name):
         connection.close()
     return free_interfaces
 
-def update_pod_annotation(pod_name, namespace, interfaces):
-    """Update the Pod's annotation with assigned interfaces."""
+def update_pod_annotation(pod_name, namespace, networks_info):
+    """Update the Pod's annotation with assigned networks and optional IPs."""
     v1 = client.CoreV1Api()
     pod = v1.read_namespaced_pod(pod_name, namespace)
     pod_annotations = pod.metadata.annotations or {}
-    pod_annotations['k8s.v1.cni.cncf.io/networks'] = ', '.join(interfaces)
+    
+    # Format the annotations based on whether IPs are provided
+    formatted_networks = []
+    for network_info in networks_info:
+        if network_info['ips']:  # Case B with IP addresses
+            formatted_networks.append(json.dumps({
+                "name": network_info['name'],
+                "ips": network_info['ips']
+            }))
+        else:  # Case A without specific IP addresses
+            formatted_networks.append(network_info['name'])
+            
+    pod_annotations['k8s.v1.cni.cncf.io/networks'] = '[' + ', '.join(formatted_networks) + ']'
     v1.patch_namespaced_pod(pod_name, namespace, {'metadata': {'annotations': pod_annotations}})
 
 
@@ -434,15 +436,8 @@ def delete_vn(spec, name, logger, **kwargs):
             
             
     
-            response = session.delete(base_controller_url + '/l2sm/networks/' + name)
-            
-            if response.status_code == 204:
-                # Successful request
-                logger.info(f"Network has been deleted in the SDN Controller")
-                connection.commit()
-            else:
-                # Handle errors
-                logger.info(f"Error: {response.status_code}")
+          
+            connection.commit()
     finally:
         connection.close()
         logger.info(f"Network {name} removed")

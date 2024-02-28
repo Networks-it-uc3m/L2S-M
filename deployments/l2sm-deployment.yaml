@@ -9,7 +9,10 @@ spec:
       "type": "bridge",
       "bridge": "br1",
       "mtu": 1400,
-      "device": "veth1"
+      "device": "veth1",
+        "ipam": {
+          "type":"static"
+        }
     }'
 ---
 apiVersion: "k8s.cni.cncf.io/v1"
@@ -22,7 +25,10 @@ spec:
       "type": "bridge",
       "bridge": "br2",
       "mtu": 1400,
-      "device": "veth2"
+      "device": "veth2",
+        "ipam": {
+          "type":"static"
+        }
     }'
 ---
 apiVersion: "k8s.cni.cncf.io/v1"
@@ -35,7 +41,10 @@ spec:
       "type": "bridge",
       "bridge": "br3",
       "mtu": 1400,
-      "device": "veth3"
+      "device": "veth3",
+        "ipam": {
+          "type":"static"
+        }
     }'
 ---
 apiVersion: "k8s.cni.cncf.io/v1"
@@ -48,7 +57,10 @@ spec:
       "type": "bridge",
       "bridge": "br4",
       "mtu": 1400,
-      "device": "veth4"
+      "device": "veth4",
+        "ipam": {
+          "type":"static"
+        }
     }'
 ---
 apiVersion: "k8s.cni.cncf.io/v1"
@@ -61,7 +73,10 @@ spec:
       "type": "bridge",
       "bridge": "br5",
       "mtu": 1400,
-      "device": "veth5"
+      "device": "veth5",
+        "ipam": {
+          "type":"static"
+        }
     }'
 ---
 apiVersion: "k8s.cni.cncf.io/v1"
@@ -74,7 +89,10 @@ spec:
       "type": "bridge",
       "bridge": "br6",
       "mtu": 1400,
-      "device": "veth6"
+      "device": "veth6",
+        "ipam": {
+          "type":"static"
+        }
     }'
 ---
 
@@ -88,7 +106,10 @@ spec:
       "type": "bridge",
       "bridge": "br7",
       "mtu": 1400,
-      "device": "veth7"
+      "device": "veth7",
+        "ipam": {
+          "type":"static"
+        }
     }'
 ---
 apiVersion: "k8s.cni.cncf.io/v1"
@@ -101,7 +122,10 @@ spec:
       "type": "bridge",
       "bridge": "br8",
       "mtu": 1400,
-      "device": "veth8"
+      "device": "veth8",
+        "ipam": {
+          "type":"static"
+        }
     }'
 ---
 apiVersion: "k8s.cni.cncf.io/v1"
@@ -114,7 +138,10 @@ spec:
       "type": "bridge",
       "bridge": "br9",
       "mtu": 1400,
-      "device": "veth9"
+      "device": "veth9",
+        "ipam": {
+          "type":"static"
+        }
     }'
 ---
 apiVersion: "k8s.cni.cncf.io/v1"
@@ -127,7 +154,10 @@ spec:
       "type": "bridge",
       "bridge": "br10",
       "mtu": 1400,
-      "device": "veth10"
+      "device": "veth10",
+        "ipam": {
+          "type":"static"
+        }
     }'
 ---
 apiVersion: v1

@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: poda
+  labels:
+    app: ping-pong
+  annotations:
+    k8s.v1.cni.cncf.io/networks:  '[
+            { "name": "ptp1",
+              "ips": ["192.168.1.6/16"]
+            }]'
+spec:
+  containers:
+  - name: router
+    command: ["/bin/ash", "-c", "trap : TERM INT; sleep infinity & wait"]
+    image: alpine:latest
+    securityContext:
+      capabilities:
+        add: ["NET_ADMIN"]
+  # Use this parameter if you want to place the pod in a specific node
+  #nodeName: workerk8s

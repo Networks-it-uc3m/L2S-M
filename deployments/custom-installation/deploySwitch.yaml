@@ -14,7 +14,7 @@ spec:
       labels:
         l2sm-component: l2sm-switch
       annotations:
-        k8s.v1.cni.cncf.io/networks: veth1, veth2, veth3, veth4, veth5, veth6, veth7, veth8, veth9, veth10
+        k8s.v1.cni.cncf.io/networks: '[{ "name": "veth1", "ips": ["fe80::58d0:b8ff:fe42:debf/64"]}, { "name": "veth2", "ips": ["fe80::58d0:b8ff:fe42:debe/64"]}, { "name": "veth3", "ips": ["fe80::58d0:b8ff:fe42:debd/64"]}, { "name": "veth4", "ips": ["fe80::58d0:b8ff:fe42:debc/64"]}, { "name": "veth5", "ips": ["fe80::58d0:b8ff:fe42:debb/64"]}, { "name": "veth6", "ips": ["fe80::58d0:b8ff:fe42:deba/64"]}, { "name": "veth7", "ips": ["fe80::58d0:b8ff:fe42:deb9/64"]}, { "name": "veth8", "ips": ["fe80::58d0:b8ff:fe42:deb8/64"]}, { "name": "veth9", "ips": ["fe80::58d0:b8ff:fe42:deb7/64"]}, { "name": "veth10", "ips": ["fe80::58d0:b8ff:fe42:deb6/64"]}]'
     spec:
       tolerations:
       # this toleration is to have the daemonset runnable on master nodes
@@ -22,18 +22,18 @@ spec:
       - key: node-role.kubernetes.io/master
         operator: Exists
         effect: NoSchedule
-      initContainers:
-      - name: wait-for-l2sm-operator
-        image: curlimages/curl
-        args:
-        - /bin/sh
-        - -c
-        - >
-          set -x;
-          while [ $(curl -sw '%{http_code}' "http://l2sm-operator-service:8080/healthz" -o /dev/null) -ne 200 ]; do
-            sleep 15;
-          done;
-          sleep 5;
+      # initContainers:
+      # - name: wait-for-l2sm-operator
+      #   image: curlimages/curl
+      #   args:
+      #   - /bin/sh
+      #   - -c
+      #   - >
+      #     set -x;
+      #     while [ $(curl -sw '%{http_code}' "http://l2sm-operator-service:8080/healthz" -o /dev/null) -ne 200 ]; do
+      #       sleep 15;
+      #     done;
+      #     sleep 5;
       containers:
       - name: l2sm-switch
         image: alexdecb/l2sm-switch:2.2

@@ -9,5 +9,8 @@ spec:
       "type": "bridge",
       "bridge": "br9",
       "mtu": 1400,
-      "device": "veth9"
+      "device": "veth9",
+        "ipam": {
+          "type":"static"
+        }
     }'
