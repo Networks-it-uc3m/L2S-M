@@ -1,4 +1,4 @@
-apiVersion: l2sm.k8s.local/v1
+apiVersion: l2sm.l2sm.k8s.local/v1
 kind: L2SMNetwork
 metadata:
   name: ping-network

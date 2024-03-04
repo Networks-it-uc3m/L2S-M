@@ -152,7 +152,7 @@ def update_db(body, logger, annotations, **kwargs):
 
 #UPDATE DATABASE WHEN NETWORK IS CREATED, I.E: IS A MULTUS CRD WITH OUR L2SM INTERFACE PRESENT IN ITS CONFIG
 #@kopf.on.create('NetworkAttachmentDefinition', field="spec.config['device']", value='l2sm-vNet')
-@kopf.on.create('l2sm.k8s.local', 'v1', 'l2sm-networks')
+@kopf.on.create('l2sm.l2sm.k8s.local', 'v1', 'l2smnetworks')
 def create_vn(spec, name, namespace, logger, **kwargs):
     
     # Database connection setup
@@ -183,7 +183,6 @@ def pod_vn(body, name, namespace, logger, annotations, **kwargs):
     """Assign Pod to a network if a specific annotation is present."""
 
     # Avoid database overlap by introducing a random sleep time
-    time.sleep(random.uniform(0, 0.8))
 
     multus_networks = extract_multus_networks(annotations)
     if not multus_networks:
@@ -219,10 +218,10 @@ def pod_vn(body, name, namespace, logger, annotations, **kwargs):
     
 def update_network(l2sm_network_name,pod_name,namespace,api):
     l2sm_network = api.get_namespaced_custom_object(
-        group="l2sm.k8s.local",
+        group="l2sm.l2sm.k8s.local",
         version="v1",
         namespace=namespace,
-        plural="l2sm-networks",
+        plural="l2smnetworks",
         name=l2sm_network_name,
     )
     connected_pods = l2sm_network.get('status', {}).get('connectedPods', [])
@@ -232,10 +231,10 @@ def update_network(l2sm_network_name,pod_name,namespace,api):
         # Apply the patch to the L2SMNetwork
         
         api.patch_namespaced_custom_object(
-            group="l2sm.k8s.local",
+            group="l2sm.l2sm.k8s.local",
             version="v1",
             namespace=namespace,
-            plural="l2sm-networks",
+            plural="l2smnetworks",
             name=l2sm_network_name,
             body=patch
         )
@@ -243,10 +242,10 @@ def update_network(l2sm_network_name,pod_name,namespace,api):
 
 def remove_from_network(l2sm_network_name,pod_name,namespace,api):
     l2sm_network = api.get_namespaced_custom_object(
-        group="l2sm.k8s.local",
+        group="l2sm.l2sm.k8s.local",
         version="v1",
         namespace=namespace,
-        plural="l2sm-networks",
+        plural="l2smnetworks",
         name=l2sm_network_name,
     )
     connected_pods = l2sm_network.get('status', {}).get('connectedPods', [])
@@ -256,10 +255,10 @@ def remove_from_network(l2sm_network_name,pod_name,namespace,api):
         # Apply the patch to the L2SMNetwork
         
         api.patch_namespaced_custom_object(
-            group="l2sm.k8s.local",
+            group="l2sm.l2sm.k8s.local",
             version="v1",
             namespace=namespace,
-            plural="l2sm-networks",
+            plural="l2smnetworks",
             name=l2sm_network_name,
             body=patch
         )
@@ -284,7 +283,7 @@ def extract_multus_networks(annotations):
 def get_existing_networks(namespace):
     """Return existing networks in the namespace."""
     api = client.CustomObjectsApi()
-    networks = api.list_namespaced_custom_object('l2sm.k8s.local', 'v1', namespace, 'l2sm-networks').get('items')
+    networks = api.list_namespaced_custom_object('l2sm.l2sm.k8s.local', 'v1', namespace, 'l2smnetworks').get('items')
     return [network['metadata']['name'] for network in networks if "vnet" in network['spec']['type']]
 
 def filter_target_networks(multus_networks, existing_networks):
@@ -317,19 +316,19 @@ def update_pod_annotation(pod_name, namespace, networks_info):
     v1 = client.CoreV1Api()
     pod = v1.read_namespaced_pod(pod_name, namespace)
     pod_annotations = pod.metadata.annotations or {}
-    
+    print("pod")
+    print(pod_name)
+    print("networks")
+    print(networks_info)
     # Format the annotations based on whether IPs are provided
     formatted_networks = []
     for network_info in networks_info:
-        if network_info['ips']:  # Case B with IP addresses
-            formatted_networks.append(json.dumps({
-                "name": network_info['name'],
-                "ips": network_info['ips']
-            }))
-        else:  # Case A without specific IP addresses
-            formatted_networks.append(network_info['name'])
-            
+        if not network_info.get('ips'):  
+            network_info['ips'] = [generate_random_ipv6_fe80()]  # Ensure this is a list
+        formatted_networks.append(json.dumps(network_info))  # Convert dict to a JSON string
+
     pod_annotations['k8s.v1.cni.cncf.io/networks'] = '[' + ', '.join(formatted_networks) + ']'
+    print(pod_annotations)
     v1.patch_namespaced_pod(pod_name, namespace, {'metadata': {'annotations': pod_annotations}})
 
 
@@ -344,20 +343,19 @@ def update_network_assignments(pod_name, namespace, node_name, free_interfaces, 
         assigned_interfaces = []
         with connection.cursor() as cursor:
             for i, interface in enumerate(free_interfaces[:len(target_networks)]):
-                update_interface_assignment(cursor, interface['id'], target_networks[i], pod_name, node_name)
-                assigned_interfaces.append(interface['name'])
-
+                update_interface_assignment(cursor, interface['id'], target_networks[i]['name'], pod_name, node_name)
+                assigned_interfaces.append({"name":interface['name'], "ips": target_networks[i]['ips']})
                 # Assuming function get_openflow_id and session.post logic are implemented elsewhere
                 if openflow_id:
                     port_number = extract_port_number(interface['name'])
-                    post_network_assignment(openflow_id, port_number, target_networks[i])
+                    post_network_assignment(openflow_id, port_number, target_networks[i]['name'])
                             
             update_pod_annotation(pod_name, namespace, assigned_interfaces)
 
         connection.commit()
     finally:
         connection.close()
-    logger.info(f"Pod {pod_name} attached to networks {', '.join(target_networks)}")
+    logger.info(f"Pod {pod_name} attached to networks {', '.join(network['name'] for network in target_networks)}")
 
 # Assuming these functions are implemented as per original logic
 def update_interface_assignment(cursor, interface_id, network_name, pod_name, node_name):
@@ -395,7 +393,7 @@ def post_network_assignment(openflow_id, port_number, network_name):
 
 #UPDATE DATABASE WHEN POD IS DELETED
 @kopf.on.delete('pods.v1', annotations={'l2sm/networks': kopf.PRESENT})
-def dpod_vn(name, logger, **kwargs):
+def dpod_vn(body, name, namespace, logger, annotations, **kwargs):
     connection = pymysql.connect(host=database_ip,
                                 user=database_username,
                                 password=database_password,
@@ -407,13 +405,31 @@ def dpod_vn(name, logger, **kwargs):
             cursor.execute(sql)
             
             connection.commit()
-            update_network()
+            multus_networks = extract_multus_networks(annotations)
+            if not multus_networks:
+                logger.info("No Multus networks specified. Exiting.")
+                return
+
+            existing_networks = get_existing_networks(namespace)
+            # Need to extract just the names from multus_networks for comparison
+            target_networks_info = filter_target_networks([net['name'] for net in multus_networks], existing_networks)
+            if not target_networks_info:
+                logger.info("No target networks found. Letting Multus handle the network assignment.")
+                return
+            
+            # Update `target_networks` to include IP information if available
+            target_networks = [net for net in multus_networks if net['name'] in target_networks_info]
+
+            api = CustomObjectsApi()
+            # Assign pods to each of the target networks
+            for network in target_networks:
+                update_network(network['name'], name, namespace, api)
     finally:
         connection.close()
         logger.info(f"Pod {name} removed")
 
 #UPDATE DATABASE WHEN NETWORK IS DELETED
-@kopf.on.delete('l2sm.k8s.local', 'v1', 'l2sm-networks')
+@kopf.on.delete('l2sm.l2sm.k8s.local', 'v1', 'l2smnetworks')
 def delete_vn(spec, name, logger, **kwargs):
     connection = pymysql.connect(host=database_ip,
                                 user=database_username,
@@ -426,12 +442,12 @@ def delete_vn(spec, name, logger, **kwargs):
             update_interfaces_sql = """
             UPDATE interfaces
             SET network_id = NULL
-            WHERE network_id = (SELECT id FROM networks WHERE name = %s AND type = '%s');
+            WHERE network_id = (SELECT id FROM networks WHERE name = %s AND type = %s);
             """
             cursor.execute(update_interfaces_sql, (name,spec['type']))
 
             # Then, delete the network from networks table
-            delete_network_sql = "DELETE FROM networks WHERE name = %s AND type = '%s';"
+            delete_network_sql = "DELETE FROM networks WHERE name = %s AND type = %s;"
             cursor.execute(delete_network_sql, (name,spec['type']))
             
             
@@ -463,4 +479,22 @@ def remove_node(body, logger, annotations, **kwargs):
     finally:
         connection.close()
     logger.info(f"Node {body['spec']['nodeName']} has been deleted from the cluster")
+
+
+def generate_random_ipv6_fe80():
+    # IPv6 FE80::/64 starts with '1111 1110 10' and 54 bits of 0s
+    # So we can fix the first 10 bits as '1111 1110 10' 
+    # Then we generate the last 64 bits randomly for the interface ID
+    # Since IPv6 addresses are represented in hexadecimal, we convert the binary values to hexadecimal
+    
+    
+    # Generating the interface ID (64 bits)
+    interface_id = random.getrandbits(64)
+    # Formatting to a 16 character hexadecimal string
+    interface_id_hex = format(interface_id, '016x')
+
+    # Constructing the full IPv6 address in the fe80::/64 range
+    ipv6_address = f"fe80::{interface_id_hex[:4]}:{interface_id_hex[4:8]}:{interface_id_hex[8:12]}:{interface_id_hex[12:]}/64"
+    
+    return ipv6_address
 
