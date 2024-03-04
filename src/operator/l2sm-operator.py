@@ -182,7 +182,7 @@ def create_vn(spec, name, namespace, logger, **kwargs):
 def pod_vn(body, name, namespace, logger, annotations, **kwargs):
     """Assign Pod to a network if a specific annotation is present."""
 
-    # Avoid database overlap by introducing a random sleep time
+    #time.sleep(random.uniform(0,0.8)) # Avoid database overlap by introducing a random sleep time
 
     multus_networks = extract_multus_networks(annotations)
     if not multus_networks:
@@ -316,10 +316,6 @@ def update_pod_annotation(pod_name, namespace, networks_info):
     v1 = client.CoreV1Api()
     pod = v1.read_namespaced_pod(pod_name, namespace)
     pod_annotations = pod.metadata.annotations or {}
-    print("pod")
-    print(pod_name)
-    print("networks")
-    print(networks_info)
     # Format the annotations based on whether IPs are provided
     formatted_networks = []
     for network_info in networks_info:
@@ -470,9 +466,9 @@ def remove_node(body, logger, annotations, **kwargs):
         with connection.cursor() as cursor:
             sql = """
             DELETE FROM interfaces
-            WHERE switch_id = (SELECT id FROM switches WHERE node_name = '%s');
+            WHERE switch_id = (SELECT id FROM switches WHERE node_name = %s);
             """
-            switchSql = "DELETE FROM switches WHERE node_name = '%s';"
+            switchSql = "DELETE FROM switches WHERE node_name = %s;"
             cursor.execute(sql,body['spec']['nodeName'])
             cursor.execute(switchSql,body['spec']['nodeName'])
             connection.commit()
