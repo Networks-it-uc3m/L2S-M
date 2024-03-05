@@ -1,11 +1,14 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: pong
+  name: podb
   labels:
     app: ping-pong
   annotations:
-    l2sm/networks: ping-network
+    k8s.v1.cni.cncf.io/networks:  '[
+            { "name": "ptp1",
+            "ips": ["fe80::58d0:b8ff:fe42:debf/64"]
+            }]'
 spec:
   containers:
   - name: router
