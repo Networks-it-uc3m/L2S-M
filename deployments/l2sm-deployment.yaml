@@ -15,7 +15,7 @@ spec:
 apiVersion: "k8s.cni.cncf.io/v1"
 kind: NetworkAttachmentDefinition
 metadata:
-  name: veth2
+  name:  veth2
 spec:
   config: '{
       "cniVersion": "0.3.0",
@@ -27,8 +27,8 @@ spec:
 ---
 apiVersion: "k8s.cni.cncf.io/v1"
 kind: NetworkAttachmentDefinition
-metadata:
-  name: veth3
+metadata: 
+  name:  veth3
 spec:
   config: '{
       "cniVersion": "0.3.0",
@@ -146,12 +146,12 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: l2sm-operator
-    namespace: default
+    namespace: he-codeco-netma
 ---
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: mysql-pv
+  name: mysql-pv-l2sm
   labels:
     type: local
 spec:
@@ -161,12 +161,12 @@ spec:
   accessModes:
     - ReadWriteOnce
   hostPath:
-    path: "/mnt/data"
+    path: "/mnt/he-codeco-netma"
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: mysql-pv-claim
+  name: mysql-pv-l2sm-claim
 spec:
   storageClassName: manual
   accessModes:
@@ -276,7 +276,7 @@ spec:
       volumes:
         - name: mysql-persistent-storage
           persistentVolumeClaim:
-            claimName: mysql-pv-claim
+            claimName: mysql-pv-l2sm-claim
       nodeSelector:
         dedicated: master
       tolerations:

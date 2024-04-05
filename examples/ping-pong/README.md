@@ -28,7 +28,7 @@ As you can see, L2S-M virtual networks are a [NetworkAttachmentDefinition](https
 To create the virtual network in your cluster, use the appropriate *kubectl* command as if you were building any other K8s resource:
 
 ```bash
-kubectl create -f ./examples/ping-pong/network.yaml
+kubectl create -f ./examples/ping-pong/network.yaml -n=he-codeco-namespace
 ```
 
 Et voilá! You have successfully created your first virtual network in your K8s cluster.
@@ -49,8 +49,8 @@ If you want to add your own Multus annotations, you are free to do so! L2S-M wil
 To assist you with the deployment of your first application with L2S-M, you can use the pod definitions available in this repository. To deploy both "ping-pong" pods (which are simple Ubuntu alpine containers), use the following commands:
 
 ```bash
-kubectl create -f ./examples/ping-pong/ping.yaml
-kubectl create -f ./examples/ping-pong/pong.yaml
+kubectl create -f ./examples/ping-pong/ping.yaml -n=he-codeco-namespace
+kubectl create -f ./examples/ping-pong/pong.yaml -n=he-codeco-namespace
 ```
 
 After a bit of time, check that both pods were successfully instantiated in your cluster.

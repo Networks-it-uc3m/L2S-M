@@ -15,13 +15,19 @@ This guide details the necessary steps to install the L2S-M Kubernetes operator 
 kubectl taint nodes --all node-role.kubernetes.io/control-plane- node-role.kubernetes.io/master-
 ```
 
+5. The `he-codeco-netma` namespace created. You can do so if it's not already done, by using the following kubectl command:
+
+```bash
+kubectl create namespace he-codeco-netma
+```
+
  
 ## Install L2S-M
 
 Installing L2S-M can be done by using a single command:
 
 ```bash
-kubectl create -f ./deployments/l2sm-deployment.yaml
+kubectl create -f ./deployments/l2sm-deployment.yaml -n=he-codeco-netma
 ```
 
 The installation will take around a minute to finish, and to check that everyting is running properly, you may run the following command:
