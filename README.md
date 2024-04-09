@@ -47,6 +47,19 @@ L2S-M has been presented in the following events:
 
 * [Open Source Mano (OSM) #13 plenary meeting (June 2022)](https://github.com/Networks-it-uc3m/L2S-M/blob/main/additional%20info/OSM%2313%20Plenary%20Meeting.pdf): In this meeting, L2S-M was presented as a solution to enable virtual networking to deploy Cloud Network Functions (CNFs) in K8s clusters. Moreover, the potential use of L2S-M to become the basis for a feature to be introduced in OSM's code was discussed as well.
 
+### Use cases where L2S-M has been used:
+The following publications and references showcase various use cases where L2S-M was used as the basis for providing secure communications within one, or multiple, Kubernetes clusters:
+
+* **Fishy Reference Framework:** Complex experimentation platform developed to support the H2020 FISHY project use cases & its main functionalities. L2S-M was utilised as a component that provided secured communications between all FISHY functionalities and elements, either virtualised or physical. 
+    - I. Vidal et al., 'A Multi-domain Testbed for Collaborative Research on the IoT-Edge-Cloud Continuum,' in 2023 20th Annual IEEE International Conference on Sensing, Communication, and Networking (SECON), 2023, pp. 394--395. *DOI: 10.1109/SECON58729.2023.10287436*.
+
+* **Smart Campus use case:** This use case was centred around the deployment of a "Content Delivery Network" (CDN) for distributing audiovisual content in a Univeristy environment composed of multiple edge and cloud K8s clusters. L2S-M provided inter-cluster and intra-cluster networking to securely connect all its elements.
+    - L. F. Gonzalez, I. Vidal, F. Valera, R. Martin, and D. Artalejo, 'A Link-Layer Virtual Networking Solution for Cloud-Native Network Function Virtualisation Ecosystems: L2S-M,' Future Internet, vol. 15, no. 8, 2023.* *DOI: 10.3390/fi15080274*. [Online]. Available [here.](https://www.mdpi.com/1999-5903/15/8/274)
+
+* **Secure Federated Learning use case:** This use case, done in collaboration with the University of Bristol, was centred around the implementation of a secured federated learning infrastructure. L2S-M enabled the isolated and secured communication between the FL clients and the server.
+    - J. M. Parra-Ullauri, L. F. Gonzalez, A. Bravalheri, R. Hussain, X. Vasilakos, I. Vidal, F. Valera, R. Nejabati, and D. Simeonidou, 'Privacy Preservation in Kubernetes-based Federated Learning: A Networking Approach,' in IEEE INFOCOM2023 - IEEE Conference on Computer CommunicationsWorkshops (INFOCOMWKSHPS), 2023, pp. 1--7. *DOI: 10.1109/INFOCOMWKSHPS57453.2023.10225925*.
+
+
 ### How to reach us
 
 Do you have any doubts about L2S-M or its installation? Do you want to provide feedback about the solution? Please, do not hesitate to contact us out through e-mail!
