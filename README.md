@@ -21,10 +21,9 @@ If you want more information about the original idea of L2S-M and its initial de
 
 Did you like L2S-M and want to use it in your K8s infrastructure or project? Please, feel free to do so, and don't forget to cite us! 
 
-### Projects where L2S-M is being used:
-- H2020 FISHY Project: https://fishy-project.eu (grant agreement 952644) 
-- True5G Project: (PID2019-108713RB-C52 / AEI / 10.13039/501100011033)
-- H2020 Labyrinth project: https://labyrinth2020.eu/ (grant agreement 861696).
+### Demo video
+
+This [video](https://youtube.com/watch?v=Oj2gzm-YxYE&si=bV9eN77wTlXQZY3Y) exemplifies the process to create virtual networks in Kubernetes using the L2S-M open-source software. More concretely, it shows how L2S is used to create a simple content distribution network on a Kubernetes cluster.
 
 ### Inter-cluster communications
 We are currently working on a solution to enable communications among workloads deployed on differente Kubernetes clusters. The solution enables the creation and deletion of virtual link-layer networks to connect application workloads running in different virtualization domains. This way, it supports inter-domain link-layer communications among remote workloads.  
@@ -38,9 +37,15 @@ In the [following section](./additional-info) of the repository, you can find a 
 
 L2S-M has been presented in the following events:
 
-* [Open Source Mano (OSM) #13 plenary meeting (01/06/2022)](https://github.com/Networks-it-uc3m/L2S-M/blob/main/additional%20info/OSM%2313%20Plenary%20Meeting.pdf): In this meeting, L2S-M was presented as a solution to enable virtual networking to deploy Cloud Network Functions (CNFs) in K8s clusters. Moreover, the potential use of L2S-M to become the basis for a feature to be introduced in OSM's code was discussed as well.
+* ETSI Network Operator Council Meeting #195 (June 2023)
 
-* [FIHY Summer Camp (20/04/2023)](https://drcn2023.upc.edu/FISHYSummerCamp.html). In this summer camp, we described the utilization of L2S-M in next-generation secured communication scenarios, which are covered in the H2020 FIHSY and Labyrinth projects (see Acnkowledgemnt sections).
+* [ETSI Open Source MANO (OSM) Proof-of-Concept: OSM PoC 14 Leveraging OSM virtual networking in Kubernetes clusters](https://osm.etsi.org/wikipub/index.php/OSM_PoC_14_Leveraging_OSM_virtual_networking_in_Kubernetes_clusters)
+
+* Demo in the [ETSI OSM MR14 Ecosystem Day](https://osm.etsi.org/wikipub/index.php/OSM-MR14_Ecosystem_Day) (March 2023)
+
+* [FIHY Summer Camp (20/04/2023)](https://drcn2023.upc.edu/FISHYSummerCamp.html). In this summer camp, we described the utilization of L2S-M in next-generation secured communication scenarios, which are covered in the H2020 FIHSY and Labyrinth projects (March 2023).
+
+* [Open Source Mano (OSM) #13 plenary meeting (June 2022)](https://github.com/Networks-it-uc3m/L2S-M/blob/main/additional%20info/OSM%2313%20Plenary%20Meeting.pdf): In this meeting, L2S-M was presented as a solution to enable virtual networking to deploy Cloud Network Functions (CNFs) in K8s clusters. Moreover, the potential use of L2S-M to become the basis for a feature to be introduced in OSM's code was discussed as well.
 
 ### How to reach us
 
@@ -54,4 +59,9 @@ Do you have any doubts about L2S-M or its installation? Do you want to provide f
 
 
 ### Acknowledment
-The work in this open-source project has partially been supported by the European H2020 FISHY Project (grant agreement 952644) and by the H2020 Labyrinth project (grant agreement 861696).
+The work in this open-source project has partially been supported by the European Horizon NEMO project (grant agreement 101070118), the Horizon CODECO project (grant agreement 101092696), and by the national 6GINSPIRE project (PID2022-137329OB-C429). 
+
+### Other projects where L2S-M is being used:
+- H2020 FISHY Project: https://fishy-project.eu (grant agreement 952644) 
+- True5G Project: (PID2019-108713RB-C52 / AEI / 10.13039/501100011033)
+- H2020 Labyrinth project: https://labyrinth2020.eu/ (grant agreement 861696).
