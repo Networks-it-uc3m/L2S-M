@@ -59,7 +59,7 @@ Do you have any doubts about L2S-M or its installation? Do you want to provide f
 
 
 ### Acknowledment
-The work in this open-source project has partially been supported by the European Horizon NEMO project (grant agreement 101070118), the Horizon CODECO project (grant agreement 101092696), and by the national 6GINSPIRE project (PID2022-137329OB-C429). 
+The work in this open-source project has partially been supported by the European Horizon NEMO project (grant agreement 101070118), the European Horizon CODECO project (grant agreement 101092696), and by the national 6GINSPIRE project (PID2022-137329OB-C429). 
 
 ### Other projects where L2S-M is being used:
 - H2020 FISHY Project: https://fishy-project.eu (grant agreement 952644) 
