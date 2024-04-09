@@ -1,0 +1,4 @@
+## Append samples of your project ##
+resources:
+- l2sm_v1_l2smnetwork.yaml
+#+kubebuilder:scaffold:manifestskustomizesamples

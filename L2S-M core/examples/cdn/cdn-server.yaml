@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: cdn-server
+  labels:
+    app: test4
+  annotations:
+    k8s.v1.cni.cncf.io/networks: v-network-1
+spec:
+  containers:
+  - name: server
+    command: ["/bin/ash", "-c", "ip a add 10.0.1.2/24 dev net1 && ip route add 10.0.2.0/24 via 10.0.1.1 dev net1 && trap : TERM INT; sleep infinity & wait"]
+    image: alpine:latest
+    securityContext:
+      capabilities:
+        add: ["NET_ADMIN"]
+  #nodeName: test-l2sm-uc3m-polito-1

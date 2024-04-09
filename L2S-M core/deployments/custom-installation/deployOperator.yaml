@@ -1,0 +1,144 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: l2sm-operator
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      l2sm-component: l2sm-opt
+  template:
+    metadata:
+      labels:
+        l2sm-component: l2sm-opt
+    spec:
+      serviceAccountName: l2sm-operator
+      initContainers:
+      - name: wait-for-l2sm-controller
+        image: curlimages/curl
+        args:
+        - /bin/sh
+        - -c
+        - >
+          set -x;
+          while [ $(curl -sw '%{http_code}' "http://l2sm-controller-service:8181/onos/ui" -o /dev/null) -ne 302 ]; do
+            sleep 15;
+          done;
+          sleep 5;
+      containers:
+      - image: alexdecb/l2sm-operator:2.3
+        name: l2sm-opt-pod
+        env:
+          - name: CONTROLLER_IP
+            value: l2sm-controller-service
+        #imagePullPolicy: Always
+      - name: mysql
+        image: mysql:5.7
+        envFrom:
+        - secretRef:
+            name: mysql-secret
+        ports:
+          - containerPort: 3306
+            name: mysql
+        volumeMounts:
+          - name: mysql-persistent-storage
+            mountPath: /var/lib/mysql
+          - name: initdb-volume
+            mountPath: /docker-entrypoint-initdb.d
+      volumes:
+        - name: mysql-persistent-storage
+          persistentVolumeClaim:
+            claimName: mysql-pv-claim
+        - name: initdb-volume
+          configMap:
+            name: mysql-schema
+            items:
+            - key: init.sql
+              path: init.sql
+      nodeSelector:
+        dedicated: master
+      tolerations:
+      - key: dedicated
+        operator: Equal
+        value: master
+        effect: NoSchedule
+        
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: l2sm-operator-service
+spec:
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 8080
+  selector:
+    l2sm-component: l2sm-opt
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mysql-schema
+data:
+  init.sql: |
+  
+    CREATE DATABASE IF NOT EXISTS l2sm;
+    USE l2sm;
+
+    CREATE TABLE networks (
+      id INT PRIMARY KEY AUTO_INCREMENT,
+      name VARCHAR(255) NOT NULL,
+      type ENUM('vlink', 'vnet', 'ext-vnet') NOT NULL,
+      UNIQUE KEY unique_network_name (name, type)
+    );
+
+    CREATE TABLE switches (
+      id INT PRIMARY KEY AUTO_INCREMENT,
+      node_name VARCHAR(255) NOT NULL,
+      openflowId TEXT,
+      ip VARCHAR(15)
+    );
+
+    CREATE TABLE neds (
+      id INT PRIMARY KEY AUTO_INCREMENT,
+      node_name VARCHAR(255) NOT NULL,
+      provider VARCHAR(255) NOT NULL,
+      openflowId TEXT,
+      ip VARCHAR(15)
+    );
+
+    CREATE TABLE interfaces (
+      id INT PRIMARY KEY AUTO_INCREMENT,
+      name VARCHAR(255),
+      pod VARCHAR(255),
+      switch_id INT,
+      ned_id INT,
+      network_id INT,
+      FOREIGN KEY (switch_id) REFERENCES switches(id),
+      FOREIGN KEY (ned_id) REFERENCES neds(id),
+      FOREIGN KEY (network_id) REFERENCES networks(id)
+    );
+
+    -- Define the one-to-many relationship between switches and interfaces
+    ALTER TABLE interfaces
+    ADD CONSTRAINT fk_switch_interface
+    FOREIGN KEY (switch_id)
+    REFERENCES switches(id);
+
+    -- Define the one-to-many relationship between neds and interfaces
+    ALTER TABLE interfaces
+    ADD CONSTRAINT fk_ned_interface
+    FOREIGN KEY (ned_id)
+    REFERENCES neds(id);
+
+    -- Define the many-to-one relationship between networks and interfaces
+    ALTER TABLE interfaces
+    ADD CONSTRAINT fk_network_interface
+    FOREIGN KEY (network_id)
+    REFERENCES networks(id);
+
+
+

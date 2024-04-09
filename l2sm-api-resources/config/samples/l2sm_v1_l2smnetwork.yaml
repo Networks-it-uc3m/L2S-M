@@ -1,0 +1,12 @@
+apiVersion: l2sm.l2sm.k8s.local/v1
+kind: L2SMNetwork
+metadata:
+  labels:
+    app.kubernetes.io/name: l2smnetwork
+    app.kubernetes.io/instance: l2smnetwork-sample
+    app.kubernetes.io/part-of: l2smnetwork
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: l2smnetwork
+  name: l2smnetwork-sample
+spec:
+  # TODO(user): Add fields here

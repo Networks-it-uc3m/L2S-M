@@ -1,0 +1,27 @@
+# permissions for end users to view l2smnetworks.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: l2smnetwork-viewer-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: l2smnetwork
+    app.kubernetes.io/part-of: l2smnetwork
+    app.kubernetes.io/managed-by: kustomize
+  name: l2smnetwork-viewer-role
+rules:
+- apiGroups:
+  - l2sm.l2sm.k8s.local
+  resources:
+  - l2smnetworks
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - l2sm.l2sm.k8s.local
+  resources:
+  - l2smnetworks/status
+  verbs:
+  - get
