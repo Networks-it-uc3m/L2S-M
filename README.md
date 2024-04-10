@@ -21,10 +21,6 @@ If you want more information about the original idea of L2S-M and its initial de
 
 Did you like L2S-M and want to use it in your K8s infrastructure or project? Please, feel free to do so, and don't forget to cite us! 
 
-### Projects where L2S-M is being used:
-- H2020 FISHY Project: https://fishy-project.eu (grant agreement 952644) 
-- True5G Project: (PID2019-108713RB-C52 / AEI / 10.13039/501100011033)
-- H2020 Labyrinth project: https://labyrinth2020.eu/ (grant agreement 861696).
 
 ### Inter-cluster communications
 L2S-M is now capable of managing inter-cluster communications, with custom resources that enable the creation of overlay network topologies and multi domain networks on demand. If you are interested in how these resources are defined, you can check [the provided inter-cluster example](./L2S-M%20core/examples/inter-cluster/) and [the source code of the Custom Resources.](./l2sm-api-resources)
