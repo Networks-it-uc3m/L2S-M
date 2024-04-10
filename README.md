@@ -1,0 +1,56 @@
+# Multi domain L2S-M 
+Welcome to the official repository of L2S-M, a **Kubernetes operator** that enables virtual networking in K8s clusters.
+
+Link-Layer Secure connectivity for Microservice platforms (L2S-M) is a K8s networking solution that complements the CNI plugin approach of K8s to create and manage virtual networks in K8s clusters. These virtual networks allow workloads (pods) to have isolated link-layer connectivity with other pods in a K8s cluster, regardless of the k8s node where they are actually deployed. L2S-M enables the creation/deletion of virtual networks on-demand, as well as attaching/detaching pods to that networks. The solution is seamlessly integrated within the K8s environment, through a K8s operator:
+
+![alt text](./L2S-M%20core/assets/v1_architecture.png?raw=true)
+
+L2S-M provides its intended functionalities using a programmable data-plane based on Software Defined Networking (SDN), which in turn provides a high degree of flexibility to dynamically incorporate new application and/or network configurations into K8s clusters. Moreover, L2S-M has been designed to flexibly accommodate various deployment options, ranging from small K8s clusters to those with a high number of distributed nodes. 
+
+The main K8s interface of pods remains intact (provided by a CNI plugin), retaining the compatibility with all the standard K8s elements (e.g., services, connectivity through the main interface, etc.). Moreover, the solution has the potential to be used for inter-cluster communications to support scenarios where network functions are spread through multiple distributed infrastructures (this is still a work in progress).  
+
+The figure outlines the design of L2S-M. See [how L2S-M works](./L2S-M%20core/L2S-M/additional-info/) to read further details on the L2S-M solution.
+
+If you want to learn how to install L2S-M in your cluster, see the [installation guide](./L2S-M%20core/deployments) of this repository to start its installation.
+
+Did you already install the operator and  you cannot wait to start building your own virtual networks in your K8s cluster? Check out our [ping-pong](./L2S-M%20core/examples/ping-pong) example!
+
+If you want more information about the original idea of L2S-M and its initial design, you can check our latest publication in the [IEEE Network journal](https://ieeexplore.ieee.org/document/9740640):
+
+- L. F. Gonzalez, I. Vidal, F. Valera and D. R. Lopez, "Link Layer Connectivity as a Service for Ad-Hoc Microservice Platforms," in IEEE Network, vol. 36, no. 1, pp. 10-17, January/February 2022, doi: 10.1109/MNET.001.2100363.
+
+Did you like L2S-M and want to use it in your K8s infrastructure or project? Please, feel free to do so, and don't forget to cite us! 
+
+### Projects where L2S-M is being used:
+- H2020 FISHY Project: https://fishy-project.eu (grant agreement 952644) 
+- True5G Project: (PID2019-108713RB-C52 / AEI / 10.13039/501100011033)
+- H2020 Labyrinth project: https://labyrinth2020.eu/ (grant agreement 861696).
+
+### Inter-cluster communications
+L2S-M is now capable of managing inter-cluster communications, with custom resources that enable the creation of overlay network topologies and multi domain networks on demand. If you are interested in how these resources are defined, you can check [the provided inter-cluster example](./L2S-M%20core/examples/inter-cluster/) and [the source code of the Custom Resources.](./l2sm-api-resources)
+The solution can work jointly with L2S-M or be used standalone through the [Multus CNI](https://github.com/k8snetworkplumbingwg/multus-cni). Details can be checked [here](https://github.com/Networks-it-uc3m/snd-based-inter-cluster-communications/blob/main/README.md).
+
+The solution enables the creation and deletion of virtual link-layer networks to connect application workloads running in different virtualization domains. This way, it supports inter-domain link-layer communications among remote workloads.
+
+### Additional information about L2S-M
+In the [following section](./L2S-M%20core/additional-info) of the repository, you can find a series of documents and slides that provide additional information about L2S-M, including presentations where our solution has been showcased to the public in various events.
+
+L2S-M has been presented in the following events:
+
+* [Open Source Mano (OSM) #13 plenary meeting (01/06/2022)](https://github.com/Networks-it-uc3m/L2S-M/blob/main/additional%20info/OSM%2313%20Plenary%20Meeting.pdf): In this meeting, L2S-M was presented as a solution to enable virtual networking to deploy Cloud Network Functions (CNFs) in K8s clusters. Moreover, the potential use of L2S-M to become the basis for a feature to be introduced in OSM's code was discussed as well.
+
+* [FIHY Summer Camp (20/04/2023)](https://drcn2023.upc.edu/FISHYSummerCamp.html). In this summer camp, we described the utilization of L2S-M in next-generation secured communication scenarios, which are covered in the H2020 FIHSY and Labyrinth projects (see Acnkowledgemnt sections).
+
+### How to reach us
+
+Do you have any doubts about L2S-M or its installation? Do you want to provide feedback about the solution? Please, do not hesitate to contact us out through e-mail!
+
+- Alex T. de Cock Buning: 100383348@alumnos.uc3m.es (Universidad Carlos III de Madrid)
+- Luis F. Gonzalez: luisfgon@it.uc3m.es (Universidad Carlos III de Madrid)
+- Ivan Vidal : ividal@it.uc3m.es (Universidad Carlos III de Madrid)
+- Francisco Valera: fvalera@it.uc3m.es (Universidad Carlos III de Madrid)
+- Diego R. Lopez: diego.r.lopez@telefonica.com (Telefónica I+D)
+
+
+### Acknowledment
+The work in this open-source project has partially been supported by the European H2020 FISHY Project (grant agreement 952644) and by the H2020 Labyrinth project (grant agreement 861696).
