@@ -4,28 +4,20 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.14.0
-  name: networkedgedevices.l2sm.l2sm.k8s.local
+  name: overlays.l2sm.l2sm.k8s.local
 spec:
   group: l2sm.l2sm.k8s.local
   names:
-    kind: NetworkEdgeDevice
-    listKind: NetworkEdgeDeviceList
-    plural: networkedgedevices
-    singular: networkedgedevice
+    kind: Overlay
+    listKind: OverlayList
+    plural: overlays
+    singular: overlay
   scope: Namespaced
   versions:
-  - additionalPrinterColumns:
-    - description: Availability status of the overlay
-      jsonPath: .status.availability
-      name: STATUS
-      type: string
-    - jsonPath: .metadata.creationTimestamp
-      name: AGE
-      type: date
-    name: v1
+  - name: v1
     schema:
       openAPIV3Schema:
-        description: NetworkEdgeDevice is the Schema for the networkedgedevices API
+        description: Overlay is the Schema for the overlays API
         properties:
           apiVersion:
             description: |-
@@ -45,7 +37,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: NetworkEdgeDeviceSpec defines the desired state of NetworkEdgeDevice
+            description: OverlaySpec defines the desired state of Overlay
             properties:
               neighbors:
                 description: Field exclusive to the multi-domain overlay type. If
@@ -4540,22 +4532,30 @@ spec:
                     - containers
                     type: object
                 type: object
+              topology:
+                description: |-
+                  Topology represents the desired topology, it's represented by the 'Nodes' field, a list of nodes where the switches are going to be deployed and a list of bidirectional links,
+                  selecting the nodes that are going to be linked.
+                properties:
+                  links:
+                    items:
+                      type: string
+                    type: array
+                  nodes:
+                    items:
+                      type: string
+                    type: array
+                required:
+                - links
+                - nodes
+                type: object
             required:
             - networkController
             - switchTemplate
             type: object
           status:
-            description: NetworkEdgeDeviceStatus defines the observed state of NetworkEdgeDevice
+            description: OverlayStatus defines the observed state of Overlay
             properties:
-              availability:
-                default: Unavailable
-                description: Status of the overlay. Is available when switches are
-                  connected between them and with the network Controller.
-                enum:
-                - Available
-                - Unavailable
-                - Unknown
-                type: string
               connectedNeighbors:
                 items:
                   properties:
@@ -4573,10 +4573,6 @@ spec:
                   - node
                   type: object
                 type: array
-              openflowId:
-                type: string
-            required:
-            - availability
             type: object
         type: object
     served: true

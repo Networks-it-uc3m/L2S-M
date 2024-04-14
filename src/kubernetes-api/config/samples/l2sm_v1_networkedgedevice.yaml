@@ -8,7 +8,6 @@ spec:
   networkController:
     name: example-network-controller
     domain: controller.example.com
-  type: multi-domain
   neighbors:
     - node: l2sm-test-5
       domain: 10.0.0.2

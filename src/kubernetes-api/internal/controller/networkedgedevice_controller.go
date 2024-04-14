@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -61,9 +62,9 @@ func (r *NetworkEdgeDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Re
 
 	log := log.FromContext(ctx)
 
-	overlay := &l2smv1.NetworkEdgeDevice{}
+	netEdgeDevice := &l2smv1.NetworkEdgeDevice{}
 
-	if err := r.Get(ctx, req.NamespacedName, overlay); err != nil {
+	if err := r.Get(ctx, req.NamespacedName, netEdgeDevice); err != nil {
 		// we'll ignore not-found errors, since they can't be fixed by an immediate
 		// requeue (we'll need to wait for a new notification), and we can get them
 		// on deleted requests.
@@ -74,36 +75,36 @@ func (r *NetworkEdgeDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	l2smFinalizer := "l2sm.operator.io/finalizer"
 
 	// examine DeletionTimestamp to determine if object is under deletion
-	if overlay.ObjectMeta.DeletionTimestamp.IsZero() {
+	if netEdgeDevice.ObjectMeta.DeletionTimestamp.IsZero() {
 		// The object is not being deleted, so if it does not have our finalizer,
 		// then lets add the finalizer and update the object. This is equivalent
 		// to registering our finalizer.
-		if !controllerutil.ContainsFinalizer(overlay, l2smFinalizer) {
-			controllerutil.AddFinalizer(overlay, l2smFinalizer)
-			if err := r.Update(ctx, overlay); err != nil {
+		if !controllerutil.ContainsFinalizer(netEdgeDevice, l2smFinalizer) {
+			controllerutil.AddFinalizer(netEdgeDevice, l2smFinalizer)
+			if err := r.Update(ctx, netEdgeDevice); err != nil {
 				return ctrl.Result{}, err
 			}
-			log.Info("Overlay created", "NetworkEdgeDevice", overlay.Name)
+			log.Info("Network Edge Device created", "NetworkEdgeDevice", netEdgeDevice.Name)
 
 		}
 	} else {
 		// The object is being deleted
-		if controllerutil.ContainsFinalizer(overlay, l2smFinalizer) {
+		if controllerutil.ContainsFinalizer(netEdgeDevice, l2smFinalizer) {
 			// our finalizer is present, so lets handle any external dependency
-			if err := r.deleteExternalResources(ctx, overlay); err != nil {
+			if err := r.deleteExternalResources(ctx, netEdgeDevice); err != nil {
 				// if fail to delete the external dependency here, return with error
 				// so that it can be retried.
 				return ctrl.Result{}, err
 			}
 
 			// remove our finalizer from the list and update it.
-			controllerutil.RemoveFinalizer(overlay, l2smFinalizer)
-			if err := r.Update(ctx, overlay); err != nil {
+			controllerutil.RemoveFinalizer(netEdgeDevice, l2smFinalizer)
+			if err := r.Update(ctx, netEdgeDevice); err != nil {
 				return ctrl.Result{}, err
 			}
 
 		}
-		log.Info("Overlay deleted", "NetworkEdgeDevice", overlay.Name)
+		log.Info("Network Edge Device deleted", "NetworkEdgeDevice", netEdgeDevice.Name)
 		// Stop reconciliation as the item is being deleted
 		return ctrl.Result{}, nil
 	}
@@ -115,13 +116,15 @@ func (r *NetworkEdgeDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	}
 
 	if len(switchReplicaSets.Items) == 0 {
-		if err := r.createExternalResources(ctx, overlay); err != nil {
+		if err := r.createExternalResources(ctx, netEdgeDevice); err != nil {
 			log.Error(err, "unable to create ReplicaSet")
 			return ctrl.Result{}, err
 		}
 		log.Info("NED Launched")
 		return ctrl.Result{RequeueAfter: time.Second * 20}, nil
 	} else {
+
+		//b, _ := json.Marshal(netEdgeDevice.Spec.Neighbors)
 
 	}
 
@@ -153,25 +156,88 @@ func (r *NetworkEdgeDeviceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func (r *NetworkEdgeDeviceReconciler) deleteExternalResources(ctx context.Context, overlay *l2smv1.NetworkEdgeDevice) error {
+func (r *NetworkEdgeDeviceReconciler) deleteExternalResources(ctx context.Context, netEdgeDevice *l2smv1.NetworkEdgeDevice) error {
 
 	return nil
 }
+func (r *NetworkEdgeDeviceReconciler) createExternalResources(ctx context.Context, netEdgeDevice *l2smv1.NetworkEdgeDevice) error {
+	// Convert netEdgeDevice.Spec.Neighbors to JSON
+	neighborsJSON, err := json.Marshal(netEdgeDevice.Spec.Neighbors)
+	if err != nil {
+		return err
+	}
 
-func (r *NetworkEdgeDeviceReconciler) createExternalResources(ctx context.Context, overlay *l2smv1.NetworkEdgeDevice) error {
+	// Create a ConfigMap to store the neighbors JSON
 
-	fmt.Print(utils.SpecToJson(overlay))
+	constructConfigMapForNED := func(netEdgeDevice *l2smv1.NetworkEdgeDevice) (*corev1.ConfigMap, error) {
 
-	constructReplicaSetforOverlay := func(overlay *l2smv1.NetworkEdgeDevice, scheduledTime time.Time) (*appsv1.ReplicaSet, error) {
+		configMap := &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      fmt.Sprintf("%s-neighbors", netEdgeDevice.Name),
+				Namespace: netEdgeDevice.Namespace,
+			},
+			Data: map[string]string{
+				"neighbors.json": string(neighborsJSON),
+			},
+		}
+		if err := controllerutil.SetControllerReference(netEdgeDevice, configMap, r.Scheme); err != nil {
+			return nil, err
+		}
+		return configMap, nil
+	}
 
-		name := fmt.Sprintf("%s-%s", overlay.Name, utils.GenerateHash(overlay))
+	configMap, err := constructConfigMapForNED(netEdgeDevice)
+
+	// Create the ConfigMap in Kubernetes
+	if err := r.Client.Create(ctx, configMap); err != nil {
+		return err
+	}
+
+	constructReplicaSetforNED := func(netEdgeDevice *l2smv1.NetworkEdgeDevice) (*appsv1.ReplicaSet, error) {
+		name := fmt.Sprintf("%s-%s", netEdgeDevice.Name, utils.GenerateHash(netEdgeDevice))
+
+		// Define volume mounts to be added to each container
+		volumeMounts := []corev1.VolumeMount{
+			{
+				Name:      "neighbors",
+				MountPath: "/etc/l2sm/",
+				ReadOnly:  true,
+			},
+		}
+
+		// Update containers to include the volume mount
+		containers := make([]corev1.Container, len(netEdgeDevice.Spec.SwitchTemplate.Spec.Containers))
+		for i, container := range netEdgeDevice.Spec.SwitchTemplate.Spec.Containers {
+			container.VolumeMounts = append(container.VolumeMounts, volumeMounts...)
+			containers[i] = container
+		}
+
+		// Define the volume using the created ConfigMap
+		volumes := []corev1.Volume{
+			{
+				Name: "neighbors",
+				VolumeSource: corev1.VolumeSource{
+					ConfigMap: &corev1.ConfigMapVolumeSource{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: configMap.Name,
+						},
+						Items: []corev1.KeyToPath{
+							{
+								Key:  "neighbors.json",
+								Path: "neighbors.json",
+							},
+						},
+					},
+				},
+			},
+		}
 
 		replicaSet := &appsv1.ReplicaSet{
 			ObjectMeta: metav1.ObjectMeta{
 				Labels:      make(map[string]string),
 				Annotations: make(map[string]string),
 				Name:        name,
-				Namespace:   overlay.Namespace,
+				Namespace:   netEdgeDevice.Namespace,
 			},
 			Spec: appsv1.ReplicaSetSpec{
 				Replicas: utils.Int32Ptr(1),
@@ -187,26 +253,28 @@ func (r *NetworkEdgeDeviceReconciler) createExternalResources(ctx context.Contex
 						},
 					},
 					Spec: corev1.PodSpec{
-						InitContainers: overlay.Spec.SwitchTemplate.Spec.InitContainers,
-						Containers:     overlay.Spec.SwitchTemplate.Spec.Containers,
-						Volumes:        overlay.Spec.SwitchTemplate.Spec.Volumes,
-						HostNetwork:    overlay.Spec.SwitchTemplate.Spec.HostNetwork},
+						InitContainers: netEdgeDevice.Spec.SwitchTemplate.Spec.InitContainers,
+						Containers:     containers,
+						Volumes:        volumes,
+						HostNetwork:    netEdgeDevice.Spec.SwitchTemplate.Spec.HostNetwork,
+					},
 				},
 			},
 		}
-		for k, v := range overlay.Spec.SwitchTemplate.Annotations {
+
+		for k, v := range netEdgeDevice.Spec.SwitchTemplate.Annotations {
 			replicaSet.Annotations[k] = v
 		}
-		for k, v := range overlay.Spec.SwitchTemplate.Labels {
+		for k, v := range netEdgeDevice.Spec.SwitchTemplate.Labels {
 			replicaSet.Labels[k] = v
 		}
-		if err := ctrl.SetControllerReference(overlay, replicaSet, r.Scheme); err != nil {
+		if err := controllerutil.SetControllerReference(netEdgeDevice, replicaSet, r.Scheme); err != nil {
 			return nil, err
 		}
 		return replicaSet, nil
 	}
-	replicaSet, err := constructReplicaSetforOverlay(overlay, time.Now())
 
+	replicaSet, err := constructReplicaSetforNED(netEdgeDevice)
 	if err != nil {
 		return err
 	}
@@ -216,5 +284,4 @@ func (r *NetworkEdgeDeviceReconciler) createExternalResources(ctx context.Contex
 	}
 
 	return nil
-
 }

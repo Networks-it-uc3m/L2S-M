@@ -1,0 +1,27 @@
+# permissions for end users to view overlays.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: overlay-viewer-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: l2sm-kapi
+    app.kubernetes.io/part-of: l2sm-kapi
+    app.kubernetes.io/managed-by: kustomize
+  name: overlay-viewer-role
+rules:
+- apiGroups:
+  - l2sm.l2sm.k8s.local
+  resources:
+  - overlays
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - l2sm.l2sm.k8s.local
+  resources:
+  - overlays/status
+  verbs:
+  - get

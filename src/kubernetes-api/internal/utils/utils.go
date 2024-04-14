@@ -50,7 +50,7 @@ func GenerateHash(obj runtime.Object) string {
 	return hex.EncodeToString(hash[:5])
 }
 
-func SpecToJson(obj runtime.Object) string {
+func SpecToJson(obj runtime.Object) bytes.Buffer {
 	s := json.NewSerializerWithOptions(json.DefaultMetaFactory, nil, nil, json.SerializerOptions{Yaml: false, Pretty: false, Strict: true})
 
 	// Create a buffer to hold the JSON data
@@ -59,5 +59,5 @@ func SpecToJson(obj runtime.Object) string {
 	// Encode the object to JSON; handle runtime objects appropriately
 	s.Encode(obj, &b)
 
-	return b.String()
+	return b
 }

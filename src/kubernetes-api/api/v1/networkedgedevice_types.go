@@ -24,19 +24,6 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
-// +kubebuilder:validation:Enum=local;multi-domain
-type OverlayType string
-
-const (
-	Local       OverlayType = "local"
-	MultiDomain OverlayType = "multi-domain"
-)
-
-type TopologySpec struct {
-	Nodes []string `json:"nodes"`
-	Links []string `json:"links"`
-}
-
 // The SDN Controller that manages the overlay network.
 type NetworkControllerSpec struct {
 
@@ -119,14 +106,6 @@ type NetworkEdgeDeviceSpec struct {
 
 	// The SDN Controller that manages the overlay network. Must specify a domain and a name.
 	NetworkController *NetworkControllerSpec `json:"networkController"`
-
-	// Type represents the type of Overlay. There's local overlay that must be accompained by a desired topology in the spec definition and a multi-domain overlay
-	// that is managed by an external provider and connects with other clusters, which must be accompained by the neighbors spec field.
-	Type OverlayType `json:"type"`
-
-	// Topology represents the desired topology, it's represented by the 'Nodes' field, a list of nodes where the switches are going to be deployed and a list of bidirectional links,
-	// selecting the nodes that are going to be linked.
-	Topology *TopologySpec `json:"topology,omitempty"`
 
 	// Field exclusive to the multi-domain overlay type. If specified in other  types of overlays, the reosurce will launch an error and won't be created.
 	Neighbors []NeighborSpec `json:"neighbors,omitempty"`

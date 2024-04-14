@@ -56,3 +56,29 @@ rules:
   - get
   - patch
   - update
+- apiGroups:
+  - l2sm.l2sm.k8s.local
+  resources:
+  - overlays
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - l2sm.l2sm.k8s.local
+  resources:
+  - overlays/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - l2sm.l2sm.k8s.local
+  resources:
+  - overlays/status
+  verbs:
+  - get
+  - patch
+  - update

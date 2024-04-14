@@ -1,5 +1,5 @@
-# l2network
-The "l2networks" component is essentially a set of Custom Resource Definitions (CRDs) accompanied by a controller and a manager. It's designed to manage the virtual networks that L2S-M uses between pods within a K8s cluster. These virtual networks facilitate isolated link-layer connectivity among pods, enhancing security and network efficiency.
+# L2S-M KAPI
+The "l2s-m kapi" component is essentially a set of Custom Resource Definitions (CRDs) accompanied by a controller and a manager. It's designed to manage the overlays and virtual networks that L2S-M uses between pods within a K8s cluster. These virtual networks facilitate isolated link-layer connectivity among pods, enhancing security and network efficiency.
 ## Description
 
 Link-Layer Secure connectivity for Microservice platforms (L2S-M) is a K8s networking solution that complements the CNI plugin approach of K8s to create and manage virtual networks in K8s clusters. These virtual networks allow workloads (pods) to have isolated link-layer connectivity with other pods in a K8s cluster, regardless of the k8s node where they are actually deployed. L2S-M enables the creation/deletion of virtual networks on-demand, as well as attaching/detaching pods to that networks. [More info can be found in the original repo.](https://github.com/Networks-it-uc3m/L2S-M)

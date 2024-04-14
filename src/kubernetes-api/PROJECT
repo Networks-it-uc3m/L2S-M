@@ -31,4 +31,13 @@ resources:
   kind: NetworkEdgeDevice
   path: l2sm.k8s.local/l2sm-kapi/api/v1
   version: v1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: l2sm.k8s.local
+  group: l2sm
+  kind: Overlay
+  path: l2sm.k8s.local/l2sm-kapi/api/v1
+  version: v1
 version: "3"
