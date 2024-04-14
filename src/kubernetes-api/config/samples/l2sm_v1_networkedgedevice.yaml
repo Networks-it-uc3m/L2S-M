@@ -1,0 +1,23 @@
+apiVersion: l2sm.l2sm.k8s.local/v1
+kind: NetworkEdgeDevice
+metadata:
+  name: example-networkedgedevice
+  labels:
+    app: l2sm
+spec:
+  networkController:
+    name: example-network-controller
+    domain: controller.example.com
+  type: multi-domain
+  neighbors:
+    - node: l2sm-test-5
+      domain: 10.0.0.2
+  switchTemplate:
+    spec:
+      hostNetwork: true
+      containers:
+        - name: l2sm-switch
+          image: alexdecb/l2sm-switch:2.3
+          resources: {}
+          ports:
+            - containerPort: 80

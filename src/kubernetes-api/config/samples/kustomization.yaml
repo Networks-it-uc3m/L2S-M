@@ -1,0 +1,6 @@
+## Append samples of your project ##
+resources:
+- l2sm_v1_l2network.yaml
+- l2sm_v1_networkedgedevice.yaml
+- l2sm_v1_networkedgedevice.yaml
+#+kubebuilder:scaffold:manifestskustomizesamples
