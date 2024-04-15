@@ -278,7 +278,7 @@ spec:
           persistentVolumeClaim:
             claimName: mysql-pv-claim
       nodeSelector:
-        dedicated: master
+        dedicated: control-plane
       tolerations:
       - key: dedicated
         operator: Equal
