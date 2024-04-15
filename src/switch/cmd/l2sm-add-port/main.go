@@ -6,7 +6,6 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"ovs-switch/pkg/ovs"
 )
 
@@ -21,7 +20,7 @@ type Node struct {
 // the second one is the path to the configuration file, in reference to the code.
 func main() {
 
-	configDir, nodeName, fileType, err := takeArguments()
+	portName, err := takeArguments()
 
 	bridge := ovs.FromName("brtun")
 
@@ -30,41 +29,26 @@ func main() {
 		return
 	}
 
-	nodes, err := readFile(configDir)
-
-	switch fileType {
-	case "topology":
-		err = createTopology(bridge, nodes, nodeName)
-
-	case "neighbors":
-		err = connectToNeighbors(bridge, nodes[0])
-	}
+	bridge.AddPort(portName)
 
 	if err != nil {
-		fmt.Println("Vxlans not created: ", err)
+		fmt.Println("Port not added: ", err)
 		return
 	}
 }
 
-func takeArguments() (string, string, string, error) {
-	configDir := os.Args[len(os.Args)-1]
+func takeArguments() (string, error) {
 
-	nodeName := flag.String("node_name", "", "name of the node the script is executed in. Required.")
-
-	fileType := flag.String("file_type", "topology", "type of filed passed as an argument. Can either be topology or neighbors. Default: topology.")
+	portName := flag.String("port_name", "", "port you want to add. Required.")
 
 	flag.Parse()
 
-	switch {
-	case *nodeName == "":
-		return "", "", "", errors.New("node name is not defined")
-	case *fileType != "topology" || *fileType != "neighbors":
-		return "", "", "", errors.New("file type not supported. Available types: 'topology' and 'neighbors'")
-	case configDir == "":
-		return "", "", "", errors.New("config directory is not defined")
+	if *portName == "" {
+		return "", errors.New("port name is not defined")
+
 	}
 
-	return configDir, *nodeName, *fileType, nil
+	return *portName, nil
 }
 
 func createTopology(bridge ovs.Bridge, nodes []Node, nodeName string) error {
