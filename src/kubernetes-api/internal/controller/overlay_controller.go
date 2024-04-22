@@ -24,7 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	l2smv1 "l2sm.k8s.local/l2sm-kapi/api/v1"
+	l2smv1 "l2sm.k8s.local/controllermanager/api/v1"
 )
 
 // OverlayReconciler reconciles a Overlay object

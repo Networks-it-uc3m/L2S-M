@@ -3,7 +3,7 @@ package sdnclient
 import (
 	"errors"
 
-	l2smv1 "l2sm.k8s.local/l2sm-kapi/api/v1"
+	l2smv1 "l2sm.k8s.local/controllermanager/api/v1"
 )
 
 type ClientType string
@@ -37,7 +37,7 @@ func NewClient(clientType ClientType, config ClientConfig) (Client, error) {
 		}
 		return client, nil
 	case ExternalType:
-		client := &ExternalClient{Session: sessionClient} // Adjust ExternalClient struct accordingly
+		client := &ExternalClient{Session: sessionClient}
 		if !client.beginSessionController() {
 			return nil, errors.New("could not initialize session with SDN controller. Please check the connection details and credentials.")
 		}

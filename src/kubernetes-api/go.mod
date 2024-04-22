@@ -1,4 +1,4 @@
-module l2sm.k8s.local/l2sm-kapi
+module l2sm.k8s.local/controllermanager
 
 go 1.21
 

@@ -28,9 +28,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	l2smv1 "l2sm.k8s.local/l2sm-kapi/api/v1"
-	"l2sm.k8s.local/l2sm-kapi/internal/sdnclient"
-	"l2sm.k8s.local/l2sm-kapi/internal/utils"
+	l2smv1 "l2sm.k8s.local/controllermanager/api/v1"
+	"l2sm.k8s.local/controllermanager/internal/sdnclient"
+	"l2sm.k8s.local/controllermanager/internal/utils"
 )
 
 // L2NetworkReconciler reconciles a L2Network object
@@ -150,7 +150,7 @@ func (r *L2NetworkReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	r.Log.Info("this is the controller ip", os.Getenv("CONTROLLER_IP"))
 	fmt.Println(os.Getenv("CONTROLLER_IP"))
 	// Initialize the InternalClient with the base URL of the SDN controller
-	clientConfig := sdnclient.ClientConfig{BaseURL: fmt.Sprintf("http://%s:8181/onos/v1", os.Getenv("CONTROLLER_IP")), Username: "karaf", Password: "karaf"}
+	clientConfig := sdnclient.ClientConfig{BaseURL: fmt.Sprintf("http://%s:8181/onos", os.Getenv("CONTROLLER_IP")), Username: "karaf", Password: "karaf"}
 
 	r.InternalClient, err = sdnclient.NewClient(sdnclient.InternalType, clientConfig)
 	if err != nil {

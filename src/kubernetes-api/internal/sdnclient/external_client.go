@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
-	l2smv1 "l2sm.k8s.local/l2sm-kapi/api/v1"
+	l2smv1 "l2sm.k8s.local/controllermanager/api/v1"
 )
 
 // ExternalClient is part of the Client interface, and implements the SessionClient, which is a wrapper of the http function

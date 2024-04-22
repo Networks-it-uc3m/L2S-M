@@ -34,8 +34,8 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
-	l2smv1 "l2sm.k8s.local/l2sm-kapi/api/v1"
-	"l2sm.k8s.local/l2sm-kapi/internal/controller"
+	l2smv1 "l2sm.k8s.local/controllermanager/api/v1"
+	"l2sm.k8s.local/controllermanager/internal/controller"
 	//+kubebuilder:scaffold:imports
 )
 

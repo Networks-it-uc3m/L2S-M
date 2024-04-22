@@ -34,7 +34,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
-	l2smv1 "l2sm.k8s.local/l2sm-kapi/api/v1"
+	l2smv1 "l2sm.k8s.local/controllermanager/api/v1"
 	//+kubebuilder:scaffold:imports
 )
 

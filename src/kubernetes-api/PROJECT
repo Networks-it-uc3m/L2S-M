@@ -5,8 +5,8 @@
 domain: l2sm.k8s.local
 layout:
 - go.kubebuilder.io/v4
-projectName: l2sm-kapi
-repo: l2sm.k8s.local/l2sm-kapi
+projectName: controllermanager
+repo: l2sm.k8s.local/controllermanager
 resources:
 - api:
     crdVersion: v1
@@ -15,7 +15,7 @@ resources:
   domain: l2sm.k8s.local
   group: l2sm
   kind: L2Network
-  path: l2sm.k8s.local/l2sm-kapi/api/v1
+  path: l2sm.k8s.local/controllermanager/api/v1
   version: v1
 - controller: true
   group: core
@@ -29,7 +29,7 @@ resources:
   domain: l2sm.k8s.local
   group: l2sm
   kind: NetworkEdgeDevice
-  path: l2sm.k8s.local/l2sm-kapi/api/v1
+  path: l2sm.k8s.local/controllermanager/api/v1
   version: v1
 - api:
     crdVersion: v1
@@ -38,6 +38,6 @@ resources:
   domain: l2sm.k8s.local
   group: l2sm
   kind: Overlay
-  path: l2sm.k8s.local/l2sm-kapi/api/v1
+  path: l2sm.k8s.local/controllermanager/api/v1
   version: v1
 version: "3"

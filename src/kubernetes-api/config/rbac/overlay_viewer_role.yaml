@@ -6,8 +6,8 @@ metadata:
     app.kubernetes.io/name: clusterrole
     app.kubernetes.io/instance: overlay-viewer-role
     app.kubernetes.io/component: rbac
-    app.kubernetes.io/created-by: l2sm-kapi
-    app.kubernetes.io/part-of: l2sm-kapi
+    app.kubernetes.io/created-by: controllermanager
+    app.kubernetes.io/part-of: controllermanager
     app.kubernetes.io/managed-by: kustomize
   name: overlay-viewer-role
 rules:
