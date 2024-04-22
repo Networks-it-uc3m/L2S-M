@@ -22,7 +22,7 @@ database_username = os.environ['MYSQL_USER']
 database_password = os.environ['MYSQL_PASSWORD']
 database_name = os.environ['MYSQL_DATABASE']
 
-base_controller_url = 'http://' + os.environ['CONTROLLER_IP'] + ':8181' + '/onos/v1'
+base_controller_url = 'http://' + os.environ['CONTROLLER_IP'] + ':8181' + '/onos'
 
 print(base_controller_url)
 print(database_ip)
@@ -36,7 +36,7 @@ def begin_session_controller(base_controller_url,username,password):
   session.auth = auth
 
   #Check if connection is possible
-  response = session.get(base_controller_url + '/l2sm/networks/status')
+  response = session.get(base_controller_url + '/vnets/api/status')
   if response.status_code == 200:
     # Successful request
     print("Initialized session between operator and controller.")
@@ -69,7 +69,7 @@ def get_openflow_id(node_name):
                     return switchId  # If openflowId is already set, return it
 
             # If openflowId is not set, make a request to get the information from the API
-            response = session.get(base_controller_url + '/devices')
+            response = session.get(base_controller_url + '/v1/devices')
             devices = response.json().get('devices', [])
 
             for device in devices:
@@ -152,7 +152,7 @@ def update_db(body, logger, annotations, **kwargs):
 
 #UPDATE DATABASE WHEN NETWORK IS CREATED, I.E: IS A MULTUS CRD WITH OUR L2SM INTERFACE PRESENT IN ITS CONFIG
 #@kopf.on.create('NetworkAttachmentDefinition', field="spec.config['device']", value='l2sm-vNet')
-@kopf.on.create('l2sm.l2sm.k8s.local', 'v1', 'l2smnetworks')
+@kopf.on.create('l2sm.l2sm.k8s.local', 'v1', 'l2networks')
 def create_vn(spec, name, namespace, logger, **kwargs):
     
     # Database connection setup
@@ -221,7 +221,7 @@ def update_network(l2sm_network_name,pod_name,namespace,api):
         group="l2sm.l2sm.k8s.local",
         version="v1",
         namespace=namespace,
-        plural="l2smnetworks",
+        plural="l2networks",
         name=l2sm_network_name,
     )
     connected_pods = l2sm_network.get('status', {}).get('connectedPods', [])
@@ -234,7 +234,7 @@ def update_network(l2sm_network_name,pod_name,namespace,api):
             group="l2sm.l2sm.k8s.local",
             version="v1",
             namespace=namespace,
-            plural="l2smnetworks",
+            plural="l2networks",
             name=l2sm_network_name,
             body=patch
         )
@@ -245,7 +245,7 @@ def remove_from_network(l2sm_network_name,pod_name,namespace,api):
         group="l2sm.l2sm.k8s.local",
         version="v1",
         namespace=namespace,
-        plural="l2smnetworks",
+        plural="l2networks",
         name=l2sm_network_name,
     )
     connected_pods = l2sm_network.get('status', {}).get('connectedPods', [])
@@ -258,7 +258,7 @@ def remove_from_network(l2sm_network_name,pod_name,namespace,api):
             group="l2sm.l2sm.k8s.local",
             version="v1",
             namespace=namespace,
-            plural="l2smnetworks",
+            plural="l2networks",
             name=l2sm_network_name,
             body=patch
         )
@@ -283,7 +283,7 @@ def extract_multus_networks(annotations):
 def get_existing_networks(namespace):
     """Return existing networks in the namespace."""
     api = client.CustomObjectsApi()
-    networks = api.list_namespaced_custom_object('l2sm.l2sm.k8s.local', 'v1', namespace, 'l2smnetworks').get('items')
+    networks = api.list_namespaced_custom_object('l2sm.l2sm.k8s.local', 'v1', namespace, 'l2networks').get('items')
     return [network['metadata']['name'] for network in networks if "vnet" in network['spec']['type']]
 
 def filter_target_networks(multus_networks, existing_networks):
@@ -381,7 +381,7 @@ def post_network_assignment(openflow_id, port_number, network_name):
         "networkId": network_name,
         "networkEndpoints": [f"{openflow_id}/{port_number}"]
     }
-    response = session.post(f"{base_controller_url}/l2sm/networks/port", json=payload)
+    response = session.post(f"{base_controller_url}/vnets/api/port", json=payload)
     if response.status_code != 204:
         raise Exception(f"Network assignment failed with status code: {response.status_code}")
      
@@ -425,7 +425,7 @@ def dpod_vn(body, name, namespace, logger, annotations, **kwargs):
         logger.info(f"Pod {name} removed")
 
 #UPDATE DATABASE WHEN NETWORK IS DELETED
-@kopf.on.delete('l2sm.l2sm.k8s.local', 'v1', 'l2smnetworks')
+@kopf.on.delete('l2sm.l2sm.k8s.local', 'v1', 'l2networks')
 def delete_vn(spec, name, logger, **kwargs):
     connection = pymysql.connect(host=database_ip,
                                 user=database_username,
