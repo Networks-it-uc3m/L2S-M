@@ -1,3 +1,21 @@
+<!---
+ Copyright 2024  Charles III University of Madrid
+ 
+ Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ use this file except in compliance with the License.  You may obtain a copy
+ of the License at
+ 
+   http://www.apache.org/licenses/LICENSE-2.0
+ 
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ License for the specific language governing permissions and limitations under
+ the License.
+ 
+ SPDX-License-Identifier: Apache-2.0
+-->
+
 # l2smnetwork
 The "l2smnetworks" component is essentially a set of Custom Resource Definitions (CRDs) accompanied by a controller and a manager. It's designed to manage the virtual networks that L2S-M uses between pods within a K8s cluster. These virtual networks facilitate isolated link-layer connectivity among pods, enhancing security and network efficiency.
 ## Description
