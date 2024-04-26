@@ -1,3 +1,21 @@
+<!---
+ Copyright 2024  Universidad Carlos III de Madrid
+ 
+ Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ use this file except in compliance with the License.  You may obtain a copy
+ of the License at
+ 
+   http://www.apache.org/licenses/LICENSE-2.0
+ 
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ License for the specific language governing permissions and limitations under
+ the License.
+ 
+ SPDX-License-Identifier: Apache-2.0
+-->
+
 # How does L2S-M work?
 
 L2S-M takes a different approach to K8s networking in comparison with other solutions available, which mostly implement CNI plugins to be used as the main connectivity basis for a cluster. L2S-M is deployed as a complementary solution to these CNI Plugins, since it allows the creation and management of virtual networks in a K8s cluster in order to provide workloads with one (or several) interface(s) to communicate with other workloads attached to the same network(s) at the link-layer. The main CNI Plugin interface in these pods remains intact, allowing the standard K8s functionalities to still be available for the pods (services, communications using the main interface, etc.).
