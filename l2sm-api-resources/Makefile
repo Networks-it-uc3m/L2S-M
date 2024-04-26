@@ -1,5 +1,5 @@
 #-------------------------------------------------------------------------------
-# Copyright 2024  Charles III University of Madrid
+# Copyright 2024  Universidad Carlos III de Madrid
 # 
 # Licensed under the Apache License, Version 2.0 (the "License"); you may not
 # use this file except in compliance with the License.  You may obtain a copy
@@ -15,6 +15,7 @@
 # 
 # SPDX-License-Identifier: Apache-2.0
 #-------------------------------------------------------------------------------
+
 # Image URL to use all building/pushing image targets
 IMG ?= controller:latest
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
