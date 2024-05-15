@@ -20,14 +20,12 @@ type VnetPayload struct {
 
 func (c *InternalClient) beginSessionController() bool {
 	resp, err := c.Session.Get("/vnets/api/status")
-	fmt.Println("Getting it")
 	if err != nil {
 		fmt.Println(err)
 		return false
 	}
 	defer resp.Body.Close()
 
-	fmt.Println(resp.StatusCode)
 	// Check if the status code indicates success (HTTP 200 OK).
 	return resp.StatusCode == http.StatusOK
 }
