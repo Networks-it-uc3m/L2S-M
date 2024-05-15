@@ -134,12 +134,12 @@ func createTopology(bridge ovs.Bridge, topology Topology, nodeName string) error
 		case link.EndpointNodeB:
 			remoteIp = nodeMap[link.EndpointNodeA]
 		default:
-			break
+			continue
 		}
 		err := bridge.CreateVxlan(ovs.Vxlan{VxlanId: vxlanId, LocalIp: localIp, RemoteIp: remoteIp, UdpPort: "7000"})
 
 		if err != nil {
-			return fmt.Errorf("could not create vxlan between node %s and node %s", link.EndpointNodeA, link.EndpointNodeB)
+			return fmt.Errorf("could not create vxlan between node %s and node %s. Error:%s", link.EndpointNodeA, link.EndpointNodeB, err)
 		} else {
 			fmt.Printf("Created vxlan between node %s and node %s.\n", link.EndpointNodeA, link.EndpointNodeB)
 		}
