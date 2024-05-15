@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: l2sm-controller
-        image: alexdecb/l2sm-controller:2.3
+        image: alexdecb/l2sm-controller:2.4
         readinessProbe:
           httpGet:
             path: /onos/ui
