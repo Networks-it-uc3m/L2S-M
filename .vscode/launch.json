@@ -11,7 +11,8 @@
                 "DATABASE_IP": "10.152.183.132",
                 "MYSQL_USER": "l2sm",
                 "MYSQL_PASSWORD": "l2sm",
-                "MYSQL_DATABASE": "l2sm"
+                "MYSQL_DATABASE": "l2sm",
+                "NODE_NAME": "l2sm1"
             }
         }
     ]
