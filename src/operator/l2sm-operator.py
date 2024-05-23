@@ -307,6 +307,7 @@ def get_free_interfaces(node_name):
                     """            
             cursor.execute(sql, (node_name.strip(),))
             free_interfaces = cursor.fetchall()
+            print(free_interfaces)
     finally:
         connection.close()
     return free_interfaces
@@ -326,6 +327,8 @@ def update_pod_annotation(pod_name, namespace, networks_info):
     pod_annotations['k8s.v1.cni.cncf.io/networks'] = '[' + ', '.join(formatted_networks) + ']'
     print(pod_annotations)
     v1.patch_namespaced_pod(pod_name, namespace, {'metadata': {'annotations': pod_annotations}})
+    v1.delete_namespaced_pod(pod_name, namespace)
+
 
 
 def update_network_assignments(pod_name, namespace, node_name, free_interfaces, target_networks, logger, openflow_id):
