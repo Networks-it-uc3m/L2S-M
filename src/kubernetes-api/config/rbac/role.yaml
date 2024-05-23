@@ -5,6 +5,18 @@ metadata:
   name: manager-role
 rules:
 - apiGroups:
+  - apps
+  resources:
+  - replicasets
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
   - l2sm.l2sm.k8s.local
   resources:
   - l2networks
@@ -82,3 +94,15 @@ rules:
   - get
   - patch
   - update
+- apiGroups:
+  - l2sm.l2sm.k8s.local
+  resources:
+  - replicasets
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
