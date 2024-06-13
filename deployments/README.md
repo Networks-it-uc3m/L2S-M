@@ -21,6 +21,13 @@ kubectl taint nodes --all node-role.kubernetes.io/control-plane- node-role.kuber
 kubectl create namespace he-codeco-netma
 ```
 
+
+6. It is neccessary to label your control-plane node as the "control-plane" of the cluster. To do so, get the names of your Kubernetes nodes, select the control-plane and apply the "control-plane" label with the following command:
+
+```bash
+kubectl get nodes
+kubectl label nodes [your-control-plane-node] dedicated=master
+```
  
 ## Install L2S-M
 
