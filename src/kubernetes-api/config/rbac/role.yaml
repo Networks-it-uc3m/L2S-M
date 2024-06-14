@@ -1,0 +1,134 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: manager-role
+rules:
+- apiGroups:
+  - apps
+  resources:
+  - replicasets
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - pods/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - pods/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - l2sm.l2sm.k8s.local
+  resources:
+  - l2networks
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - l2sm.l2sm.k8s.local
+  resources:
+  - l2networks/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - l2sm.l2sm.k8s.local
+  resources:
+  - l2networks/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - l2sm.l2sm.k8s.local
+  resources:
+  - networkedgedevices
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - l2sm.l2sm.k8s.local
+  resources:
+  - networkedgedevices/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - l2sm.l2sm.k8s.local
+  resources:
+  - networkedgedevices/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - l2sm.l2sm.k8s.local
+  resources:
+  - overlays
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - l2sm.l2sm.k8s.local
+  resources:
+  - overlays/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - l2sm.l2sm.k8s.local
+  resources:
+  - overlays/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - l2sm.l2sm.k8s.local
+  resources:
+  - replicasets
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch

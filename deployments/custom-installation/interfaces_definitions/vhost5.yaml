@@ -3,11 +3,17 @@ apiVersion: "k8s.cni.cncf.io/v1"
 kind: NetworkAttachmentDefinition
 metadata:
   name: veth5
+  namespace: he-codeco-netma
+  labels:
+    app: l2sm
 spec:
   config: '{
       "cniVersion": "0.3.0",
       "type": "bridge",
       "bridge": "br5",
       "mtu": 1400,
-      "device": "veth5"
+      "device": "veth5",
+        "ipam": {
+          "type":"static"
+        }
     }'

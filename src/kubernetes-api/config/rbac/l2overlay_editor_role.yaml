@@ -1,0 +1,31 @@
+# permissions for end users to edit networkedgedevices.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: networkedgedevice-editor-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: l2network
+    app.kubernetes.io/part-of: l2network
+    app.kubernetes.io/managed-by: kustomize
+  name: networkedgedevice-editor-role
+rules:
+- apiGroups:
+  - l2sm.l2sm.k8s.local
+  resources:
+  - networkedgedevices
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - l2sm.l2sm.k8s.local
+  resources:
+  - networkedgedevices/status
+  verbs:
+  - get

@@ -9,13 +9,13 @@ The files and scripts are meant to be run directly in the /L2S-M directory, as t
 - `./build/switch`: Dockerfile and related files for building the l2sm-switch Docker image.
 - `./build/controller`: Dockerfile and related files for building the l2sm-controller Docker image.
 - `./build/operator`: Dockerfile and related files for building the l2sm-operator Docker image.
-- `./build/build_and_push_images.sh`: Bash script for automating the build and push process of Docker images.
+- `./build/build_images.sh`: Bash script for automating the build and push process of Docker images.
 
 ## Script Usage:
 
 ### 1. Build Images:
 ```bash
-./build/build_and_push_images.sh build
+./build/build_images.sh build
 ```
 
 This command will build Docker images for l2sm-switch, l2sm-controller, and l2sm-operator.
@@ -23,7 +23,7 @@ This command will build Docker images for l2sm-switch, l2sm-controller, and l2sm
 ### 2. Push Images:
 
 ```bash
-./build/build_and_push_images.sh push
+./build/build_images.sh push
 ```
 
 This command will push previously built Docker images to the specified DockerHub repository.
@@ -31,7 +31,7 @@ This command will push previously built Docker images to the specified DockerHub
 ### 3. Build and Push Images:
 
 ```bash
-./build/build_and_push_images.sh build_push
+./build/build_images.sh build_push
 ```
 
 This command will both build and push Docker images.

@@ -1,0 +1,27 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  labels:
+    app.kubernetes.io/name: mutatingwebhookconfiguration
+    app.kubernetes.io/instance: mutating-webhook-configuration
+    app.kubernetes.io/component: webhook
+    app.kubernetes.io/created-by: controllermanager
+    app.kubernetes.io/part-of: controllermanager
+    app.kubernetes.io/managed-by: kustomize
+  name: mutating-webhook-configuration
+webhooks:
+  - name: mpod.kb.io
+    clientConfig:
+      url: https://10.0.2.4:9443/mutate-v1-pod
+      caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURIVENDQWdXZ0F3SUJBZ0lVTlNKZThmd0FwSnEwUXYybDFwRnArM09oMnJNd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0dERVdNQlFHQTFVRUF3d05iRzlqWVd3dGQyVmlhRzl2YXpBZUZ3MHlOREEyTVRReE1UVTNNVFZhRncweQpOVEEyTVRReE1UVTNNVFZhTUJneEZqQVVCZ05WQkFNTURXeHZZMkZzTFhkbFltaHZiMnN3Z2dFaU1BMEdDU3FHClNJYjNEUUVCQVFVQUE0SUJEd0F3Z2dFS0FvSUJBUURtTGNYRVp4MU5ObSswQmJPK1NuSmVHVHZCa1EyOHdackkKbDBPSFFuaW1YQStaYkJBWFhrV2xMeTlmZEpoVWRUV1d6bnBCcXhsZXZSZUE4Y3JjdWRnV2R2cFBjandjczBHUQovRVhjTkFzcng4NzAvdWthMzhPd3J4MEdrVnFlYjE3NTFnUlhML3ZtT0xKOHRmcEhVVml0eERSenI5UjBUTjNGCk9KWGcwa0xhOUlmMXRzblVmSjVwNjcrZFJNN2xaZVhEZy9Hb3JkT3IrU010Q21PWUFwRFBQMURCc0EzMU1RMFMKd0o1cythS2tML21KbkIrZC9tTXFEUStKV3BnaVRCR3RWcHJFZnFyb0h4am5xVEREK1dJQkRZVUhVczJxMk9aSQpJSWxNTkpzUVVFc2dtcWwyaWtpYXVBMmo5cElZekNyVHhrdFUrZFJxaVBhQlFkYkQ4dEtmQWdNQkFBR2pYekJkCk1EWUdBMVVkRVFRdk1DMkhCSDhBQUFHSEJBb0FBZ1NDQ1d4dlkyRnNhRzl6ZElJVWQyVmlhRzl2YXkxelpYSjIKWlhJdWJHOWpZV3d3RGdZRFZSMFBBUUgvQkFRREFnV2dNQk1HQTFVZEpRUU1NQW9HQ0NzR0FRVUZCd01CTUEwRwpDU3FHU0liM0RRRUJDd1VBQTRJQkFRQlltcXhKTkVzU0daOVB1ZVozTS8vUDdOQkh1Z3N0cG1rVXk2WGNRSy9YCjcrSnh6SlBqQmpBSnQwWGVlZzFNMVBGS29tTm1mKzZEV08yVlQwWFJlM3B4bGFsRWtxSG5TUDVqUlBJTGlxRmoKTXIwRmFZQzN4RndyNjFWNUk5TkFjRkV3aTZyd256YTk5UzA5d094RUxLaU9XVngyM2NKRnhKWVNUUkxyR1NlZgppcWFQY2lKRlc4NkFVdGZES3VQTW1DRU1zQnRFRHZZQ3l0WFJIdTdBNTU0TVpjRjZCd3Q2c1FXRzNzMENxbCtYCk1xdVBkN1dJMXZJQnBDYXhxM2dscUlpbVdQRkcxbWs1YWtMQndnQWNWdmdacFpRREhZZXgxK1hPQmZ6dnRTUDkKdjNjSjliZm1wNStBNURnM28yckNZa01HZFFjcjBFREJqUnp3R05UbE5jN1YKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+    rules:
+      - operations: [ "CREATE", "UPDATE" ]
+        apiGroups: [""]
+        apiVersions: ["v1"]
+        resources: ["pods"]
+    failurePolicy: Ignore
+    sideEffects: None
+    admissionReviewVersions: ["v1"]
+    objectSelector:
+      matchLabels:
+        l2sm: "true"

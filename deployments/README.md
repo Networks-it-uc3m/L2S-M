@@ -8,35 +8,20 @@ This guide details the necessary steps to install the L2S-M Kubernetes operator 
 
 2. Install the Multus CNI Plugin in your K8s cluster. For more information on how to install Multus in your cluster, check their [official GitHub repository](https://github.com/k8snetworkplumbingwg/multus-cni).
 
-3. Install the Cert-Manager in your K8s cluster. For more information on how to install Cert-Manager in your cluster, check their [official installation guide](https://cert-manager.io/docs/installation/).
+3. The host-device CNI plugin must be able to be used in your cluster. If it is not present in your K8s distribution, you can find how to install it in your K8s cluster in their [official GitHub repository](https://github.com/containernetworking/plugins).
 
-4. The host-device CNI plugin must be able to be used in your cluster. If it is not present in your K8s distribution, you can find how to install it in your K8s cluster in their [official GitHub repository](https://github.com/containernetworking/plugins).
-
-5. Your K8s Control-Plane node must be able to deploy K8s pods for the operator to work. Remove its master and control-plane taints using the following command:
+4. Your K8s Control-Plane node must be able to deploy K8s pods for the operator to work. Remove its master and control-plane taints using the following command:
 ```bash
 kubectl taint nodes --all node-role.kubernetes.io/control-plane- node-role.kubernetes.io/master-
 ```
 
-6. The `he-codeco-netma` namespace created. You can do so if it's not already done, by using the following kubectl command:
-
-```bash
-kubectl create namespace he-codeco-netma
-```
-
-
-6. It is neccessary to label your control-plane node as the "control-plane" of the cluster. To do so, get the names of your Kubernetes nodes, select the control-plane and apply the "control-plane" label with the following command:
-
-```bash
-kubectl get nodes
-kubectl label nodes [your-control-plane-node] dedicated=control-plane
-```
  
 ## Install L2S-M
 
 Installing L2S-M can be done by using a single command:
 
 ```bash
-kubectl create -f ./deployments/l2sm-deployment.yaml -n=he-codeco-netma
+kubectl create -f ./deployments/l2sm-deployment.yaml
 ```
 
 The installation will take around a minute to finish, and to check that everyting is running properly, you may run the following command:

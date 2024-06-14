@@ -1,9 +1,12 @@
 FROM onosproject/onos:2.7-latest
 
-COPY ./src/controller ./
 
 RUN apt-get update && \
-    apt-get install wget && \
-    chmod +x ./setup_controller.sh
+    apt-get install -y wget ssh sshpass
+    
+COPY ./src/controller ./
+
+RUN chmod +x ./setup_controller.sh && \
+    chmod +x ./onos_critique.sh
 
 ENTRYPOINT ["./setup_controller.sh"]

@@ -1,0 +1,38 @@
+{{- range .Values.global.nodes }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .name }}-lpm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .name }}-lpm
+  template:
+    metadata:
+      labels:
+        app: {{ .name }}-lpm
+      annotations:
+        l2sm/networks: '[{"name": "{{ $.Values.global.network.name }}", "ips":["{{ .ip }}"]}]'
+    spec:
+      nodeName: {{ .name }}
+      containers:
+      - name: lpm-container
+        image: alexdecb/lpm-collector:1.1
+        workingDir: /usr/src/app
+        securityContext:
+          capabilities:
+            add: ["NET_ADMIN"]
+        ports:
+        - containerPort: 8090
+        volumeMounts:
+        - name: config-volume
+          mountPath: /usr/src/app/config.json
+          subPath: config.json
+        imagePullPolicy: Always
+      volumes:
+      - name: config-volume
+        configMap:
+          name: {{ .name }}-config
+---
+{{- end }}
