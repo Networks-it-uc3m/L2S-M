@@ -1,0 +1,4 @@
+apiVersion: v2
+name: exporter
+description: A subchart for data collection
+version: 0.1.0
