@@ -11,7 +11,7 @@ metadata:
     app.kubernetes.io/name: namespace
     app.kubernetes.io/part-of: l2network
     control-plane: controller-manager
-  name: l2sm-system
+  name: he-codeco-netma
 ---
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
@@ -9306,7 +9306,7 @@ metadata:
     app.kubernetes.io/name: serviceaccount
     app.kubernetes.io/part-of: l2network
   name: l2sm-controller-manager
-  namespace: l2sm-system
+  namespace: he-codeco-netma
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
@@ -9319,7 +9319,7 @@ metadata:
     app.kubernetes.io/name: role
     app.kubernetes.io/part-of: l2network
   name: l2sm-leader-election-role
-  namespace: l2sm-system
+  namespace: he-codeco-netma
 rules:
 - apiGroups:
   - ""
@@ -9540,7 +9540,7 @@ metadata:
     app.kubernetes.io/name: rolebinding
     app.kubernetes.io/part-of: l2network
   name: l2sm-leader-election-rolebinding
-  namespace: l2sm-system
+  namespace: he-codeco-netma
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -9548,7 +9548,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: l2sm-controller-manager
-  namespace: l2sm-system
+  namespace: he-codeco-netma
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -9568,7 +9568,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: l2sm-controller-manager
-  namespace: l2sm-system
+  namespace: he-codeco-netma
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -9588,7 +9588,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: l2sm-controller-manager
-  namespace: l2sm-system
+  namespace: he-codeco-netma
 ---
 apiVersion: v1
 kind: Service
@@ -9602,7 +9602,7 @@ metadata:
     app.kubernetes.io/part-of: l2network
     control-plane: controller-manager
   name: l2sm-controller-manager-metrics-service
-  namespace: l2sm-system
+  namespace: he-codeco-netma
 spec:
   ports:
   - name: https
@@ -9623,7 +9623,7 @@ metadata:
     app.kubernetes.io/name: service
     app.kubernetes.io/part-of: controllermanager
   name: l2sm-webhook-service
-  namespace: l2sm-system
+  namespace: he-codeco-netma
 spec:
   ports:
   - port: 443
@@ -9644,7 +9644,7 @@ metadata:
     app.kubernetes.io/part-of: l2network
     control-plane: controller-manager
   name: l2sm-controller-manager
-  namespace: l2sm-system
+  namespace: he-codeco-netma
 spec:
   replicas: 1
   selector:
@@ -9669,6 +9669,8 @@ spec:
           value: l2sm-controller-service.default.svc.cluster.local
         - name: CONTROLLER_PORT
           value: "8181"
+        - name: SWITCHES_NAMESPACE
+          value: he-codeco-netma
         image: alexdecb/l2sm-controller-manager:2.5
         livenessProbe:
           httpGet:
@@ -9747,11 +9749,11 @@ metadata:
     app.kubernetes.io/name: certificate
     app.kubernetes.io/part-of: controllermanager
   name: l2sm-serving-cert
-  namespace: l2sm-system
+  namespace: he-codeco-netma
 spec:
   dnsNames:
-  - l2sm-webhook-service.l2sm-system.svc
-  - l2sm-webhook-service.l2sm-system.svc.cluster.local
+  - l2sm-webhook-service.he-codeco-netma.svc
+  - l2sm-webhook-service.he-codeco-netma.svc.cluster.local
   issuerRef:
     kind: Issuer
     name: l2sm-selfsigned-issuer
@@ -9768,7 +9770,7 @@ metadata:
     app.kubernetes.io/name: certificate
     app.kubernetes.io/part-of: controllermanager
   name: l2sm-selfsigned-issuer
-  namespace: l2sm-system
+  namespace: he-codeco-netma
 spec:
   selfSigned: {}
 ---
@@ -9776,7 +9778,7 @@ apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
 metadata:
   annotations:
-    cert-manager.io/inject-ca-from: l2sm-system/l2sm-serving-cert
+    cert-manager.io/inject-ca-from: he-codeco-netma/l2sm-serving-cert
   labels:
     app.kubernetes.io/component: webhook
     app.kubernetes.io/created-by: controllermanager
@@ -9792,7 +9794,7 @@ webhooks:
     caBundle: ""
     service:
       name: l2sm-webhook-service
-      namespace: l2sm-system
+      namespace: he-codeco-netma
       path: /mutate-v1-pod
   failurePolicy: Ignore
   name: mpod.kb.io
