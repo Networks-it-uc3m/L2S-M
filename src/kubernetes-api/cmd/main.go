@@ -28,15 +28,17 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	l2smv1 "l2sm.k8s.local/controllermanager/api/v1"
+	"l2sm.k8s.local/controllermanager/internal/controller"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
-	l2smv1 "l2sm.k8s.local/controllermanager/api/v1"
-	"l2sm.k8s.local/controllermanager/internal/controller"
 	//+kubebuilder:scaffold:imports
+	nettypes "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
 )
 
 var (
@@ -44,10 +46,14 @@ var (
 	setupLog = ctrl.Log.WithName("setup")
 )
 
+const SWITCHES_NAMESPACE = "default"
+
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
 	utilruntime.Must(l2smv1.AddToScheme(scheme))
+	utilruntime.Must(nettypes.AddToScheme(scheme))
+
 	//+kubebuilder:scaffold:scheme
 }
 
@@ -129,13 +135,14 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "L2Network")
 		os.Exit(1)
 	}
-	// if err = (&controller.PodReconciler{
-	// 	Client: mgr.GetClient(),
-	// 	Scheme: mgr.GetScheme(),
-	// }).SetupWithManager(mgr); err != nil {
-	// 	setupLog.Error(err, "unable to create controller", "controller", "Pod")
-	// 	os.Exit(1)
-	// }
+	if err = (&controller.PodReconciler{
+		Client:            mgr.GetClient(),
+		Scheme:            mgr.GetScheme(),
+		SwitchesNamespace: SWITCHES_NAMESPACE,
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "Pod")
+		os.Exit(1)
+	}
 	if err = (&controller.NetworkEdgeDeviceReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
@@ -150,8 +157,15 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "Overlay")
 		os.Exit(1)
 	}
+	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
+		podAnnotator := &controller.PodAnnotator{Client: mgr.GetClient(), SwitchesNamespace: SWITCHES_NAMESPACE}
+		if err := podAnnotator.InjectDecoder(admission.NewDecoder(mgr.GetScheme())); err != nil {
+			setupLog.Error(err, "unable to inject decoder into PodAnnotator")
+			os.Exit(1)
+		}
+		mgr.GetWebhookServer().Register("/mutate-v1-pod", &webhook.Admission{Handler: podAnnotator})
+	}
 	//+kubebuilder:scaffold:builder
-
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
 		setupLog.Error(err, "unable to set up health check")
 		os.Exit(1)

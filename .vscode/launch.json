@@ -7,8 +7,8 @@
             "request": "launch",
             "command": "kopf run ${workspaceFolder}/src/operator/l2sm-operator.py",
             "env": {
-                "CONTROLLER_IP": "10.152.183.3", 
-                "DATABASE_IP": "10.152.183.132",
+                "CONTROLLER_IP": "10.152.183.42", 
+                "DATABASE_IP": "10.152.183.70",
                 "MYSQL_USER": "l2sm",
                 "MYSQL_PASSWORD": "l2sm",
                 "MYSQL_DATABASE": "l2sm",

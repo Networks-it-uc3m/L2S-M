@@ -18,6 +18,7 @@ type Client interface {
 	CreateNetwork(networkType l2smv1.NetworkType, config interface{}) error
 	DeleteNetwork(networkType l2smv1.NetworkType, networkID string) error
 	CheckNetworkExists(networkType l2smv1.NetworkType, networkID string) (bool, error)
+	AttachPodToNetwork(networkType l2smv1.NetworkType, config interface{}) error
 }
 
 type ClientConfig struct {

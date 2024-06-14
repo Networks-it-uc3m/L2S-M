@@ -5,4 +5,4 @@ kind: Kustomization
 images:
 - name: controller
   newName: alexdecb/l2sm-controller-manager
-  newTag: "2.4"
+  newTag: "2.5"

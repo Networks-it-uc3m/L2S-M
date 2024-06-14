@@ -18924,7 +18924,7 @@ spec:
         env:
         - name: CONTROLLER_IP
           value: l2sm-controller-service.default.svc.cluster.local
-        image: alexdecb/l2sm-controller-manager:2.4
+        image: alexdecb/l2sm-controller-manager:2.5
         livenessProbe:
           httpGet:
             path: /healthz

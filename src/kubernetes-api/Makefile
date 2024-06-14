@@ -1,6 +1,6 @@
 
 # Image URL to use all building/pushing image targets
-IMG ?= alexdecb/l2sm-controller-manager:2.4
+IMG ?= alexdecb/l2sm-controller-manager:2.5
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.29.0
 
@@ -84,6 +84,8 @@ build: manifests generate fmt vet ## Build manager binary.
 	go build -o bin/manager cmd/main.go
 
 .PHONY: run
+include .env
+export $(shell sed 's/=.*//' .env)
 run: manifests generate fmt vet ## Run a controller from your host.
 	go run ./cmd/main.go
 
@@ -147,6 +149,35 @@ deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in
 .PHONY: undeploy
 undeploy: kustomize ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
 	$(KUSTOMIZE) build config/default | $(KUBECTL) delete --ignore-not-found=$(ignore-not-found) -f -
+
+.PHONY: webhook-certs
+webhook-certs: ## generate self-signed cert and key for local webhook development
+	mkdir -p /tmp/k8s-webhook-server/serving-certs
+	openssl req -x509 -newkey rsa:2048 -nodes -keyout /tmp/k8s-webhook-server/serving-certs/tls.key -out /tmp/k8s-webhook-server/serving-certs/tls.crt -days 365 -config ./config/dev/openssl.cnf -batch -subj '/CN=local-webhook'
+	cat /tmp/k8s-webhook-server/serving-certs/tls.crt | base64 -w0 > /tmp/k8s-webhook-server/tls.b64
+# $(eval B64_CERT := $(shell cat /tmp/k8s-webhook-server/tls.b64))
+# echo $(B64_CERT)
+# cat /tmp/k8s-webhook-server/tls.b64
+
+
+
+# openssl req -x509 \
+# 			-newkey rsa:2048 \
+# 			-nodes \
+# 			-keyout /tmp/k8s-webhook-server/serving-certs/tls.key \
+# 			-out /tmp/k8s-webhook-server/serving-certs/tls.crt \
+# 			-days 365 \
+# 			-subj '/CN=local-webhook'
+##@ Webhook
+
+.PHONY: deploy-webhook
+deploy-webhook: webhook-certs manifests kustomize ## Deploy validating and mutating webhooks to the K8s cluster specified in ~/.kube/config.
+	sed -i'' -e 's/caBundle: .*/caBundle: $(shell cat /tmp/k8s-webhook-server/tls.b64)/' ./config/dev/webhookcainjection_patch.yaml
+	$(KUSTOMIZE) build config/dev | $(KUBECTL) apply -f -
+
+.PHONY: undeploy-webhook
+undeploy-webhook: kustomize ## Undeploy validating and mutating webhooks from the K8s cluster specified in ~/.kube/config.
+	$(KUSTOMIZE) build config/dev | $(KUBECTL) delete --ignore-not-found=$(ignore-not-found) -f -
 
 ##@ Dependencies
 
