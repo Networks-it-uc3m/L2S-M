@@ -5,7 +5,7 @@ In order to connect the switches between themselves, an additional configuration
   a. Create a file anywhere or use the reference in ./configs/sampleFile.json. In this installation, this file will be used as a reference.
   b. In this file, you will specify, using the template shown in the reference file, the name of the nodes in the cluster and the IP addresses of **the switches** running on them. For example:
   ```bash
-  $ kubectl get pods -o wide -n=he-codeco-netma
+  $ kubectl get pods -o wide
   >NAME                                               READY   STATUS    RESTARTS   AGE     IP            NODE    NOMINATED NODE   READINESS GATES
   >l2sm-controller-d647b7fb5-lpp2h                    1/1     Running   0          30m     10.1.14.55    l2sm1   <none>           <none>
   >l2sm-operator-7d487d8468-lhgkx                     2/2     Running   0          2m11s   10.1.14.56    l2sm1   <none>           <none>
@@ -54,20 +54,20 @@ Note: Any number of nodes can be configured, as long as the entry is in this fil
 Once this file is created, we inject it to each node using the kubectl cp command:
 
 ```bash
-kubectl cp ./configs/sampleFile.json <pod-name>:/etc/l2sm/switchConfig.json -n=he-codeco-netma
+kubectl cp ./configs/sampleFile.json <pod-name>:/etc/l2sm/switchConfig.json 
 ```
 
 And then executing the script in the switch-pod:
 
 ```bash
-kubectl exec -it <switch-pod-name> -n=he-codeco-netma -- /bin/bash -c 'l2sm-vxlans --node_name=$NODENAME /etc/l2sm/switchConfig.json'
+kubectl exec -it <switch-pod-name> -- /bin/bash -c 'l2sm-vxlans --node_name=$NODENAME /etc/l2sm/switchConfig.json'
 ```
 
 This must be done in each switch-pod. In the provided example, using two nodes, l2sm1 and l2sm2, we have to do it twice, in l2-ps-8p5td and l2-ps-xdkvz.
 When the exec command is done, we should see an output like this:
 
 ```bash
-kubectl exec -it l2sm-switch-8p5td -n=he-codeco-netma -- /bin/bash -c 'l2sm-vxlans --node_name=$NODENAME /etc/l2sm/switchConfig.json'
+kubectl exec -it l2sm-switch-8p5td -- /bin/bash -c 'l2sm-vxlans --node_name=$NODENAME /etc/l2sm/switchConfig.json'
 Defaulted container "l2sm-switch" out of: l2sm-switch, wait-for-l2sm-controller (init)
 Created vxlan between node l2sm1 and node l2sm2.
 ```

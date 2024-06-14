@@ -5,11 +5,11 @@ metadata:
   labels:
     app: test4
   annotations:
-    k8s.v1.cni.cncf.io/networks: v-network-1
+    l2sm/networks: '[{"name": "v-network-1", "ips":["192.168.1.8/24"]}]'
 spec:
   containers:
   - name: server
-    command: ["/bin/ash", "-c", "ip a add 10.0.1.2/24 dev net1 && ip route add 10.0.2.0/24 via 10.0.1.1 dev net1 && trap : TERM INT; sleep infinity & wait"]
+    command: ["/bin/ash", "-c", "sleep infinity & wait"]
     image: alpine:latest
     securityContext:
       capabilities:

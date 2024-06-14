@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: l2sm-operator
+  namespace: he-codeco-netma
 spec:
   replicas: 1
   strategy:
@@ -28,35 +29,22 @@ spec:
           done;
           sleep 5;
       containers:
-      - image: alexdecb/l2sm-operator:2.2
+      - image: alexdecb/l2sm-operator:2.5
         name: l2sm-opt-pod
         env:
           - name: CONTROLLER_IP
             value: l2sm-controller-service
-        #imagePullPolicy: Always
-      - image: mysql/mysql-server:5.7
-        name: mysql
-        env:
-          - name: MYSQL_ROOT_PASSWORD
-            value: password
-          - name: MYSQL_DATABASE
-            value: L2SM
+          - name: DATABASE_IP
+            value: mysql-service
           - name: MYSQL_USER
             value: l2sm
           - name: MYSQL_PASSWORD
-            value: l2sm;
-        ports:
-          - containerPort: 3306
-            name: mysql
-        volumeMounts:
-          - name: mysql-persistent-storage
-            mountPath: /var/lib/mysql
-      volumes:
-        - name: mysql-persistent-storage
-          persistentVolumeClaim:
-            claimName: mysql-pv-claim
+            value: l2sm
+          - name: MYSQL_DATABASE
+            value: l2sm
+        # imagePullPolicy: Always
       nodeSelector:
-        dedicated: master
+        dedicated: control-plane
       tolerations:
       - key: dedicated
         operator: Equal
@@ -68,6 +56,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: l2sm-operator-service
+  namespace: he-codeco-netma
 spec:
   ports:
     - protocol: TCP

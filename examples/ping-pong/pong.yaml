@@ -4,8 +4,9 @@ metadata:
   name: pong
   labels:
     app: ping-pong
+    l2sm: "true"
   annotations:
-    k8s.v1.cni.cncf.io/networks: ping-network
+    l2sm/networks: ping-network
 spec:
   containers:
   - name: router
