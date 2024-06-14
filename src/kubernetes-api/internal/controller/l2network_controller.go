@@ -158,8 +158,10 @@ func (r *L2NetworkReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	r.Log.Info("this is the controller ip", os.Getenv("CONTROLLER_IP"))
 	fmt.Println(os.Getenv("CONTROLLER_IP"))
+	fmt.Println(os.Getenv("CONTROLLER_PORT"))
+
 	// Initialize the InternalClient with the base URL of the SDN controller
-	clientConfig := sdnclient.ClientConfig{BaseURL: fmt.Sprintf("http://%s:8181/onos", os.Getenv("CONTROLLER_IP")), Username: "karaf", Password: "karaf"}
+	clientConfig := sdnclient.ClientConfig{BaseURL: fmt.Sprintf("http://%s:%s/onos", os.Getenv("CONTROLLER_IP"), os.Getenv("CONTROLLER_PORT")), Username: "karaf", Password: "karaf"}
 
 	r.InternalClient, err = sdnclient.NewClient(sdnclient.InternalType, clientConfig)
 	if err != nil {

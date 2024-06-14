@@ -41,6 +41,7 @@ type NetworkAnnotation struct {
 
 func (a *PodAnnotator) Handle(ctx context.Context, req admission.Request) admission.Response {
 	log := log.FromContext(ctx)
+	log.Info("Registering pod")
 
 	// First we decode the pod
 	pod := &corev1.Pod{}
@@ -87,8 +88,11 @@ func (a *PodAnnotator) Handle(ctx context.Context, req admission.Request) admiss
 			netAttachDef := &netAttachDefs.Items[index]
 			newAnnotation := NetworkAnnotation{Name: netAttachDef.Name, IPAdresses: network.IPAdresses}
 			netAttachDef.Labels[netAttachDefLabel] = "true"
+			log.Info(fmt.Sprintf("updating network attachment definition_ ", netAttachDef))
+
 			err = a.Client.Update(ctx, netAttachDef)
 			if err != nil {
+				log.Error(err, "Could not update network attachment definition")
 
 			}
 			multusAnnotations = append(multusAnnotations, newAnnotation)

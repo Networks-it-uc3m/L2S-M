@@ -46,8 +46,6 @@ var (
 	setupLog = ctrl.Log.WithName("setup")
 )
 
-const SWITCHES_NAMESPACE = "default"
-
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
@@ -138,7 +136,7 @@ func main() {
 	if err = (&controller.PodReconciler{
 		Client:            mgr.GetClient(),
 		Scheme:            mgr.GetScheme(),
-		SwitchesNamespace: SWITCHES_NAMESPACE,
+		SwitchesNamespace: os.Getenv("SWITCHES_NAMESPACE"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Pod")
 		os.Exit(1)
@@ -158,7 +156,7 @@ func main() {
 		os.Exit(1)
 	}
 	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
-		podAnnotator := &controller.PodAnnotator{Client: mgr.GetClient(), SwitchesNamespace: SWITCHES_NAMESPACE}
+		podAnnotator := &controller.PodAnnotator{Client: mgr.GetClient(), SwitchesNamespace: os.Getenv("SWITCHES_NAMESPACE")}
 		if err := podAnnotator.InjectDecoder(admission.NewDecoder(mgr.GetScheme())); err != nil {
 			setupLog.Error(err, "unable to inject decoder into PodAnnotator")
 			os.Exit(1)

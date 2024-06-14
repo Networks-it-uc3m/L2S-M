@@ -179,7 +179,7 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 func (r *PodReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	var err error
 	// Initialize the InternalClient with the base URL of the SDN controller
-	clientConfig := sdnclient.ClientConfig{BaseURL: fmt.Sprintf("http://%s:8181/onos", os.Getenv("CONTROLLER_IP")), Username: "karaf", Password: "karaf"}
+	clientConfig := sdnclient.ClientConfig{BaseURL: fmt.Sprintf("http://%s:%s/onos", os.Getenv("CONTROLLER_IP"), os.Getenv("CONTROLLER_PORT")), Username: "karaf", Password: "karaf"}
 
 	r.InternalClient, err = sdnclient.NewClient(sdnclient.InternalType, clientConfig)
 	if err != nil {
