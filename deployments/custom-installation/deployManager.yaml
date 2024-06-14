@@ -9666,7 +9666,7 @@ spec:
         - /manager
         env:
         - name: CONTROLLER_IP
-          value: l2sm-controller-service.default.svc.cluster.local
+          value: l2sm-controller-service.he-codeco-netma.svc.cluster.local
         - name: CONTROLLER_PORT
           value: "8181"
         - name: SWITCHES_NAMESPACE
