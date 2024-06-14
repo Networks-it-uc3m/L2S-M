@@ -29,3 +29,6 @@ webhooks:
     failurePolicy: Ignore
     sideEffects: None
     admissionReviewVersions: ["v1"]
+    objectSelector:
+      matchLabels:
+        l2sm: "true"

@@ -185,6 +185,11 @@ def pod_vn(body, name, namespace, logger, annotations, **kwargs):
     #time.sleep(random.uniform(0,0.8)) # Avoid database overlap by introducing a random sleep time
 
     l2networks = extract_l2networks(annotations)
+    logger.info("These l2networks extracted")
+    logger.info(l2networks)
+
+    
+
     if not l2networks:
         logger.info("No Multus networks specified. Exiting.")
         return
@@ -199,6 +204,9 @@ def pod_vn(body, name, namespace, logger, annotations, **kwargs):
     # Update `target_networks` to include IP information if available
     target_networks = [net for net in l2networks if net['name'] in target_networks_info]
 
+    logger.info("These are the target networks")
+    logger.info(target_networks)
+
     api = CustomObjectsApi()
     # Assign pods to each of the target networks, this part remains unchanged
     for network in target_networks:
@@ -207,9 +215,13 @@ def pod_vn(body, name, namespace, logger, annotations, **kwargs):
     if 'spec' in body and 'nodeName' in body['spec']:
         node_name = body['spec']['nodeName']
         # free_interfaces = get_free_interfaces(node_name)
+        v1 = client.CoreV1Api()
+        
         pod = v1.read_namespaced_pod(name, namespace)
         multus_annotations = pod.metadata.annotations if pod.metadata.annotations else {}
         free_interfaces = extract_multus_networks(multus_annotations)
+        logger.info("These are the target used interfaces")
+        logger.info(free_interfaces)
         if len(free_interfaces) != len(target_networks):
             raise kopf.PermanentError(f"Node {node_name} has no free interfaces left")
         
@@ -357,12 +369,14 @@ def update_network_assignments(pod_name, namespace, node_name, free_interfaces, 
         assigned_interfaces = []
         with connection.cursor() as cursor:
             for i, interface in enumerate(free_interfaces[:len(target_networks)]):
+                logger.info("interface: ")
+                logger.info(interface)
                 if openflow_id:
                     port_number = extract_port_number(interface['name'])
-                    post_network_assignment(openflow_id, port_number, target_networks[i]['name'])
-                            
-            # update_pod_annotation(pod_name, namespace, assigned_interfaces)
+                    logger.info("port number: ")
+                    logger.info(port_number)
 
+                    post_network_assignment(openflow_id, port_number, target_networks[i]['name'])
         connection.commit()
     finally:
         connection.close()
@@ -490,22 +504,4 @@ def remove_node(body, logger, annotations, **kwargs):
     finally:
         connection.close()
     logger.info(f"Node {body['spec']['nodeName']} has been deleted from the cluster")
-
-
-def generate_random_ipv6_fe80():
-    # IPv6 FE80::/64 starts with '1111 1110 10' and 54 bits of 0s
-    # So we can fix the first 10 bits as '1111 1110 10' 
-    # Then we generate the last 64 bits randomly for the interface ID
-    # Since IPv6 addresses are represented in hexadecimal, we convert the binary values to hexadecimal
-    
-    
-    # Generating the interface ID (64 bits)
-    interface_id = random.getrandbits(64)
-    # Formatting to a 16 character hexadecimal string
-    interface_id_hex = format(interface_id, '016x')
-
-    # Constructing the full IPv6 address in the fe80::/64 range
-    ipv6_address = f"fe80::{interface_id_hex[:4]}:{interface_id_hex[4:8]}:{interface_id_hex[8:12]}:{interface_id_hex[12:]}/64"
-    
-    return ipv6_address
 
