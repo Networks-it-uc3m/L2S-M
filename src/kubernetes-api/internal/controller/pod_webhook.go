@@ -87,8 +87,6 @@ func (a *PodAnnotator) Handle(ctx context.Context, req admission.Request) admiss
 			return admission.Allowed("No interfaces available for node")
 		}
 
-		fmt.Println("esto funcsiona")
-		log.Info(fmt.Sprintf("Networks: %v", networks))
 		// Now we create the multus annotations, by using the network attachment definition name
 		// And the desired IP address.
 		for index, network := range networks {
@@ -96,7 +94,6 @@ func (a *PodAnnotator) Handle(ctx context.Context, req admission.Request) admiss
 			netAttachDef := &netAttachDefs.Items[index]
 			newAnnotation := NetworkAnnotation{Name: netAttachDef.Name, IPAdresses: network.IPAdresses, Namespace: a.SwitchesNamespace}
 			netAttachDef.Labels[netAttachDefLabel] = "true"
-			log.Info(fmt.Sprintf("updating network attachment definition %v", netAttachDef))
 
 			err = a.Client.Update(ctx, netAttachDef)
 			if err != nil {
@@ -105,7 +102,6 @@ func (a *PodAnnotator) Handle(ctx context.Context, req admission.Request) admiss
 			}
 			multusAnnotations = append(multusAnnotations, newAnnotation)
 		}
-		log.Info(fmt.Sprintf("%v", multusAnnotations))
 		pod.Annotations[MULTUS_ANNOTATION_KEY] = multusAnnotationToString(multusAnnotations)
 
 		// pod.Annotations["k8s.v1.cni.cncf.io/networks"] = `[{"name": "veth10","ips": ["10.0.0.1/24"]}]`
