@@ -185,9 +185,6 @@ def pod_vn(body, name, namespace, logger, annotations, **kwargs):
     #time.sleep(random.uniform(0,0.8)) # Avoid database overlap by introducing a random sleep time
 
     l2networks = extract_l2networks(annotations)
-    logger.info("These l2networks extracted")
-    logger.info(l2networks)
-
     
 
     if not l2networks:
@@ -204,8 +201,6 @@ def pod_vn(body, name, namespace, logger, annotations, **kwargs):
     # Update `target_networks` to include IP information if available
     target_networks = [net for net in l2networks if net['name'] in target_networks_info]
 
-    logger.info("These are the target networks")
-    logger.info(target_networks)
 
     api = CustomObjectsApi()
     # Assign pods to each of the target networks, this part remains unchanged
@@ -220,8 +215,6 @@ def pod_vn(body, name, namespace, logger, annotations, **kwargs):
         pod = v1.read_namespaced_pod(name, namespace)
         multus_annotations = pod.metadata.annotations if pod.metadata.annotations else {}
         free_interfaces = extract_multus_networks(multus_annotations)
-        logger.info("These are the target used interfaces")
-        logger.info(free_interfaces)
         if len(free_interfaces) != len(target_networks):
             raise kopf.PermanentError(f"Node {node_name} has no free interfaces left")
         
@@ -369,12 +362,8 @@ def update_network_assignments(pod_name, namespace, node_name, free_interfaces, 
         assigned_interfaces = []
         with connection.cursor() as cursor:
             for i, interface in enumerate(free_interfaces[:len(target_networks)]):
-                logger.info("interface: ")
-                logger.info(interface)
                 if openflow_id:
                     port_number = extract_port_number(interface['name'])
-                    logger.info("port number: ")
-                    logger.info(port_number)
 
                     post_network_assignment(openflow_id, port_number, target_networks[i]['name'])
         connection.commit()
