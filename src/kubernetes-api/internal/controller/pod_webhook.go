@@ -50,10 +50,16 @@ func (a *PodAnnotator) Handle(ctx context.Context, req admission.Request) admiss
 		log.Error(err, "Error decoding pod")
 		return admission.Errored(http.StatusBadRequest, err)
 	}
+	if pod.Spec.NodeName == "" {
+		return admission.Errored(http.StatusBadRequest, fmt.Errorf("Pod hasn't got a node assigned to it"))
+	}
 
 	// Check if the pod has the annotation l2sm/networks. This webhook operation only will happen if so. Else, it will just
 	// let the creation begin.
 	if annot, ok := pod.Annotations[L2SM_NETWORK_ANNOTATION]; ok {
+		if _, ok := pod.Annotations[MULTUS_ANNOTATION_KEY]; ok {
+			return admission.Allowed("Pod already using multus cni plugin")
+		}
 		netAttachDefLabel := NET_ATTACH_LABEL_PREFIX + pod.Spec.NodeName
 		// We extract which networks the user intends to attach the pod to. If there is any error, or the
 		// Networks aren't created, the pod will be set as errored, until a network is created.
@@ -81,14 +87,16 @@ func (a *PodAnnotator) Handle(ctx context.Context, req admission.Request) admiss
 			return admission.Allowed("No interfaces available for node")
 		}
 
+		fmt.Println("esto funcsiona")
+		log.Info(fmt.Sprintf("Networks: %v", networks))
 		// Now we create the multus annotations, by using the network attachment definition name
 		// And the desired IP address.
 		for index, network := range networks {
 
 			netAttachDef := &netAttachDefs.Items[index]
-			newAnnotation := NetworkAnnotation{Name: netAttachDef.Name, IPAdresses: network.IPAdresses}
+			newAnnotation := NetworkAnnotation{Name: netAttachDef.Name, IPAdresses: network.IPAdresses, Namespace: a.SwitchesNamespace}
 			netAttachDef.Labels[netAttachDefLabel] = "true"
-			log.Info(fmt.Sprintf("updating network attachment definition_ ", netAttachDef))
+			log.Info(fmt.Sprintf("updating network attachment definition %v", netAttachDef))
 
 			err = a.Client.Update(ctx, netAttachDef)
 			if err != nil {
@@ -97,6 +105,7 @@ func (a *PodAnnotator) Handle(ctx context.Context, req admission.Request) admiss
 			}
 			multusAnnotations = append(multusAnnotations, newAnnotation)
 		}
+		log.Info(fmt.Sprintf("%v", multusAnnotations))
 		pod.Annotations[MULTUS_ANNOTATION_KEY] = multusAnnotationToString(multusAnnotations)
 
 		// pod.Annotations["k8s.v1.cni.cncf.io/networks"] = `[{"name": "veth10","ips": ["10.0.0.1/24"]}]`
