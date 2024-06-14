@@ -28,7 +28,7 @@ kubectl create namespace he-codeco-netma
 
 ```bash
 kubectl get nodes
-kubectl label nodes [your-control-plane-node] dedicated=master
+kubectl label nodes [your-control-plane-node] dedicated=control-plane
 ```
  
 ## Install L2S-M
