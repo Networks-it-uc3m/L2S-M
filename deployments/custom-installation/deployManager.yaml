@@ -18948,7 +18948,7 @@ spec:
         - name: CONTROLLER_IP
           value: l2sm-controller-service.default.svc.cluster.local
         - name: CONTROLLER_PORT
-          value: 8181
+          value: "8181"
         image: alexdecb/l2sm-controller-manager:2.5
         livenessProbe:
           httpGet:
