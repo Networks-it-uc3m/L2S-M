@@ -28,7 +28,7 @@ spec:
           done;
           sleep 5;
       containers:
-      - image: alexdecb/l2sm-operator:2.4
+      - image: alexdecb/l2sm-operator:2.5
         name: l2sm-opt-pod
         env:
           - name: CONTROLLER_IP
