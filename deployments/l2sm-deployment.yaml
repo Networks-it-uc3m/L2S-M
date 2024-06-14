@@ -1,3 +1,21 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: l2sm-operator
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: l2sm-operator
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+  - kind: ServiceAccount
+    name: l2sm-operator
+    namespace: default
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -43,6 +61,8 @@ spec:
     port: 8181
     targetPort: 8181
   type: ClusterIP
+---
+
 ---
 apiVersion: v1
 kind: Namespace
@@ -9403,6 +9423,44 @@ metadata:
   name: l2sm-manager-role
 rules:
 - apiGroups:
+  - apps
+  resources:
+  - replicasets
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - pods/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - pods/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
   - l2sm.l2sm.k8s.local
   resources:
   - l2networks
@@ -9480,6 +9538,18 @@ rules:
   - get
   - patch
   - update
+- apiGroups:
+  - l2sm.l2sm.k8s.local
+  resources:
+  - replicasets
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -9606,6 +9676,26 @@ spec:
   selector:
     control-plane: controller-manager
 ---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/component: webhook
+    app.kubernetes.io/created-by: controllermanager
+    app.kubernetes.io/instance: webhook-service
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: service
+    app.kubernetes.io/part-of: controllermanager
+  name: l2sm-webhook-service
+  namespace: l2sm-system
+spec:
+  ports:
+  - port: 443
+    protocol: TCP
+    targetPort: 9443
+  selector:
+    control-plane: controller-manager
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -9633,6 +9723,51 @@ spec:
     spec:
       containers:
       - args:
+        - --health-probe-bind-address=:8081
+        - --metrics-bind-address=127.0.0.1:8080
+        - --leader-elect
+        command:
+        - /manager
+        env:
+        - name: CONTROLLER_IP
+          value: l2sm-controller-service.default.svc.cluster.local
+        - name: CONTROLLER_PORT
+          value: "8181"
+        image: alexdecb/l2sm-controller-manager:2.5
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8081
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        name: manager
+        ports:
+        - containerPort: 9443
+          name: webhook-server
+          protocol: TCP
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8081
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources:
+          limits:
+            cpu: 500m
+            memory: 128Mi
+          requests:
+            cpu: 10m
+            memory: 64Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+        volumeMounts:
+        - mountPath: /tmp/k8s-webhook-server/serving-certs
+          name: cert
+          readOnly: true
+      - args:
         - --secure-listen-address=0.0.0.0:8443
         - --upstream=http://127.0.0.1:8080/
         - --logtostderr=true
@@ -9655,45 +9790,90 @@ spec:
           capabilities:
             drop:
             - ALL
-      - args:
-        - --health-probe-bind-address=:8081
-        - --metrics-bind-address=127.0.0.1:8080
-        - --leader-elect
-        command:
-        - /manager
-        env:
-        - name: CONTROLLER_IP
-          value: l2sm-controller-service.default.svc.cluster.local
-        image: alexdecb/l2sm-controller-manager:2.4
-        livenessProbe:
-          httpGet:
-            path: /healthz
-            port: 8081
-          initialDelaySeconds: 15
-          periodSeconds: 20
-        name: manager
-        readinessProbe:
-          httpGet:
-            path: /readyz
-            port: 8081
-          initialDelaySeconds: 5
-          periodSeconds: 10
-        resources:
-          limits:
-            cpu: 500m
-            memory: 128Mi
-          requests:
-            cpu: 10m
-            memory: 64Mi
-        securityContext:
-          allowPrivilegeEscalation: false
-          capabilities:
-            drop:
-            - ALL
       securityContext:
         runAsNonRoot: true
       serviceAccountName: l2sm-controller-manager
       terminationGracePeriodSeconds: 10
+      volumes:
+      - name: cert
+        secret:
+          defaultMode: 420
+          secretName: webhook-server-cert
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  labels:
+    app.kubernetes.io/component: certificate
+    app.kubernetes.io/created-by: controllermanager
+    app.kubernetes.io/instance: serving-cert
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: certificate
+    app.kubernetes.io/part-of: controllermanager
+  name: l2sm-serving-cert
+  namespace: l2sm-system
+spec:
+  dnsNames:
+  - l2sm-webhook-service.l2sm-system.svc
+  - l2sm-webhook-service.l2sm-system.svc.cluster.local
+  issuerRef:
+    kind: Issuer
+    name: l2sm-selfsigned-issuer
+  secretName: webhook-server-cert
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  labels:
+    app.kubernetes.io/component: certificate
+    app.kubernetes.io/created-by: controllermanager
+    app.kubernetes.io/instance: serving-cert
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: certificate
+    app.kubernetes.io/part-of: controllermanager
+  name: l2sm-selfsigned-issuer
+  namespace: l2sm-system
+spec:
+  selfSigned: {}
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  annotations:
+    cert-manager.io/inject-ca-from: l2sm-system/l2sm-serving-cert
+  labels:
+    app.kubernetes.io/component: webhook
+    app.kubernetes.io/created-by: controllermanager
+    app.kubernetes.io/instance: mutating-webhook-configuration
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: mutatingwebhookconfiguration
+    app.kubernetes.io/part-of: controllermanager
+  name: l2sm-mutating-webhook-configuration
+webhooks:
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    caBundle: ""
+    service:
+      name: l2sm-webhook-service
+      namespace: l2sm-system
+      path: /mutate-v1-pod
+  failurePolicy: Ignore
+  name: mpod.kb.io
+  objectSelector:
+    matchLabels:
+      l2sm: "true"
+  rules:
+  - apiGroups:
+    - ""
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - pods
+  sideEffects: None
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -9725,7 +9905,7 @@ spec:
           done;
           sleep 5;
       containers:
-      - image: alexdecb/l2sm-operator:2.4
+      - image: alexdecb/l2sm-operator:2.5
         name: l2sm-opt-pod
         env:
           - name: CONTROLLER_IP
@@ -9800,7 +9980,7 @@ spec:
           sleep 5;
       containers:
       - name: l2sm-switch
-        image: alexdecb/l2sm-switch:2.4
+        image: alexdecb/l2sm-switch:2.5
         # imagePullPolicy: Always
         #args: ["setup_switch.sh && sleep infinity"]
         env:
@@ -9824,6 +10004,8 @@ apiVersion: "k8s.cni.cncf.io/v1"
 kind: NetworkAttachmentDefinition
 metadata:
   name: veth10
+  labels:
+    app: l2sm
 spec:
   config: '{
       "cniVersion": "0.3.0",
@@ -9841,6 +10023,8 @@ apiVersion: "k8s.cni.cncf.io/v1"
 kind: NetworkAttachmentDefinition
 metadata:
   name: veth1
+  labels:
+    app: l2sm
 spec:
   config: '{
       "cniVersion": "0.3.0",
@@ -9858,6 +10042,8 @@ apiVersion: "k8s.cni.cncf.io/v1"
 kind: NetworkAttachmentDefinition
 metadata:
   name: veth2
+  labels:
+    app: l2sm
 spec:
   config: '{
       "cniVersion": "0.3.0",
@@ -9875,6 +10061,8 @@ apiVersion: "k8s.cni.cncf.io/v1"
 kind: NetworkAttachmentDefinition
 metadata:
   name: veth3
+  labels:
+    app: l2sm
 spec:
   config: '{
       "cniVersion": "0.3.0",
@@ -9892,6 +10080,8 @@ apiVersion: "k8s.cni.cncf.io/v1"
 kind: NetworkAttachmentDefinition
 metadata:
   name: veth4
+  labels:
+    app: l2sm
 spec:
   config: '{
       "cniVersion": "0.3.0",
@@ -9909,6 +10099,8 @@ apiVersion: "k8s.cni.cncf.io/v1"
 kind: NetworkAttachmentDefinition
 metadata:
   name: veth5
+  labels:
+    app: l2sm
 spec:
   config: '{
       "cniVersion": "0.3.0",
@@ -9926,6 +10118,8 @@ apiVersion: "k8s.cni.cncf.io/v1"
 kind: NetworkAttachmentDefinition
 metadata:
   name: veth6
+  labels:
+    app: l2sm
 spec:
   config: '{
       "cniVersion": "0.3.0",
@@ -9943,6 +10137,8 @@ apiVersion: "k8s.cni.cncf.io/v1"
 kind: NetworkAttachmentDefinition
 metadata:
   name: veth7
+  labels:
+    app: l2sm
 spec:
   config: '{
       "cniVersion": "0.3.0",
@@ -9960,6 +10156,8 @@ apiVersion: "k8s.cni.cncf.io/v1"
 kind: NetworkAttachmentDefinition
 metadata:
   name: veth8
+  labels:
+    app: l2sm
 spec:
   config: '{
       "cniVersion": "0.3.0",
@@ -9977,6 +10175,8 @@ apiVersion: "k8s.cni.cncf.io/v1"
 kind: NetworkAttachmentDefinition
 metadata:
   name: veth9
+  labels:
+    app: l2sm
 spec:
   config: '{
       "cniVersion": "0.3.0",
@@ -10082,22 +10282,19 @@ spec:
         items:
         - key: init.sql
           path: init.sql
-  nodeName: l2sm1
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: mysql-development-service
 spec:
-  type: NodePort
+  type: ClusterIP
   ports:
     - port: 3306
       targetPort: 3306
-      nodePort: 30001
       protocol: TCP
   selector:
     app: mysql
-
 ---
 apiVersion: v1
 kind: Secret
