@@ -6,7 +6,7 @@ stages:          # List of stages for jobs, and their order of execution
 build-job:       # This job runs in the build stage, which runs first.
   stage: build
   image: docker:latest
-  pre-script:
+  # pre-script:
   script:
     - ./build/build_images.sh build_push
 unit-test-job:   # This job runs in the test stage.
