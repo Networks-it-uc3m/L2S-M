@@ -54,20 +54,20 @@ Note: Any number of nodes can be configured, as long as the entry is in this fil
 Once this file is created, we inject it to each node using the kubectl cp command:
 
 ```bash
-kubectl cp ./configs/sampleFile.json <pod-name>:/etc/l2sm/switchConfig.json -n=he-codeco-netma
+kubectl cp ./configs/sampleFile.json <pod-name>:/etc/l2sm/switchConfig.json 
 ```
 
 And then executing the script in the switch-pod:
 
 ```bash
-kubectl exec -it <switch-pod-name> -n=he-codeco-netma -- /bin/bash -c 'l2sm-vxlans --node_name=$NODENAME /etc/l2sm/switchConfig.json'
+kubectl exec -it <switch-pod-name> -- /bin/bash -c 'l2sm-vxlans --node_name=$NODENAME /etc/l2sm/switchConfig.json'
 ```
 
 This must be done in each switch-pod. In the provided example, using two nodes, l2sm1 and l2sm2, we have to do it twice, in l2-ps-8p5td and l2-ps-xdkvz.
 When the exec command is done, we should see an output like this:
 
 ```bash
-kubectl exec -it l2sm-switch-8p5td -n=he-codeco-netma -- /bin/bash -c 'l2sm-vxlans --node_name=$NODENAME /etc/l2sm/switchConfig.json'
+kubectl exec -it l2sm-switch-8p5td -- /bin/bash -c 'l2sm-vxlans --node_name=$NODENAME /etc/l2sm/switchConfig.json'
 Defaulted container "l2sm-switch" out of: l2sm-switch, wait-for-l2sm-controller (init)
 Created vxlan between node l2sm1 and node l2sm2.
 ```

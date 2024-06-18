@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: l2sm-controller
+  namespace: he-codeco-netma
 spec:
   replicas: 1
   selector:
@@ -14,7 +15,7 @@ spec:
     spec:
       containers:
       - name: l2sm-controller
-        image: alexdecb/l2sm-controller:2.2
+        image: alexdecb/l2sm-controller:2.4
         readinessProbe:
           httpGet:
             path: /onos/ui
@@ -24,11 +25,13 @@ spec:
         ports:
         - containerPort: 6633
         - containerPort: 8181
+        # imagePullPolicy: Always
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: l2sm-controller-service
+  namespace: he-codeco-netma
 spec:
   selector:
     app: l2sm-controller

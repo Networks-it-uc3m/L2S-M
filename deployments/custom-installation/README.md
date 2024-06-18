@@ -37,6 +37,7 @@ kubectl create -f ./deployments/custom-installation/mysql/
 kubectl get nodes
 kubectl label nodes [your-master-node] dedicated=master
 ```
+
 5. Deploy the L2S-M Controller by using the following command: 
 
 ```bash
@@ -49,7 +50,7 @@ kubectl create -f ./deployments/custom-installation/deployController.yaml
 kubectl create -f ./deployments/custom-installation/deployOperator.yaml
 ```
 
-Once these two pods are in running state, you can finally deploy the virtual switches
+Once these two pods are in running state, you can finally deploy the virtual switches and custom CRD
 
 7. This is done by:
 
@@ -59,6 +60,11 @@ kubectl create -f ./deployments/custom-installation/deploySwitch.yaml
 ```
 
 And check there is a pod running in each node, with ```kubectl get pods -o wide```
+
+8. And launch the CRD definition by: 
+```bash
+kubectl create -f ./deployments/custom-installation/l2sm-network-crd.yaml
+```
 
 ## Configuring Vxlans
 

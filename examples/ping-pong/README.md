@@ -10,16 +10,12 @@ This guide will assume that all commands are executed within the L2S-M directory
 First of all, let's see the details of an L2S-M virtual network. This is the descriptor corresponding to the virtual network that will be used in this example: ping-network
 
 ```yaml
-apiVersion: "k8s.cni.cncf.io/v1"
-kind: NetworkAttachmentDefinition
+apiVersion: l2sm.l2sm.k8s.local/v1
+kind: L2Network
 metadata:
   name: ping-network
 spec:
-  config: '{
-      "cniVersion": "0.3.0",
-      "type": "dummy",
-      "device": "l2sm-vNet"
-    }'
+  type: vnet
 ```
 As you can see, L2S-M virtual networks are a [NetworkAttachmentDefinition](https://github.com/k8snetworkplumbingwg/multus-cni/blob/master/docs/quickstart.md) from MULTUS. In order to build a new network, just changing its name in the "metadata" field will define a new network. 
 
@@ -28,7 +24,7 @@ As you can see, L2S-M virtual networks are a [NetworkAttachmentDefinition](https
 To create the virtual network in your cluster, use the appropriate *kubectl* command as if you were building any other K8s resource:
 
 ```bash
-kubectl create -f ./examples/ping-pong/network.yaml -n=he-codeco-namespace
+kubectl create -f ./examples/ping-pong/network.yaml
 ```
 
 Et voilá! You have successfully created your first virtual network in your K8s cluster.
@@ -41,7 +37,7 @@ For example, to add one deployment to ping-network, enter the following annotati
 
 ```yaml
 annotations:
-  k8s.v1.cni.cncf.io/networks: ping-network
+   l2sm/networks: ping-network
 ```
 
 If you want to add your own Multus annotations, you are free to do so! L2S-M will not interfere with the standard Multus behavior, so feel free to add your additional annotations if you need them.
@@ -49,8 +45,8 @@ If you want to add your own Multus annotations, you are free to do so! L2S-M wil
 To assist you with the deployment of your first application with L2S-M, you can use the pod definitions available in this repository. To deploy both "ping-pong" pods (which are simple Ubuntu alpine containers), use the following commands:
 
 ```bash
-kubectl create -f ./examples/ping-pong/ping.yaml -n=he-codeco-namespace
-kubectl create -f ./examples/ping-pong/pong.yaml -n=he-codeco-namespace
+kubectl create -f ./examples/ping-pong/ping.yaml
+kubectl create -f ./examples/ping-pong/pong.yaml
 ```
 
 After a bit of time, check that both pods were successfully instantiated in your cluster.

@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os/exec"
+	"ovs-switch/pkg/ovs"
 	"regexp"
 )
 
@@ -21,9 +22,11 @@ func main() {
 	}
 
 	fmt.Println("Initializing switch, connected to controller: ", controllerIP)
-	err = initializeSwitch(controllerIP)
+
+	bridge, err := initializeSwitch(controllerIP)
 
 	if err != nil {
+
 		fmt.Println("Could not initialize switch. Error:", err)
 		return
 	}
@@ -33,12 +36,11 @@ func main() {
 	// Set all virtual interfaces up, and connect them to the tunnel bridge:
 	for i := 1; i <= vethNumber; i++ {
 		veth := fmt.Sprintf("net%d", i)
-		cmd := exec.Command("ip", "link", "set", veth, "up") // i.e: ip link set veth1 up
-		if err := cmd.Run(); err != nil {
+		if err := bridge.AddPort(veth); err != nil {
 			fmt.Println("Error:", err)
 		}
-		exec.Command("ovs-vsctl", "add-port", "brtun", veth).Run() // i.e: ovs-vsctl add-port brtun veth1
 	}
+	fmt.Printf("Switch initialized, current state: ", bridge)
 }
 
 func takeArguments() (int, string, error) {
@@ -56,7 +58,7 @@ func takeArguments() (int, string, error) {
 	return *vethNumber, *controllerIP, nil
 }
 
-func initializeSwitch(controllerIP string) error {
+func initializeSwitch(controllerIP string) (ovs.Bridge, error) {
 
 	re := regexp.MustCompile(`\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b`)
 	if !re.MatchString(controllerIP) {
@@ -64,32 +66,9 @@ func initializeSwitch(controllerIP string) error {
 		controllerIP = re.FindString(string(out))
 	}
 
-	var err error
+	controller := fmt.Sprintf("tcp:%s:6633", controllerIP)
 
-	err = exec.Command("ovs-vsctl", "add-br", "brtun").Run()
+	bridge, err := ovs.NewBridge(ovs.Bridge{Name: "brtun", Controller: controller, Protocol: "OpenFlow13"})
 
-	if err != nil {
-		return errors.New("could not create brtun interface")
-	}
-
-	err = exec.Command("ip", "link", "set", "brtun", "up").Run()
-
-	if err != nil {
-		return errors.New("could not set brtun interface up")
-	}
-
-	err = exec.Command("ovs-vsctl", "set", "bridge", "brtun", "protocols=OpenFlow13").Run()
-
-	if err != nil {
-		return errors.New("could not set brtun messaing protocol to OpenFlow13")
-	}
-
-	target := fmt.Sprintf("tcp:%s:6633", controllerIP)
-
-	err = exec.Command("ovs-vsctl", "set-controller", "brtun", target).Run()
-
-	if err != nil {
-		return errors.New("could not connect to controller")
-	}
-	return nil
+	return bridge, err
 }

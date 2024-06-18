@@ -1,0 +1,16 @@
+# nodes:
+#   - name: l2sm1
+#     ip: 10.0.0.2/24
+#     metrics:
+#       rttInterval: 3
+#       throughputInterval: 20
+#       jitterInterval: 10
+#   - name: l2sm2
+#     ip: 10.0.0.3/24
+#     metrics:
+#       rttInterval: 20
+#       throughputInterval: 20
+#       jitterInterval: 5
+# network:
+#   name: lpm-network
+topologyNamespace: network-l2sm-namespace

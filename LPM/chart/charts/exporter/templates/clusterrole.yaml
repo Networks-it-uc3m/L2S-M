@@ -1,0 +1,8 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ .Values.global.network.name}}-topology-manager
+rules:
+  - apiGroups: ["qos-scheduler.siemens.com"]
+    resources: ["networktopologies"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
