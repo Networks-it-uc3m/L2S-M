@@ -22,7 +22,7 @@ The first step involves creating a `vlink` network, named "vlink-sample", using 
 
 ```yaml
 apiVersion: l2sm.k8s.local/v1
-kind: L2SMNetwork
+kind: L2Network
 metadata:
   name: vlink-sample
 spec:
