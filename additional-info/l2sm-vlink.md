@@ -30,7 +30,7 @@ A L2S-M vlink should be specified according to the followibng YAML description:
 
 ```yaml
 apiVersion: l2sm.k8s.local/v1
-kind: L2SMNetwork
+kind: L2Network
 metadata:
   name: vlink-sample
 spec:
@@ -223,7 +223,7 @@ The defined path is selected as an example, but in a real case scenario it may b
 
 ```yaml
 apiVersion: l2sm.k8s.local/v1
-kind: L2SMNetwork
+kind: L2Network
 metadata:
   name: vlink-sample
 spec:
@@ -270,6 +270,7 @@ metadata:
   name: ping
   labels:
     app: ping-pong
+    l2sm: "true"
   annotations:
     l2sm/networks:  '[
             { "name": "vlink-sample",
@@ -299,6 +300,7 @@ metadata:
   name: pong
   labels:
     app: ping-pong
+    l2sm: "true"
   annotations:
       l2sm/networks:  '[
             { "name": "vlink-sample",
