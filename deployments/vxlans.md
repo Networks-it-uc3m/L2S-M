@@ -17,36 +17,29 @@ In order to connect the switches between themselves, an additional configuration
   
   We want to connect them directly, so we modify the reference file, ./configs/sampleFile.json:
 ```json
-[
-    {
-        "name": "<NODE_SWITCH_1>",
-        "nodeIP": "<IP_SWITCH_1>",
-        "neighborNodes": ["<NODE_SWITCH_2>"]
-    },
-    {
-        "name": "<NODE_SWITCH_2>",
-        "nodeIP": "<IP_SWITCH_2>",
-        "neighborNodes": ["<NODE_SWITCH_1>"]
-    }
-]
+{
+    "Nodes": [
+    {"name": "<NODE_SWITCH_1>","nodeIP": "<IP_SWITCH_1>"},
+    {"name": "<NODE_SWITCH_2>","nodeIP": "<IP_SWITCH_2>"}],
+    "Link":[
+        {"endpointA":"<NODE_SWITCH_1>","endpointB":"<NODE_SWITCH_2>"}
+    ]
+}
 
 ```
 Note: The parameters to be changed are shown in the NODE and IP columns of the table above.
 
 Example of how it looks:
 ```json
-[
-    {
-        "name": "l2sm1",
-        "nodeIP": "10.1.14.58",
-        "neighborNodes": ["l2sm2"]
-    },
-    {
-        "name": "l2sm2",
-        "nodeIP": "10.1.72.111",
-        "neighborNodes": ["l2sm1"]
-    }
-]
+{
+  "Nodes": [
+    {"name": "l2sm1", "nodeIP": "10.1.14.29"},{"name": "l2sm2", "nodeIP": "10.1.72.109"}
+  ],
+  "Links": [
+    {"endpointA": "l2sm1", "endpointB": "l2sm2"}
+  ]
+}
+
 
 ```
 Note: Any number of nodes can be configured, as long as the entry is in this file. The desired connections are under the neighborNodes field, in an array, such as this other example, where we add a neighbor to l2sm2: ["l2sm1","l2sm3"]
