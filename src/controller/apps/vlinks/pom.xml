@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright 2024 Open Networking Foundation
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>org.onosproject</groupId>
+    <artifactId>onos-dependencies</artifactId>
+    <version>2.7.0</version>
+  </parent>
+
+  <groupId>org.l2sm</groupId>
+  <artifactId>vlinks-app</artifactId>
+  <version>1.0</version>
+  <packaging>bundle</packaging>
+
+  <description>LSM SDN solution</description>
+  <url>ttps://github.com/Networks-it-uc3m</url>
+
+  <properties>
+    <onos.app.name>org.l2sm.vlinks</onos.app.name>
+    <api.version>1.0.0</api.version>
+    <api.description>L2S-M Controller REST API to create or delete virtual links</api.description>
+    <onos.app.title>L2S-M Controller Vlinks app</onos.app.title>
+    <onos.app.origin>UC3M</onos.app.origin>
+    <onos.app.category>default</onos.app.category>
+    <api.package>org.l2sm.vlinks.api</api.package>
+    <onos.app.url>https://github.com/Networks-it-uc3m</onos.app.url>
+    <api.title>L2S-M Controller Vlinks REST API</api.title>
+    <onos.app.readme>2S-M Controller Vlinks application</onos.app.readme>
+    <web.context>/onos/vlinks</web.context>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.onosproject</groupId>
+      <artifactId>onos-api</artifactId>
+      <version>${onos.version}</version>
+      <scope>provided</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.onosproject</groupId>
+      <artifactId>onlab-osgi</artifactId>
+      <version>${onos.version}</version>
+      <scope>provided</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.onosproject</groupId>
+      <artifactId>onlab-misc</artifactId>
+      <version>${onos.version}</version>
+      <scope>provided</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.onosproject</groupId>
+      <artifactId>onos-api</artifactId>
+      <version>${onos.version}</version>
+      <scope>test</scope>
+      <classifier>tests</classifier>
+    </dependency>
+
+    <dependency>
+      <groupId>javax.ws.rs</groupId>
+      <artifactId>javax.ws.rs-api</artifactId>
+      <scope>provided</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-annotations</artifactId>
+      <scope>provided</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-core</artifactId>
+      <scope>provided</scope>
+    </dependency>
+
+ 
+    
+    <dependency>
+      <groupId>org.onosproject</groupId>
+      <artifactId>onos-cli</artifactId>
+      <version>${onos.version}</version>
+      <scope>provided</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.karaf.shell</groupId>
+      <artifactId>org.apache.karaf.shell.console</artifactId>
+      <scope>provided</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.glassfish.jersey.containers</groupId>
+      <artifactId>jersey-container-servlet</artifactId>
+      <scope>provided</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.onosproject</groupId>
+      <artifactId>onlab-rest</artifactId>
+      <version>${onos.version}</version>
+      <scope>provided</scope>
+    </dependency>
+
+
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+      <scope>provided</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>com.fasterxml.jackson.dataformat</groupId>
+      <artifactId>jackson-dataformat-yaml</artifactId>
+      <version>2.11.0</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.yaml</groupId>
+      <artifactId>snakeyaml</artifactId>
+      <version>1.26</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.onosproject</groupId>
+      <artifactId>onos-rest</artifactId>
+      <version>${onos.version}</version>
+      <scope>provided</scope>
+    </dependency>
+
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.onosproject</groupId>
+        <artifactId>onos-maven-plugin</artifactId>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-checkstyle-plugin</artifactId>
+        <configuration>
+          <skip>true</skip>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.felix</groupId>
+        <artifactId>maven-bundle-plugin</artifactId>
+        <configuration>
+          <instructions>
+            <_wab>src/main/webapp/</_wab>
+            <Include-Resource>WEB-INF/classes/apidoc/swagger.json=target/swagger.json,
+                          {maven-resources}</Include-Resource>
+            <Import-Package>*,!com.fasterxml.jackson.dataformat,!snakeyaml,org.glassfish.jersey.servlet</Import-Package>
+            <Web-ContextPath>${web.context}</Web-ContextPath>
+            <Karaf-Commands>org.l2sm.vlinks.cli</Karaf-Commands>
+          </instructions>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>  
+
+</project>

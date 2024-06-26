@@ -37,7 +37,6 @@ func (c *InternalClient) beginSessionController() bool {
 // CreateNetwork creates a new network in the SDN controller
 func (c *InternalClient) CreateNetwork(networkType l2smv1.NetworkType, config interface{}) error {
 
-	//TODO: Remove hard-code
 	networkType = "vnets"
 	jsonData, err := json.Marshal(config)
 	if err != nil {
