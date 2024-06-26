@@ -9747,7 +9747,7 @@ spec:
           value: "8181"
         - name: SWITCHES_NAMESPACE
           value: he-codeco-netma
-        image: alexdecb/l2sm-controller-manager:2.5
+        image: alexdecb/l2sm-controller-manager:test
         livenessProbe:
           httpGet:
             path: /healthz
@@ -9920,7 +9920,7 @@ spec:
           done;
           sleep 5;
       containers:
-      - image: alexdecb/l2sm-operator:2.5
+      - image: alexdecb/l2sm-operator:test
         name: l2sm-opt-pod
         env:
           - name: CONTROLLER_IP
