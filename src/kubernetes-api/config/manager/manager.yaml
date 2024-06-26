@@ -70,6 +70,9 @@ spec:
         - /manager
         args:
         - --leader-elect
+        env:
+        - name: CONTROLLER_IP
+          value: l2sm-controller-service.default.svc.cluster.local
         image: controller:latest
         name: manager
         securityContext:
