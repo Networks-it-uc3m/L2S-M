@@ -2,8 +2,8 @@
 set -e
 
 # Set environment variables
-export VERSION="2.4"
-export DOCKERHUB_REPO="alexdecb"
+export VERSION="test"
+export DOCKERHUB_REPO="chargalocha"
 
 # Function to build image
 build_image() {
