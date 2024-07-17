@@ -4,6 +4,7 @@ metadata:
   name: pong
   labels:
     app: ping-pong
+    l2sm: "true"
   annotations:
     l2sm/networks: ping-network
 spec:

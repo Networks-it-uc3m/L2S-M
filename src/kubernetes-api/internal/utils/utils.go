@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"crypto/sha1"
 	"encoding/hex"
+	"fmt"
+	"strings"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
@@ -60,4 +62,23 @@ func SpecToJson(obj runtime.Object) bytes.Buffer {
 	s.Encode(obj, &b)
 
 	return b
+}
+
+// GetPortNumberFromNetAttachDef extracts the port number from the network attachment name.
+func GetPortNumberFromNetAttachDef(netAttachName string) (string, error) {
+	const keyword = "veth"
+
+	// Check if the keyword exists in the netAttachName
+	index := strings.Index(netAttachName, keyword)
+	if index == -1 {
+		return "", fmt.Errorf("keyword '%s' not found in network attachment name", keyword)
+	}
+
+	// Extract the port number after the keyword
+	portNumber := netAttachName[index+len(keyword):]
+	if portNumber == "" {
+		return "", fmt.Errorf("port number not found after keyword '%s'", keyword)
+	}
+
+	return portNumber, nil
 }

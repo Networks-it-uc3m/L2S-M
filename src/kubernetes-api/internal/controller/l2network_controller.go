@@ -93,6 +93,15 @@ func (r *L2NetworkReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 	// Add finalizer for this CR
 	if !utils.ContainsString(network.GetFinalizers(), "l2network.finalizers.l2sm.k8s.local") {
+		err := r.InternalClient.CreateNetwork(network.Spec.Type, sdnclient.VnetPayload{NetworkId: network.Name})
+		if err != nil {
+			log.Error(err, "failed to create network")
+			r.updateControllerStatus(ctx, network, l2smv1.OfflineStatus)
+
+			return ctrl.Result{}, err
+		}
+		log.Info("Network created in SDN controller", "NetworkID", network.Name)
+		r.updateControllerStatus(ctx, network, l2smv1.OnlineStatus)
 		network.SetFinalizers(append(network.GetFinalizers(), "l2network.finalizers.l2sm.k8s.local"))
 		if err := r.Update(ctx, network); err != nil {
 			return ctrl.Result{}, err
@@ -113,32 +122,32 @@ func (r *L2NetworkReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		}
 	}
 
-	exists, err := r.InternalClient.CheckNetworkExists(network.Spec.Type, network.Name)
-	if err != nil {
-		log.Error(err, "failed to check network existence")
-		// Update the status to Unknown due to connection issues
+	// exists, err := r.InternalClient.CheckNetworkExists(network.Spec.Type, network.Name)
+	// if err != nil {
+	// 	log.Error(err, "failed to check network existence")
+	// 	// Update the status to Unknown due to connection issues
 
-		// Update the status in the Kubernetes API
-		r.updateControllerStatus(ctx, network, l2smv1.UnknownStatus)
-		return ctrl.Result{}, err
-	}
+	// 	// Update the status in the Kubernetes API
+	// 	r.updateControllerStatus(ctx, network, l2smv1.UnknownStatus)
+	// 	return ctrl.Result{}, err
+	// }
 
-	if !exists {
-		err := r.InternalClient.CreateNetwork(network.Spec.Type, sdnclient.VnetPayload{NetworkId: network.Name})
-		if err != nil {
-			log.Error(err, "failed to create network")
-			r.updateControllerStatus(ctx, network, l2smv1.OfflineStatus)
+	// if !exists {
+	// 	err := r.InternalClient.CreateNetwork(network.Spec.Type, sdnclient.VnetPayload{NetworkId: network.Name})
+	// 	if err != nil {
+	// 		log.Error(err, "failed to create network")
+	// 		r.updateControllerStatus(ctx, network, l2smv1.OfflineStatus)
 
-			return ctrl.Result{}, err
-		}
-		log.Info("Network created in SDN controller", "NetworkID", network.Name)
-	} else {
-		log.Info("Network already exists in SDN controller, no action needed", "NetworkID", network.Name)
-	}
-	if statusUpdateErr := r.updateControllerStatus(ctx, network, l2smv1.OnlineStatus); statusUpdateErr != nil {
-		log.Error(statusUpdateErr, "unable to update L2Network provider status")
-		return ctrl.Result{}, statusUpdateErr
-	}
+	// 		return ctrl.Result{}, err
+	// 	}
+	// 	log.Info("Network created in SDN controller", "NetworkID", network.Name)
+	// } else {
+	// 	log.Info("Network already exists in SDN controller, no action needed", "NetworkID", network.Name)
+	// }
+	// if statusUpdateErr := r.updateControllerStatus(ctx, network, l2smv1.OnlineStatus); statusUpdateErr != nil {
+	// 	log.Error(statusUpdateErr, "unable to update L2Network provider status")
+	// 	return ctrl.Result{}, statusUpdateErr
+	// }
 
 	return ctrl.Result{}, nil
 }
@@ -149,8 +158,10 @@ func (r *L2NetworkReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	r.Log.Info("this is the controller ip", os.Getenv("CONTROLLER_IP"))
 	fmt.Println(os.Getenv("CONTROLLER_IP"))
+	fmt.Println(os.Getenv("CONTROLLER_PORT"))
+
 	// Initialize the InternalClient with the base URL of the SDN controller
-	clientConfig := sdnclient.ClientConfig{BaseURL: fmt.Sprintf("http://%s:8181/onos", os.Getenv("CONTROLLER_IP")), Username: "karaf", Password: "karaf"}
+	clientConfig := sdnclient.ClientConfig{BaseURL: fmt.Sprintf("http://%s:%s/onos", os.Getenv("CONTROLLER_IP"), os.Getenv("CONTROLLER_PORT")), Username: "karaf", Password: "karaf"}
 
 	r.InternalClient, err = sdnclient.NewClient(sdnclient.InternalType, clientConfig)
 	if err != nil {

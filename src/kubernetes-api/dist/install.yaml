@@ -18639,6 +18639,18 @@ metadata:
   name: l2sm-manager-role
 rules:
 - apiGroups:
+  - apps
+  resources:
+  - replicasets
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
   - l2sm.l2sm.k8s.local
   resources:
   - l2networks
@@ -18716,6 +18728,18 @@ rules:
   - get
   - patch
   - update
+- apiGroups:
+  - l2sm.l2sm.k8s.local
+  resources:
+  - replicasets
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -18897,7 +18921,10 @@ spec:
         - --leader-elect
         command:
         - /manager
-        image: alexdecb/l2sm-operator:2.4
+        env:
+        - name: CONTROLLER_IP
+          value: l2sm-controller-service.default.svc.cluster.local
+        image: alexdecb/l2sm-controller-manager:2.5
         livenessProbe:
           httpGet:
             path: /healthz

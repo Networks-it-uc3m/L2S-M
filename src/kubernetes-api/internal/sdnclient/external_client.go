@@ -72,3 +72,23 @@ func (c *ExternalClient) DeleteNetwork(networkType l2smv1.NetworkType, networkID
 
 	return nil
 }
+
+// AttachPodToNetwork attaches a pod to a network, using the configuration file
+func (c *ExternalClient) AttachPodToNetwork(networkType l2smv1.NetworkType, config interface{}) error {
+
+	// jsonData, err := json.Marshal(config)
+	// if err != nil {
+	// 	return err
+	// }
+	// response, err := c.Session.Post("/idco/mscs", jsonData)
+	// if err != nil {
+	// 	return err
+	// }
+	// defer response.Body.Close()
+
+	// if response.StatusCode != http.StatusNoContent {
+	// 	return fmt.Errorf("failed to create network, status code: %d", response.StatusCode)
+	// }
+
+	return nil
+}

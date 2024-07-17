@@ -279,20 +279,23 @@ def pod_vn(body, name, namespace, logger, annotations, **kwargs):
 
     #time.sleep(random.uniform(0,0.8)) # Avoid database overlap by introducing a random sleep time
 
-    multus_networks = extract_multus_networks(annotations)
-    if not multus_networks:
+    l2networks = extract_l2networks(annotations)
+    
+
+    if not l2networks:
         logger.info("No Multus networks specified. Exiting.")
         return
 
     existing_networks = get_existing_networks(namespace)
-    # Need to extract just the names from multus_networks for comparison
-    target_networks_info = filter_target_networks([net['name'] for net in multus_networks], existing_networks)
+    # Need to extract just the names from l2networks for comparison
+    target_networks_info = filter_target_networks([net['name'] for net in l2networks], existing_networks)
     if not target_networks_info:
         logger.info("No target networks found. Letting Multus handle the network assignment.")
         return
     
     # Update `target_networks` to include IP information if available
-    target_networks = [net for net in multus_networks if net['name'] in target_networks_info]
+    target_networks = [net for net in l2networks if net['name'] in target_networks_info]
+
 
     api = CustomObjectsApi()
     # Assign pods to each of the target networks, this part remains unchanged
@@ -301,8 +304,13 @@ def pod_vn(body, name, namespace, logger, annotations, **kwargs):
     
     if 'spec' in body and 'nodeName' in body['spec']:
         node_name = body['spec']['nodeName']
-        free_interfaces = get_free_interfaces(node_name)
-        if len(free_interfaces) < len(target_networks):
+        # free_interfaces = get_free_interfaces(node_name)
+        v1 = client.CoreV1Api()
+        
+        pod = v1.read_namespaced_pod(name, namespace)
+        multus_annotations = pod.metadata.annotations if pod.metadata.annotations else {}
+        free_interfaces = extract_multus_networks(multus_annotations)
+        if len(free_interfaces) != len(target_networks):
             raise kopf.PermanentError(f"Node {node_name} has no free interfaces left")
         
         openflow_id = get_openflow_id(node_name)
@@ -362,9 +370,21 @@ def remove_from_network(l2sm_network_name,pod_name,namespace,api):
 
 
 
+def extract_l2networks(annotations):
+    """Extract and return l2sm networks from annotations."""
+    annotation = annotations.get('l2sm/networks')
+    if annotation.startswith('['):  # New JSON format
+        try:
+            networks = json.loads(annotation)
+            return [{ 'name': net['name'], 'ips': net.get('ips', []) } for net in networks]
+        except json.JSONDecodeError:
+            raise ValueError("Failed to decode JSON from annotations")
+    else:  # Original string format
+        return [{'name': network.strip(), 'ips': []} for network in annotation.split(",")]
+
 def extract_multus_networks(annotations):
     """Extract and return Multus networks from annotations."""
-    annotation = annotations.get('l2sm/networks')
+    annotation = annotations.get('k8s.v1.cni.cncf.io/networks')
     if annotation.startswith('['):  # New JSON format
         try:
             networks = json.loads(annotation)
@@ -381,9 +401,9 @@ def get_existing_networks(namespace):
     networks = api.list_namespaced_custom_object('l2sm.l2sm.k8s.local', 'v1', namespace, 'l2networks').get('items')
     return [network['metadata']['name'] for network in networks if "vnet" in network['spec']['type']]
 
-def filter_target_networks(multus_networks, existing_networks):
+def filter_target_networks(l2networks, existing_networks):
     """Filter and return networks that are both requested and exist."""
-    return [network for network in multus_networks if network in existing_networks]
+    return [network for network in l2networks if network in existing_networks]
 
 def get_free_interfaces(node_name):
     """Query the database for free interfaces on a node."""
@@ -402,6 +422,7 @@ def get_free_interfaces(node_name):
                     """            
             cursor.execute(sql, (node_name.strip(),))
             free_interfaces = cursor.fetchall()
+            print(free_interfaces)
     finally:
         connection.close()
     return free_interfaces
@@ -421,6 +442,8 @@ def update_pod_annotation(pod_name, namespace, networks_info):
     pod_annotations['k8s.v1.cni.cncf.io/networks'] = '[' + ', '.join(formatted_networks) + ']'
     print(pod_annotations)
     v1.patch_namespaced_pod(pod_name, namespace, {'metadata': {'annotations': pod_annotations}})
+    v1.delete_namespaced_pod(pod_name, namespace)
+
 
 
 def update_network_assignments(pod_name, namespace, node_name, free_interfaces, target_networks, logger, openflow_id):
@@ -434,15 +457,10 @@ def update_network_assignments(pod_name, namespace, node_name, free_interfaces, 
         assigned_interfaces = []
         with connection.cursor() as cursor:
             for i, interface in enumerate(free_interfaces[:len(target_networks)]):
-                update_interface_assignment(cursor, interface['id'], target_networks[i]['name'], pod_name, node_name)
-                assigned_interfaces.append({"name":interface['name'], "ips": target_networks[i]['ips']})
-                # Assuming function get_openflow_id and session.post logic are implemented elsewhere
                 if openflow_id:
                     port_number = extract_port_number(interface['name'])
-                    post_network_assignment(openflow_id, port_number, target_networks[i]['name'])
-                            
-            update_pod_annotation(pod_name, namespace, assigned_interfaces)
 
+                    post_network_assignment(openflow_id, port_number, target_networks[i]['name'])
         connection.commit()
     finally:
         connection.close()
@@ -496,20 +514,20 @@ def dpod_vn(body, name, namespace, logger, annotations, **kwargs):
             cursor.execute(sql)
             
             connection.commit()
-            multus_networks = extract_multus_networks(annotations)
-            if not multus_networks:
+            l2networks = extract_l2networks(annotations)
+            if not l2networks:
                 logger.info("No Multus networks specified. Exiting.")
                 return
 
             existing_networks = get_existing_networks(namespace)
-            # Need to extract just the names from multus_networks for comparison
-            target_networks_info = filter_target_networks([net['name'] for net in multus_networks], existing_networks)
+            # Need to extract just the names from l2networks for comparison
+            target_networks_info = filter_target_networks([net['name'] for net in l2networks], existing_networks)
             if not target_networks_info:
                 logger.info("No target networks found. Letting Multus handle the network assignment.")
                 return
             
             # Update `target_networks` to include IP information if available
-            target_networks = [net for net in multus_networks if net['name'] in target_networks_info]
+            target_networks = [net for net in l2networks if net['name'] in target_networks_info]
 
             api = CustomObjectsApi()
             # Assign pods to each of the target networks
@@ -570,22 +588,4 @@ def remove_node(body, logger, annotations, **kwargs):
     finally:
         connection.close()
     logger.info(f"Node {body['spec']['nodeName']} has been deleted from the cluster")
-
-
-def generate_random_ipv6_fe80():
-    # IPv6 FE80::/64 starts with '1111 1110 10' and 54 bits of 0s
-    # So we can fix the first 10 bits as '1111 1110 10' 
-    # Then we generate the last 64 bits randomly for the interface ID
-    # Since IPv6 addresses are represented in hexadecimal, we convert the binary values to hexadecimal
-    
-    
-    # Generating the interface ID (64 bits)
-    interface_id = random.getrandbits(64)
-    # Formatting to a 16 character hexadecimal string
-    interface_id_hex = format(interface_id, '016x')
-
-    # Constructing the full IPv6 address in the fe80::/64 range
-    ipv6_address = f"fe80::{interface_id_hex[:4]}:{interface_id_hex[4:8]}:{interface_id_hex[8:12]}:{interface_id_hex[12:]}/64"
-    
-    return ipv6_address
 
