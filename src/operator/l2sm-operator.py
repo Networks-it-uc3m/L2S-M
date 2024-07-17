@@ -181,8 +181,8 @@ def create_vn(spec, name, namespace, logger, **kwargs):
 
 #UPDATE DATABASE WHEN NETWORK IS CREATED, I.E: IS A MULTUS CRD WITH OUR DUMMY INTERFACE PRESENT IN ITS CONFIG
 #@kopf.on.create('L2SMNetwork', field="spec.config['device']", value='l2sm-vNet')
-@kopf.on.create('l2sm.k8s.local', 'v1', 'l2sm-networks') #hay que añadir : when=lambda spec, **_: 'vlink' in spec['type'] Falta modificar
-def create_vn(spec, name, namespace, logger, **kwargs):
+@kopf.on.create('l2sm.k8s.local', 'v1', 'vlink') #hay que añadir : when=lambda spec, **_: 'vlink' in spec['type'] Falta modificar
+def create_vlink(spec, name, namespace, logger, **kwargs):
 
     logger.info(f"{Style.BRIGHT}{Fore.GREEN}1. Char annotation: {Fore.CYAN}Network detected.{Style.RESET_ALL}")
        
