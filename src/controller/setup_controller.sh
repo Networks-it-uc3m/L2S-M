@@ -30,6 +30,7 @@ done
 ./bin/onos-app localhost activate org.onosproject.openflow-base
 ./bin/onos-app localhost activate org.onosproject.optical-model
 ./bin/onos-app localhost install! vnets-app-1.0.oar
+./bin/onos-app localhost install! vlinks-app-1.0.oar
 
 
 

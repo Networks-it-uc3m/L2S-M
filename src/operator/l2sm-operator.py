@@ -16,6 +16,9 @@ import requests
 import re
 import sys
 from requests.auth import HTTPBasicAuth
+import yaml
+from colorama import Fore, Style
+
 
 database_ip = os.environ['DATABASE_IP']
 database_username = os.environ['MYSQL_USER']
@@ -175,6 +178,98 @@ def create_vn(spec, name, namespace, logger, **kwargs):
     finally:
         # Ensure the database connection is closed
         connection.close()
+
+#UPDATE DATABASE WHEN NETWORK IS CREATED, I.E: IS A MULTUS CRD WITH OUR DUMMY INTERFACE PRESENT IN ITS CONFIG
+#@kopf.on.create('L2SMNetwork', field="spec.config['device']", value='l2sm-vNet')
+@kopf.on.create('l2sm.k8s.local', 'v1', 'l2sm-networks') #hay que añadir : when=lambda spec, **_: 'vlink' in spec['type'] Falta modificar
+def create_vn(spec, name, namespace, logger, **kwargs):
+
+    logger.info(f"{Style.BRIGHT}{Fore.GREEN}1. Char annotation: {Fore.CYAN}Network detected.{Style.RESET_ALL}")
+       
+    json_data=str(spec.get("config"))
+    data_dict=json.loads(json_data)
+    
+    for paths, path_info in data_dict.get("overlay-parameters",{}).items():
+        #paths takes de values of the names of each maaapath
+        #path_info takes the info inside
+        name=path_info.get("name","")
+        from_endpoint=path_info.get("FromEndpoint","")
+        to_endpoint=path_info.get("ToEndpoint","")
+        links=path_info.get("links",[])
+        
+        connection = pymysql.connect(host=database_ip,
+                             user=database_username,
+                             password=database_password,
+                             database=database_name,
+                             cursorclass=pymysql.cursors.DictCursor)
+        path =[]
+        from_end=''
+        to_end=''
+        try:
+            logger.info(f"{Style.BRIGHT}{Fore.GREEN}8. Char annotation: {Fore.CYAN}Path Array created.{Style.RESET_ALL}")
+            with connection.cursor() as cursor:
+                insertQuery="INSERT INTO path (name) VALUES ('%s')"
+                cursor.execute(insertQuery, (name))
+                
+                requestQuery="SELECT id FROM path WHERE name='%s';" % (name)
+                cursor.execute(requestQuery)
+                path_id=str(cursor.fetchall()[0]['name'])  
+                
+
+                requestQuery="SELECT openflowId FROM switches WHERE node_name='%s';" % (from_endpoint)
+                cursor.execute(requestQuery)
+                from_end=str(cursor.fetchall()[0]['openflowId'])
+
+                requestQuery="SELECT openflowId FROM switches WHERE node_name='%s';" % (to_endpoint)
+                cursor.execute(requestQuery)
+                to_end=str(cursor.fetchall()[0]['openflowId'])
+
+
+                i=0
+                link_len=len(links)
+                for element in links:
+                    link=str(element)
+
+
+                    requestQuery="SELECT switches.openflowId FROM link INNER JOIN switches ON link.end_A=switches.id WHERE link.link_name='%s';" % (link)
+                    cursor.execute(requestQuery)
+                    end_A=str(cursor.fetchall()[0]['openflowId'])
+
+                    requestQuery="SELECT switches.openflowId FROM link INNER JOIN switches ON link.end_B=switches.id WHERE link.link_name='%s';" % (link)
+                    cursor.execute(requestQuery)
+                    end_B=str(cursor.fetchall()[0]['openflowId'])
+                    
+                    if i==0 and (from_end == end_A):
+                        path.extend(end_A)
+                        path.extend(end_B)
+ 
+                    elif i==(link_len-1) and (to_end == end_B and path[i]==end_A):
+                        logger.info(f"{Style.BRIGHT}{Fore.GREEN}22.2(%s). Char annotation: {Fore.CYAN}Last Added: Path completed{Style.RESET_ALL}",i )
+                        path.extend(end_B)
+                    elif path[i]== end_A:
+                        path.extend(end_B)
+                    else:
+                        logger.info(f"{Style.BRIGHT}{Fore.GREEN}22.2(%s). Char annotation: {Fore.RED}The Path is not correct{Style.RESET_ALL}",i )
+                        return
+                    insertQuery="INSERT INTO Linkpath (link_id, path_id) VALUES ((SELECT id FROM link WHERE name=%s), (SELECT id FROM path WHERE name=%s))"
+                    cursor.execute(insertQuery, (link, name)) 
+                    i+=1
+
+        finally:
+            connection.close()
+     
+    logger.info(f"{Style.BRIGHT}{Fore.GREEN}24. Char annotation: {Fore.CYAN}Path: %s{Style.RESET_ALL}", path)
+
+    # Create the formatted string
+    create_network_to_json = f"{name} {from_end} {to_end} {{{', '.join(path)}}}"
+
+    # Create a dictionary
+    data = {"l2sm-vlink-create-network": create_network_to_json}
+
+    # Convert the dictionary to a JSON string
+    json_output = json.dumps(data)
+
+    print(json_output)
 
 
 
