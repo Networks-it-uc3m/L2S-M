@@ -18,13 +18,20 @@ package controller
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"time"
 
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	l2smv1 "l2sm.k8s.local/controllermanager/api/v1"
+	"l2sm.k8s.local/controllermanager/internal/utils"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-
-	l2smv1 "l2sm.k8s.local/controllermanager/api/v1"
 )
 
 // OverlayReconciler reconciles a Overlay object
@@ -33,6 +40,10 @@ type OverlayReconciler struct {
 	Scheme *runtime.Scheme
 }
 
+var replicaSetOwnerKeyOverlay = ".metadata.controller.overlay"
+
+// +kubebuilder:rbac:groups=l2sm.l2sm.k8s.local,resources=replicasets,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=apps,resources=replicasets,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=l2sm.l2sm.k8s.local,resources=overlays,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=l2sm.l2sm.k8s.local,resources=overlays/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=l2sm.l2sm.k8s.local,resources=overlays/finalizers,verbs=update
@@ -47,16 +58,302 @@ type OverlayReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.17.0/pkg/reconcile
 func (r *OverlayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
 
-	// TODO(user): your logic here
+	log := log.FromContext(ctx)
+
+	overlay := &l2smv1.Overlay{}
+
+	if err := r.Get(ctx, req.NamespacedName, overlay); err != nil {
+		// we'll ignore not-found errors, since they can't be fixed by an immediate
+		// requeue (we'll need to wait for a new notification), and we can get them
+		// on deleted requests.
+		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
+
+	// name of our custom finalizer
+	l2smFinalizer := "l2sm.operator.io/finalizer"
+
+	// examine DeletionTimestamp to determine if object is under deletion
+	if overlay.ObjectMeta.DeletionTimestamp.IsZero() {
+		// The object is not being deleted, so if it does not have our finalizer,
+		// then lets add the finalizer and update the object. This is equivalent
+		// to registering our finalizer.
+		if !controllerutil.ContainsFinalizer(overlay, l2smFinalizer) {
+			controllerutil.AddFinalizer(overlay, l2smFinalizer)
+			if err := r.Update(ctx, overlay); err != nil {
+				return ctrl.Result{}, err
+			}
+			log.Info("Overlay created", "Overlay", overlay.Name)
+
+		}
+	} else {
+		// The object is being deleted
+		if controllerutil.ContainsFinalizer(overlay, l2smFinalizer) {
+			// our finalizer is present, so lets handle any external dependency
+			if err := r.deleteExternalResources(ctx, overlay); err != nil {
+				// if fail to delete the external dependency here, return with error
+				// so that it can be retried.
+				return ctrl.Result{}, err
+			}
+
+			// remove our finalizer from the list and update it.
+			controllerutil.RemoveFinalizer(overlay, l2smFinalizer)
+			if err := r.Update(ctx, overlay); err != nil {
+				return ctrl.Result{}, err
+			}
+
+		}
+		log.Info("Overlay deleted", "Overlay", overlay.Name)
+		// Stop reconciliation as the item is being deleted
+		return ctrl.Result{}, nil
+	}
+
+	var switchReplicaSets appsv1.ReplicaSetList
+	if err := r.List(ctx, &switchReplicaSets, client.InNamespace(req.Namespace), client.MatchingFields{replicaSetOwnerKeyOverlay: req.Name}); err != nil {
+		log.Error(err, "unable to list child ReplicaSets")
+		return ctrl.Result{}, err
+	}
+
+	if len(switchReplicaSets.Items) == 0 {
+		if err := r.createExternalResources(ctx, overlay); err != nil {
+			log.Error(err, "unable to create ReplicaSet")
+			return ctrl.Result{}, err
+		}
+		log.Info("Overlay Launched")
+		return ctrl.Result{RequeueAfter: time.Second * 20}, nil
+	} else {
+
+		//b, _ := json.Marshal(netEdgeDevice.Spec.Neighbors)
+
+	}
 
 	return ctrl.Result{}, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *OverlayReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	if err := mgr.GetFieldIndexer().IndexField(context.Background(), &appsv1.ReplicaSet{}, replicaSetOwnerKeyOverlay, func(rawObj client.Object) []string {
+		// grab the replica set object, extract the owner...
+		replicaSet := rawObj.(*appsv1.ReplicaSet)
+		owner := metav1.GetControllerOf(replicaSet)
+		if owner == nil {
+			return nil
+		}
+		// ...make sure it's a ReplicaSet...
+		if owner.APIVersion != apiGVStr || owner.Kind != "Overlay" {
+			return nil
+		}
+
+		// ...and if so, return it
+		return []string{owner.Name}
+	}); err != nil {
+		return err
+	}
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&l2smv1.Overlay{}).
+		Owns(&appsv1.ReplicaSet{}).
 		Complete(r)
+}
+
+func (r *OverlayReconciler) deleteExternalResources(ctx context.Context, overlay *l2smv1.Overlay) error {
+
+	return nil
+}
+
+type TopologySwitchJson struct {
+	Nodes []NodeJson    `json:"Nodes"`
+	Links []l2smv1.Link `json:"Links"`
+}
+
+type NodeJson struct {
+	Name   string `json:"name"`
+	NodeIP string `json:"nodeIP"`
+}
+
+func (r *OverlayReconciler) createExternalResources(ctx context.Context, overlay *l2smv1.Overlay) error {
+
+	// Create a ConfigMap to store the topology JSON
+	constructConfigMapForOverlay := func(overlay *l2smv1.Overlay) (*corev1.ConfigMap, error) {
+
+		// Construct the TopologySwitchJson
+		topologySwitch := TopologySwitchJson{}
+
+		overlayName := overlay.ObjectMeta.Name
+
+		// Populate Nodes
+		for _, nodeName := range overlay.Spec.Topology.Nodes {
+			node := NodeJson{
+				Name:   nodeName,
+				NodeIP: fmt.Sprintf("l2sm-switch-%s-%s", overlayName, nodeName),
+			}
+			topologySwitch.Nodes = append(topologySwitch.Nodes, node)
+		}
+
+		// Populate Links
+		for _, link := range overlay.Spec.Topology.Links {
+			topologySwitch.Links = append(topologySwitch.Links, link)
+		}
+
+		// Convert TopologySwitchJson to JSON
+		topologyJSON, err := json.Marshal(topologySwitch)
+		if err != nil {
+			return nil, err
+		}
+
+		configMap := &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      fmt.Sprintf("%s-topology", overlay.Name),
+				Namespace: overlay.Namespace,
+			},
+			Data: map[string]string{
+				"topology.json": string(topologyJSON),
+			},
+		}
+		if err := controllerutil.SetControllerReference(overlay, configMap, r.Scheme); err != nil {
+			return nil, err
+		}
+		return configMap, nil
+	}
+
+	configMap, _ := constructConfigMapForOverlay(overlay)
+
+	// Create the ConfigMap in Kubernetes
+	if err := r.Client.Create(ctx, configMap); err != nil {
+		return err
+	}
+
+	constructNodeResourcesForOverlay := func(overlay *l2smv1.Overlay) ([]*appsv1.ReplicaSet, []*corev1.Service, error) {
+
+		// Define volume mounts to be added to each container
+		volumeMounts := []corev1.VolumeMount{
+			{
+				Name:      "topology",
+				MountPath: "/etc/l2sm/",
+				ReadOnly:  true,
+			},
+		}
+
+		// Update containers to include the volume mount
+		containers := make([]corev1.Container, len(overlay.Spec.SwitchTemplate.Spec.Containers))
+		for i, container := range overlay.Spec.SwitchTemplate.Spec.Containers {
+			container.VolumeMounts = append(container.VolumeMounts, volumeMounts...)
+			containers[i] = container
+		}
+
+		// Define the volume using the created ConfigMap
+		volumes := []corev1.Volume{
+			{
+				Name: "topology",
+				VolumeSource: corev1.VolumeSource{
+					ConfigMap: &corev1.ConfigMapVolumeSource{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: configMap.Name,
+						},
+						Items: []corev1.KeyToPath{
+							{
+								Key:  "topology.json",
+								Path: "topology.json",
+							},
+						},
+					},
+				},
+			},
+		}
+
+		var replicaSets []*appsv1.ReplicaSet
+		var services []*corev1.Service
+
+		for _, node := range overlay.Spec.Topology.Nodes {
+
+			name := fmt.Sprintf("%s-%s-%s", "l2sm-switch", node, utils.GenerateHash(overlay))
+
+			replicaSet := &appsv1.ReplicaSet{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels:      make(map[string]string),
+					Annotations: make(map[string]string),
+					Name:        name,
+					Namespace:   overlay.Namespace,
+				},
+				Spec: appsv1.ReplicaSetSpec{
+					Replicas: utils.Int32Ptr(1),
+					Selector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{
+							"app": name,
+						},
+					},
+					Template: corev1.PodTemplateSpec{
+						ObjectMeta: metav1.ObjectMeta{
+							Labels: map[string]string{
+								"app": name,
+							},
+						},
+						Spec: corev1.PodSpec{
+							InitContainers: overlay.Spec.SwitchTemplate.Spec.InitContainers,
+							Containers:     containers,
+							Volumes:        volumes,
+							HostNetwork:    overlay.Spec.SwitchTemplate.Spec.HostNetwork,
+							NodeName:       node,
+						},
+					},
+				},
+			}
+
+			for k, v := range overlay.Spec.SwitchTemplate.Annotations {
+				replicaSet.Annotations[k] = v
+			}
+			for k, v := range overlay.Spec.SwitchTemplate.Labels {
+				replicaSet.Labels[k] = v
+			}
+			if err := controllerutil.SetControllerReference(overlay, replicaSet, r.Scheme); err != nil {
+				return nil, nil, err
+			}
+
+			replicaSets = append(replicaSets, replicaSet)
+
+			// Create a headless service for the ReplicaSet
+			service := &corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      fmt.Sprintf("l2sm-switch-%s-%s", overlay.Name, node),
+					Namespace: overlay.Namespace,
+					Labels:    map[string]string{"app": name},
+				},
+				Spec: corev1.ServiceSpec{
+					ClusterIP: "None",
+					Selector:  map[string]string{"app": name},
+					Ports: []corev1.ServicePort{
+						{
+							Name: "http",
+							Port: 80,
+						},
+					},
+				},
+			}
+
+			if err := controllerutil.SetControllerReference(overlay, service, r.Scheme); err != nil {
+				return nil, nil, err
+			}
+
+			services = append(services, service)
+		}
+
+		return replicaSets, services, nil
+	}
+
+	replicaSets, services, err := constructNodeResourcesForOverlay(overlay)
+	if err != nil {
+		return err
+	}
+
+	for _, replicaSet := range replicaSets {
+		if err = r.Client.Create(ctx, replicaSet); err != nil {
+			return err
+		}
+	}
+	for _, service := range services {
+		if err = r.Client.Create(ctx, service); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
