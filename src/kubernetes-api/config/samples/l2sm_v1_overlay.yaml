@@ -23,7 +23,19 @@ spec:
     spec:
       containers:
         - name: l2sm-switch
-          image: alexdecb/l2sm-switch:2.5
+          image: alexdecb/l2sm-switch:2.6
           resources: {}
+          env:
+          - name: NODENAME
+            valueFrom:
+              fieldRef:
+                fieldPath: spec.nodeName
+          - name: NVETHS
+            value: "10"  
+          - name: CONTROLLERIP
+            value: "l2sm-controller-service"
+          securityContext:
+            capabilities:
+              add: ["NET_ADMIN"]
           ports:
             - containerPort: 80

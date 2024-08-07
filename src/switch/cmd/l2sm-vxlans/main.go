@@ -5,6 +5,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"net"
 	"os"
 	"ovs-switch/pkg/ovs"
 )
@@ -12,7 +13,7 @@ import (
 type Node struct {
 	Name          string   `json:"name"`
 	NodeIP        string   `json:"nodeIP"`
-	NeighborNodes []string `json:"neighborNodes"`
+	NeighborNodes []string `json:"neighborNodes,omitempty"`
 }
 
 type Link struct {
@@ -94,33 +95,45 @@ func takeArguments() (string, string, string, error) {
 	return configDir, *nodeName, *fileType, nil
 }
 
-/**
+/*
+*
 Example:
-{
-    "Nodes": [
-        {
-            "name": "l2sm1",
-            "nodeIP": "10.1.14.53"
-        },
-        {
-            "name": "l2sm2",
-            "nodeIP": "10.1.14.90"
-        }
-    ],
-    "Links": [
-        {
-            "endpointA": "l2sm1",
-            "endpointB": "l2sm2"
-        }
-    ]
-}
 
+	{
+	    "Nodes": [
+	        {
+	            "name": "l2sm1",
+	            "nodeIP": "10.1.14.53"
+	        },
+	        {
+	            "name": "l2sm2",
+	            "nodeIP": "10.1.14.90"
+	        }
+	    ],
+	    "Links": [
+	        {
+	            "endpointA": "l2sm1",
+	            "endpointB": "l2sm2"
+	        }
+	    ]
+	}
 */
 func createTopology(bridge ovs.Bridge, topology Topology, nodeName string) error {
 
 	nodeMap := make(map[string]string)
 	for _, node := range topology.Nodes {
-		nodeMap[node.Name] = node.NodeIP
+		var nodeIP string
+		if net.ParseIP(nodeIP) != nil {
+			nodeIP = node.NodeIP
+		} else {
+			ips, err := net.LookupHost(node.NodeIP)
+			if err != nil || len(ips) == 0 {
+				fmt.Printf("Failed to resolve %s\n", node.NodeIP)
+				continue
+			}
+			nodeIP = ips[0]
+		}
+		nodeMap[node.Name] = nodeIP
 	}
 
 	localIp := nodeMap[nodeName]
@@ -167,14 +180,15 @@ func readFile(configDir string, dataStruct interface{}) error {
 
 }
 
-/**
+/*
+*
 Example:
 
-        {
-            "Name": "l2sm1",
-            "nodeIP": "10.1.14.53",
-			"neighborNodes":["10.4.2.3","10.4.2.5"]
-		}
+	        {
+	            "Name": "l2sm1",
+	            "nodeIP": "10.1.14.53",
+				"neighborNodes":["10.4.2.3","10.4.2.5"]
+			}
 */
 func connectToNeighbors(bridge ovs.Bridge, node Node) error {
 	for vxlanNumber, neighborIp := range node.NeighborNodes {

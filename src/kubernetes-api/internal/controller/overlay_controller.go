@@ -286,6 +286,29 @@ func (r *OverlayReconciler) createExternalResources(ctx context.Context, overlay
 							Labels: map[string]string{
 								"app": name,
 							},
+							Annotations: map[string]string{
+								"k8s.v1.cni.cncf.io/networks": `[{
+									"name": "veth1", "ips": ["fe80::58d0:b8ff:fe42:debf/64"]
+								}, {
+									"name": "veth2", "ips": ["fe80::58d0:b8ff:fe42:debe/64"]
+								}, {
+									"name": "veth3", "ips": ["fe80::58d0:b8ff:fe42:debd/64"]
+								}, {
+									"name": "veth4", "ips": ["fe80::58d0:b8ff:fe42:debc/64"]
+								}, {
+									"name": "veth5", "ips": ["fe80::58d0:b8ff:fe42:debb/64"]
+								}, {
+									"name": "veth6", "ips": ["fe80::58d0:b8ff:fe42:deba/64"]
+								}, {
+									"name": "veth7", "ips": ["fe80::58d0:b8ff:fe42:deb9/64"]
+								}, {
+									"name": "veth8", "ips": ["fe80::58d0:b8ff:fe42:deb8/64"]
+								}, {
+									"name": "veth9", "ips": ["fe80::58d0:b8ff:fe42:deb7/64"]
+								}, {
+									"name": "veth10", "ips": ["fe80::58d0:b8ff:fe42:deb6/64"]
+								}]`,
+							},
 						},
 						Spec: corev1.PodSpec{
 							InitContainers: overlay.Spec.SwitchTemplate.Spec.InitContainers,
