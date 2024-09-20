@@ -71,7 +71,6 @@ func (r *OverlayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	}
 
 	// name of our custom finalizer
-	l2smFinalizer := "l2sm.operator.io/finalizer"
 
 	// examine DeletionTimestamp to determine if object is under deletion
 	if overlay.ObjectMeta.DeletionTimestamp.IsZero() {

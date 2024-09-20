@@ -72,17 +72,19 @@ func (r *L2NetworkReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 	// Check if the object is being deleted
 	if network.GetDeletionTimestamp() != nil {
-		if utils.ContainsString(network.GetFinalizers(), "l2network.finalizers.l2sm.k8s.local") {
+		if utils.ContainsString(network.GetFinalizers(), l2smFinalizer) {
 			// The object is being deleted
 			if err := r.InternalClient.DeleteNetwork(network.Spec.Type, network.Name); err != nil {
 				// If fail to delete the external dependency here, return with error
 				// so that it can be retried
+				log.Error(err, "couldn't delete network in sdn controller")
 				return ctrl.Result{}, err
 			}
 
 			// Remove our finalizer from the list and update it.
-			network.SetFinalizers(utils.RemoveString(network.GetFinalizers(), "l2network.finalizers.l2sm.k8s.local"))
+			network.SetFinalizers(utils.RemoveString(network.GetFinalizers(), l2smFinalizer))
 			if err := r.Update(ctx, network); err != nil {
+				log.Error(err, "couldn't remove finalizer to l2network")
 				return ctrl.Result{}, err
 			}
 		}
@@ -92,7 +94,7 @@ func (r *L2NetworkReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	// Add finalizer for this CR
-	if !utils.ContainsString(network.GetFinalizers(), "l2network.finalizers.l2sm.k8s.local") {
+	if !utils.ContainsString(network.GetFinalizers(), l2smFinalizer) {
 		err := r.InternalClient.CreateNetwork(network.Spec.Type, sdnclient.VnetPayload{NetworkId: network.Name})
 		if err != nil {
 			log.Error(err, "failed to create network")
@@ -102,13 +104,14 @@ func (r *L2NetworkReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		}
 		log.Info("Network created in SDN controller", "NetworkID", network.Name)
 		r.updateControllerStatus(ctx, network, l2smv1.OnlineStatus)
-		network.SetFinalizers(append(network.GetFinalizers(), "l2network.finalizers.l2sm.k8s.local"))
+		network.SetFinalizers(append(network.GetFinalizers(), l2smFinalizer))
 		if err := r.Update(ctx, network); err != nil {
 			return ctrl.Result{}, err
 		}
 	}
 
-	if network.Spec.Type == l2smv1.NetworkTypeExtVnet {
+	// If network is inter domain
+	if network.Spec.Provider != nil {
 		provStatus, err := interDomainReconcile(network, log)
 		if err != nil {
 			log.Error(err, "failed to connect to provider")
@@ -149,6 +152,7 @@ func (r *L2NetworkReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	// 	return ctrl.Result{}, statusUpdateErr
 	// }
 
+	log.Info("something in the rain")
 	return ctrl.Result{}, nil
 }
 

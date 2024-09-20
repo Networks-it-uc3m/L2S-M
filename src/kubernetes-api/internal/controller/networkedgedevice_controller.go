@@ -41,6 +41,8 @@ type NetworkEdgeDeviceReconciler struct {
 }
 
 var (
+	// name of our custom finalizer
+	l2smFinalizer      = "l2sm.operator.io/finalizer"
 	replicaSetOwnerKey = ".metadata.controller"
 	apiGVStr           = l2smv1.GroupVersion.String()
 )
@@ -72,9 +74,6 @@ func (r *NetworkEdgeDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		// on deleted requests.
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
-
-	// name of our custom finalizer
-	l2smFinalizer := "l2sm.operator.io/finalizer"
 
 	// examine DeletionTimestamp to determine if object is under deletion
 	if netEdgeDevice.ObjectMeta.DeletionTimestamp.IsZero() {

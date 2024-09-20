@@ -18,17 +18,20 @@ package controller
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 
 	"github.com/go-logr/logr"
-	nettypes "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	l2smv1 "l2sm.k8s.local/controllermanager/api/v1"
+	"l2sm.k8s.local/controllermanager/internal/nedinterface"
 	"l2sm.k8s.local/controllermanager/internal/sdnclient"
+	"l2sm.k8s.local/controllermanager/internal/utils"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 // PodReconciler reconciles a Pod object
@@ -55,7 +58,7 @@ type PodReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.17.0/pkg/reconcile
 func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	// logger := log.FromContext(ctx)
+	logger := log.FromContext(ctx)
 
 	pod := &corev1.Pod{}
 	err := r.Get(ctx, req.NamespacedName, pod)
@@ -73,100 +76,117 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 	// Ensure the Multus annotation is correctly formatted and present
 
 	// Check if the object is being deleted
-	// if pod.GetDeletionTimestamp() != nil {
-	// 	if utils.ContainsString(pod.GetFinalizers(), "pod.finalizers.l2sm.k8s.local") {
-	// 		// If the pod is being deleted, we should free the interface, both the net-attach-def crd and the openflow port.
-	// 		// This is done for each interface in the pod.
-	// 		multusAnnotations, ok := pod.Annotations[MULTUS_ANNOTATION_KEY]
+	if pod.GetDeletionTimestamp() != nil {
+		if utils.ContainsString(pod.GetFinalizers(), l2smFinalizer) {
+			logger.Info("L2S-M Pod deleted: detaching l2network")
 
-	// 		if !ok {
-	// 			logger.Error(nil, "Error detaching the pod from the network attachment definitions")
-	// 			return ctrl.Result{}, nil
-	// 		}
+			// If the pod is being deleted, we should free the interface, both the net-attach-def crd and the openflow port.
+			// This is done for each interface in the pod.
+			multusAnnotations, ok := pod.Annotations[MULTUS_ANNOTATION_KEY]
 
-	// 		multusNetAttachDefinitions, err := extractNetworks(pod.Annotations[multusAnnotations], r.SwitchesNamespace)
+			if !ok {
+				logger.Error(nil, "Error detaching the pod from the network attachment definitions")
+				return ctrl.Result{}, nil
+			}
 
-	// 		if err != nil {
-	// 			logger.Error(nil, "Error detaching the pod from the network attachment definitions")
-	// 			return ctrl.Result{}, nil
-	// 		}
+			multusNetAttachDefinitions, err := extractNetworks(pod.Annotations[multusAnnotations], r.SwitchesNamespace)
 
-	// 		for _, multusNetAttachDef := range multusNetAttachDefinitions {
+			if err != nil {
+				logger.Error(nil, "Error detaching the pod from the network attachment definitions")
+				return ctrl.Result{}, nil
+			}
 
-	// 			// We liberate the specific attachment from the node, so it can be used again
-	// 			r.DetachNetAttachDef(ctx, multusNetAttachDef, r.SwitchesNamespace)
+			for _, multusNetAttachDef := range multusNetAttachDefinitions {
 
-	// 			// We liberate the port in the onos app
-	// 			// r.InternalClient.DetachPodFromNetwork("vnet",multusNetAttachDef)
-	// 		}
+				fmt.Println(multusNetAttachDef)
+				// We liberate the specific attachment from the node, so it can be used again
+				//r.DetachNetAttachDef(ctx, multusNetAttachDef, r.SwitchesNamespace)
 
-	// 		// Remove our finalizer from the list and update it.
-	// 		pod.SetFinalizers(utils.RemoveString(pod.GetFinalizers(), "pod.finalizers.l2sm.k8s.local"))
-	// 		if err := r.Update(ctx, pod); err != nil {
-	// 			return ctrl.Result{}, err
-	// 		}
-	// 		// Stop reconciliation as the item is being deleted
-	// 		return ctrl.Result{}, nil
-	// 	}
+				// We liberate the port in the onos app
+				//r.InternalClient.DetachPodFromNetwork("vnet",multusNetAttachDef)
+			}
 
-	// 	// If it's not getting deleted, then let's check if it's been created or not
-	// 	// Add finalizer for this CR
-	// 	if !utils.ContainsString(pod.GetFinalizers(), "pod.finalizers.l2sm.k8s.local") {
+			// Remove our finalizer from the list and update it.
+			pod.SetFinalizers(utils.RemoveString(pod.GetFinalizers(), l2smFinalizer))
+			if err := r.Update(ctx, pod); err != nil {
+				return ctrl.Result{}, err
+			}
+			// Stop reconciliation as the item is being deleted
+			return ctrl.Result{}, nil
+		}
+		// Stop reconciliation as the item is being deleted
+		return ctrl.Result{}, nil
+	}
 
-	// 		networks, err := extractNetworks(pod.Annotations[L2SM_NETWORK_ANNOTATION], r.SwitchesNamespace)
+	// If it's not getting deleted, then let's check if it's been created or not
+	// Add finalizer for this CR
+	if !utils.ContainsString(pod.GetFinalizers(), l2smFinalizer) {
+		// We add the finalizers now that the pod has been added to the network and we want to keep track of it
+		pod.SetFinalizers(append(pod.GetFinalizers(), l2smFinalizer))
+		if err := r.Update(ctx, pod); err != nil {
+			return ctrl.Result{}, err
+		}
+		logger.Info("L2S-M Pod created: attaching to l2network")
 
-	// 		if created, _ := r.verifyNetworksAreCreated(ctx, networks); !created {
+		networkAnnotations, err := extractNetworks(pod.Annotations[L2SM_NETWORK_ANNOTATION], r.SwitchesNamespace)
 
-	// 			logger.Error(nil, "Pod's network annotation incorrect. L2Network not attached.")
-	// 			// return admission.Allowed("Pod's network annotation incorrect. L2Network not attached.")
-	// 			return ctrl.Result{}, err
+		if err != nil {
+			logger.Error(err, "l2 networks could not be extracted from the pods annotations")
+		}
+		networks, err := GetL2Networks(ctx, r.Client, networkAnnotations)
+		if err != nil {
 
-	// 		}
-	// 		// Add the pod interfaces to the sdn controller
-	// 		multusAnnotations, ok := pod.Annotations[MULTUS_ANNOTATION_KEY]
+			logger.Error(nil, "Pod's network annotation incorrect. L2Network not attached.")
+			// return admission.Allowed("Pod's network annotation incorrect. L2Network not attached.")
+			return ctrl.Result{}, err
 
-	// 		if !ok {
-	// 			logger.Error(nil, "Error detaching the pod from the network attachment definitions")
-	// 			return ctrl.Result{}, nil
-	// 		}
+		}
+		// Add the pod interfaces to the sdn controller
+		multusAnnotations, ok := pod.Annotations[MULTUS_ANNOTATION_KEY]
 
-	// 		multusNetAttachDefinitions, err := extractNetworks(pod.Annotations[multusAnnotations], r.SwitchesNamespace)
+		if !ok {
+			logger.Error(nil, "Error detaching the pod from the network attachment definitions")
+			return ctrl.Result{}, nil
+		}
 
-	// 		if err != nil {
-	// 			logger.Error(nil, "Error detaching the pod from the network attachment definitions")
-	// 			return ctrl.Result{}, nil
-	// 		}
+		multusNetAttachDefinitions, err := extractNetworks(multusAnnotations, r.SwitchesNamespace)
 
-	// 		fmt.Println(multusNetAttachDefinitions)
+		if err != nil || len(multusNetAttachDefinitions) != len(networkAnnotations) {
+			logger.Error(nil, "Error detaching the pod from the network attachment definitions")
+			return ctrl.Result{}, nil
+		}
 
-	// 		// ofID := r.GetOpenflowId(ctx, pod.Spec.NodeName)
+		ofID := fmt.Sprintf("of:%s", utils.GenerateDatapathID(pod.Spec.NodeName))
 
-	// 		// for index, network := range networks {
+		for index, network := range networks {
+			portNumber, _ := utils.GetPortNumberFromNetAttachDef(multusNetAttachDefinitions[index].Name)
+			ofPort := fmt.Sprintf("%s/%s", ofID, portNumber)
 
-	// 		// 	portNumber, _ := utils.GetPortNumberFromNetAttachDef(multusNetAttachDefinitions[index].Name)
-	// 		// 	ofPort := fmt.Sprintf("%s/%s", ofID, portNumber)
+			err = r.InternalClient.AttachPodToNetwork("vnets", sdnclient.VnetPortPayload{NetworkId: network.Name, Port: []string{ofPort}})
+			if err != nil {
+				logger.Error(err, "Error attaching pod to the l2network")
+				return ctrl.Result{}, nil
+			}
 
-	// 		// 	r.InternalClient.AttachPodToNetwork("vnets", sdnclient.VnetPortPayload{NetworkId: network.Name, Port: []string{ofPort}})
-	// 		// }
+			// If the L2Network is of type inter-domain (has a provider), attach the associated NED
+			// and communicate with it
+			if network.Spec.Provider != nil {
 
-	// 		// We add the finalizers now that the pod has been added to the network and we want to keep track of it
-	// 		pod.SetFinalizers(append(pod.GetFinalizers(), "pod.finalizers.l2sm.k8s.local"))
-	// 		if err := r.Update(ctx, pod); err != nil {
-	// 			return ctrl.Result{}, err
-	// 		}
-	// 	}
+				gatewayNodeName, err := r.CreateNewNEDConnection(network)
+				if err != nil {
+					return ctrl.Result{}, nil
+				}
 
-	// }
+				err = r.ConnectGatewaySwitchToNED(ctx, network.Name, gatewayNodeName)
+				if err != nil {
+					return ctrl.Result{}, nil
+				}
 
-	// r.GetOpenflowId(ctx,pod.Spec.NodeName)
+			}
+		}
 
-	// for _, network := range networks {
+	}
 
-	// 	ofPort := fmt.Sprintf("%s/%s",ofID,portNumber)
-	// 	sdnclient.VnetPortPayload{NetworkId: network.Name, Port: ofPort}
-
-	// 	r.InternalClient.AttachPodToNetwork()
-	// }
 	return ctrl.Result{}, nil
 
 }
@@ -191,92 +211,63 @@ func (r *PodReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func (r *PodReconciler) verifyNetworksAreCreated(ctx context.Context, networks []NetworkAnnotation) (bool, error) {
-	// List all L2Networks
-	l2Networks := &l2smv1.L2NetworkList{}
-	if err := r.List(ctx, l2Networks); err != nil {
-		return false, err
+func (r *PodReconciler) CreateNewNEDConnection(network l2smv1.L2Network) (string, error) {
+
+	clientConfig := sdnclient.ClientConfig{BaseURL: fmt.Sprintf("http://%s/onos/v1", network.Spec.Provider.Domain), Username: "karaf", Password: "karaf"}
+
+	externalClient, err := sdnclient.NewClient(sdnclient.InternalType, clientConfig)
+
+	if err != nil {
+		return "", err
+		// logger.Error(err, "no connection could be made with external sdn controller")
 	}
+	gatewayNodeName, nedPortNumber := nedinterface.GetConnectionInfo()
 
-	// Create a map of existing L2Network names for quick lookup
-	existingNetworks := make(map[string]struct{})
-	for _, network := range l2Networks.Items {
-		existingNetworks[network.Name] = struct{}{}
-	}
+	nedOFID := fmt.Sprintf("of:%s", utils.GenerateDatapathID(fmt.Sprintf("%s%s", gatewayNodeName, network.Spec.Provider.Name)))
+	nedOFPort := fmt.Sprintf("%s/%s", nedOFID, nedPortNumber)
 
-	// Verify if each annotated network exists
-	for _, net := range networks {
-		if _, exists := existingNetworks[net.Name]; !exists {
-			return false, nil
-		}
+	err = externalClient.AttachPodToNetwork("vnets", sdnclient.VnetPortPayload{NetworkId: network.Name, Port: []string{nedOFPort}})
+	if err != nil {
+		return "", errors.Join(err, errors.New("could not update network attachment definition"))
 
 	}
-
-	return true, nil
+	return gatewayNodeName, nil
 }
 
-func (r *PodReconciler) DetachNetAttachDef(ctx context.Context, multusNetAttachDef NetworkAnnotation, namespace string) error {
+func (r *PodReconciler) ConnectGatewaySwitchToNED(ctx context.Context, networkName, gatewayNodeName string) error {
 
-	netAttachDef := &nettypes.NetworkAttachmentDefinition{}
-	err := r.Get(ctx, client.ObjectKey{
-		Name:      multusNetAttachDef.Name,
-		Namespace: namespace,
-	}, netAttachDef)
-	if err != nil {
+	var err error
+	netAttachDefLabel := NET_ATTACH_LABEL_PREFIX + gatewayNodeName
+	netAttachDefs := GetFreeNetAttachDefs(ctx, r.Client, r.SwitchesNamespace, netAttachDefLabel)
+
+	if len(netAttachDefs.Items) == 0 {
+		err = errors.New("no interfaces available in control plane node")
+		//logger.Error(err, fmt.Sprintf("No interfaces available for node %s", gatewayNodeName))
 		return err
 	}
-	err = r.Delete(ctx, netAttachDef)
-	return err
 
-}
+	netAttachDef := &netAttachDefs.Items[0]
 
-func (r *PodReconciler) GetOpenflowId(ctx context.Context, nodename string) (string, error) {
-	return "", nil
-	// // Define the list options with the namespace
-	// listOptions := &client.ListOptions{
-	//     Namespace: r.SwitchesNamespace,
-	// }
+	portNumber, _ := utils.GetPortNumberFromNetAttachDef(netAttachDef.Name)
 
-	// // List all pods in the namespace
-	// podList := &corev1.PodList{}
-	// if err := r.List(ctx, podList, listOptions); err != nil {
-	//     return "", fmt.Errorf("failed to list pods: %w", err)
-	// }
+	gatewayOFID := fmt.Sprintf("of:%s", utils.GenerateDatapathID(gatewayNodeName))
 
-	// // Iterate through the pods to find the one on the specified node
-	// var switchPod *corev1.Pod
-	// for _, pod := range podList.Items {
-	//     if pod.Spec.NodeName == nodename {
-	//         switchPod = &pod
-	//         break
-	//     }
-	// }
+	gatewayOFPort := fmt.Sprintf("%s/%s", gatewayOFID, portNumber)
 
-	// if switchPod == nil {
-	//     return "", fmt.Errorf("pod not found on node: %s", nodename)
-	// }
+	err = r.InternalClient.AttachPodToNetwork("vnets", sdnclient.VnetPortPayload{NetworkId: networkName, Port: []string{gatewayOFPort}})
 
-	// // Check if the OpenFlow ID is already annotated
-	// if openflowID, exists := switchPod.Annotations["openflow-id"]; exists && openflowID != "" {
-	//     return openflowID, nil
-	// }
+	if err != nil {
+		return err
+		//logger.Error(err, "could not make a connection between the gateway switch and the NED. Internal SDN controller error.")
+	}
 
-	// // Retrieve the OpenFlow ID (replace this with your actual logic)
-	// openflowID, err := r.InternalClient.RetrieveOpenflowID(switchPod.)
-	// if err != nil {
-	//     return "", fmt.Errorf("failed to retrieve openflow id: %w", err)
-	// }
+	netAttachDef.Labels[netAttachDefLabel] = "true"
+	err = r.Client.Update(ctx, netAttachDef)
+	if err != nil {
+		return err
+		//.Error(err, "Could not update network attachment definition")
 
-	// // Annotate the pod with the OpenFlow ID
-	// if switchPod.Annotations == nil {
-	//     switchPod.Annotations = make(map[string]string)
-	// }
-	// switchPod.Annotations["openflow-id"] = openflowID
+	}
 
-	// // Update the pod with the new annotation
-	// if err := r.Update(ctx, switchPod); err != nil {
-	//     return "", fmt.Errorf("failed to update pod with openflow id: %w", err)
-	// }
-
-	// return openflowID, nil
+	return nil
 }

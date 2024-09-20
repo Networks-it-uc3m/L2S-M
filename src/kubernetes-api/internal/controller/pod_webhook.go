@@ -4,26 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"math/rand"
 	"net/http"
-	"strings"
-	"time"
 
-	nettypes "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/selection"
-	l2smv1 "l2sm.k8s.local/controllermanager/api/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
-)
-
-const (
-	NET_ATTACH_LABEL_PREFIX = "used-"
-	L2SM_NETWORK_ANNOTATION = "l2sm/networks"
-	MULTUS_ANNOTATION_KEY   = "k8s.v1.cni.cncf.io/networks"
 )
 
 // +kubebuilder:webhook:path=/mutate-v1-pod,mutating=true,failurePolicy=fail,groups="",resources=pods,verbs=create;update,versions=v1,name=mpod.kb.io
@@ -31,12 +18,6 @@ type PodAnnotator struct {
 	Client            client.Client
 	Decoder           *admission.Decoder
 	SwitchesNamespace string
-}
-
-type NetworkAnnotation struct {
-	Name       string   `json:"name"`
-	Namespace  string   `json:"namespace,omitempty"`
-	IPAdresses []string `json:"ips,omitempty"`
 }
 
 func (a *PodAnnotator) Handle(ctx context.Context, req admission.Request) admission.Response {
@@ -51,7 +32,7 @@ func (a *PodAnnotator) Handle(ctx context.Context, req admission.Request) admiss
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 	if pod.Spec.NodeName == "" {
-		return admission.Errored(http.StatusBadRequest, fmt.Errorf("Pod hasn't got a node assigned to it"))
+		return admission.Errored(http.StatusBadRequest, fmt.Errorf("pod hasn't got a node assigned to it"))
 	}
 
 	// Check if the pod has the annotation l2sm/networks. This webhook operation only will happen if so. Else, it will just
@@ -69,7 +50,7 @@ func (a *PodAnnotator) Handle(ctx context.Context, req admission.Request) admiss
 			return admission.Errored(http.StatusInternalServerError, err)
 		}
 
-		if created, _ := a.verifyNetworksAreCreated(ctx, networks); !created {
+		if _, err := GetL2Networks(ctx, a.Client, networks); err != nil {
 			log.Info("Pod's network annotation incorrect. L2Network not attached.")
 			// return admission.Allowed("Pod's network annotation incorrect. L2Network not attached.")
 
@@ -78,7 +59,7 @@ func (a *PodAnnotator) Handle(ctx context.Context, req admission.Request) admiss
 		// We get the available network attachment definitions. These are interfaces attached to the switches, so
 		// by using labelling, we can know which interfaces the switch has.
 		var multusAnnotations []NetworkAnnotation
-		netAttachDefs := a.getFreeNetAttachDefs(ctx, netAttachDefLabel)
+		netAttachDefs := GetFreeNetAttachDefs(ctx, a.Client, a.SwitchesNamespace, netAttachDefLabel)
 
 		// If there are no available network attachment definitions, we can't attach the pod to the desired networks
 		// So, we launch an error.
@@ -122,101 +103,4 @@ func (a *PodAnnotator) Handle(ctx context.Context, req admission.Request) admiss
 func (a *PodAnnotator) InjectDecoder(d *admission.Decoder) error {
 	a.Decoder = d
 	return nil
-}
-
-func extractNetworks(annotations, namespace string) ([]NetworkAnnotation, error) {
-
-	var networks []NetworkAnnotation
-	err := json.Unmarshal([]byte(annotations), &networks)
-	if err != nil {
-		// If unmarshalling fails, treat as comma-separated list
-		names := strings.Split(annotations, ",")
-		for _, name := range names {
-			name = strings.TrimSpace(name)
-			if name != "" {
-				networks = append(networks, NetworkAnnotation{Name: name})
-			}
-		}
-	}
-
-	// Iterate over the networks to check if any IPAddresses are missing
-	for i := range networks {
-		if len(networks[i].IPAdresses) == 0 {
-			// Call GenerateIPv6Address if IPAddresses are missing
-			networks[i].GenerateIPv6Address()
-		}
-		networks[i].Namespace = namespace
-	}
-
-	return networks, nil
-}
-
-func (a *PodAnnotator) verifyNetworksAreCreated(ctx context.Context, networks []NetworkAnnotation) (bool, error) {
-	// List all L2Networks
-	l2Networks := &l2smv1.L2NetworkList{}
-	if err := a.Client.List(ctx, l2Networks); err != nil {
-		return false, err
-	}
-
-	// Create a map of existing L2Network names for quick lookup
-	existingNetworks := make(map[string]struct{})
-	for _, network := range l2Networks.Items {
-		existingNetworks[network.Name] = struct{}{}
-	}
-
-	// Verify if each annotated network exists
-	for _, net := range networks {
-		if _, exists := existingNetworks[net.Name]; !exists {
-			return false, nil
-		}
-
-	}
-
-	return true, nil
-}
-
-func (a *PodAnnotator) getFreeNetAttachDefs(ctx context.Context, nodeName string) nettypes.NetworkAttachmentDefinitionList {
-
-	// We define the network attachment definition list that will be later filled.
-	freeNetAttachDef := &nettypes.NetworkAttachmentDefinitionList{}
-
-	// We specify which net-attach-def we want. We want the ones that are specific to l2sm, in the overlay namespace and available in the desired node.
-	nodeSelector := labels.NewSelector()
-
-	nodeRequirement, _ := labels.NewRequirement(fmt.Sprintf("%s%s", NET_ATTACH_LABEL_PREFIX, nodeName), selection.NotIn, []string{"true"})
-	l2smRequirement, _ := labels.NewRequirement("app", selection.Equals, []string{"l2sm"})
-
-	nodeSelector.Add(*nodeRequirement)
-	nodeSelector.Add(*l2smRequirement)
-
-	listOptions := client.ListOptions{LabelSelector: nodeSelector, Namespace: a.SwitchesNamespace}
-
-	// We get the net-attach-def with the corresponding list options
-	a.Client.List(ctx, freeNetAttachDef, &listOptions)
-	return *freeNetAttachDef
-
-}
-
-func (network *NetworkAnnotation) GenerateIPv6Address() {
-	rand.Seed(time.Now().UnixNano())
-
-	// Generating the interface ID (64 bits)
-	interfaceID := rand.Uint64()
-
-	// Formatting to a 16 character hexadecimal string
-	interfaceIDHex := fmt.Sprintf("%016x", interfaceID)
-
-	// Constructing the full IPv6 address in the fe80::/64 range
-	ipv6Address := fmt.Sprintf("fe80::%s:%s:%s:%s/64",
-		interfaceIDHex[:4], interfaceIDHex[4:8], interfaceIDHex[8:12], interfaceIDHex[12:])
-
-	network.IPAdresses = append(network.IPAdresses, ipv6Address)
-
-}
-func multusAnnotationToString(multusAnnotations []NetworkAnnotation) string {
-	jsonData, err := json.Marshal(multusAnnotations)
-	if err != nil {
-		return ""
-	}
-	return string(jsonData)
 }
