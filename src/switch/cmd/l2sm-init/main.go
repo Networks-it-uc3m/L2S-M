@@ -5,8 +5,9 @@ import (
 	"flag"
 	"fmt"
 	"os/exec"
-	"ovs-switch/pkg/ovs"
 	"regexp"
+
+	"l2sm.local/ovs-switch/pkg/ovs"
 )
 
 // Script that takes two required arguments:
@@ -14,7 +15,7 @@ import (
 // the second one is the path to the configuration file, in reference to the code.
 func main() {
 
-	vethNumber, controllerIP, err := takeArguments()
+	vethNumber, controllerIP, switchName, err := takeArguments()
 
 	if err != nil {
 		fmt.Println("Error with the arguments. Error:", err)
@@ -23,7 +24,7 @@ func main() {
 
 	fmt.Println("Initializing switch, connected to controller: ", controllerIP)
 
-	bridge, err := initializeSwitch(controllerIP)
+	bridge, err := initializeSwitch(switchName, controllerIP)
 
 	if err != nil {
 
@@ -43,22 +44,22 @@ func main() {
 	fmt.Printf("Switch initialized, current state: ", bridge)
 }
 
-func takeArguments() (int, string, error) {
+func takeArguments() (int, string, string, error) {
 
 	vethNumber := flag.Int("n_veths", 0, "number of pod interfaces that are going to be attached to the switch")
 	controllerIP := flag.String("controller_ip", "", "ip where the SDN controller is listening using the OpenFlow13 protocol. Required")
-
+	switchName := flag.String("switch_name", "", "name of the switch that will be used to set a custom datapath id. If not set, a randome datapath will be assigned")
 	flag.Parse()
 
 	switch {
 	case *controllerIP == "":
-		return 0, "", errors.New("controller IP is not defined")
+		return 0, "", "", errors.New("controller IP is not defined")
 	}
 
-	return *vethNumber, *controllerIP, nil
+	return *vethNumber, *controllerIP, *switchName, nil
 }
 
-func initializeSwitch(controllerIP string) (ovs.Bridge, error) {
+func initializeSwitch(switchName, controllerIP string) (ovs.Bridge, error) {
 
 	re := regexp.MustCompile(`\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b`)
 	if !re.MatchString(controllerIP) {
@@ -68,7 +69,8 @@ func initializeSwitch(controllerIP string) (ovs.Bridge, error) {
 
 	controller := fmt.Sprintf("tcp:%s:6633", controllerIP)
 
-	bridge, err := ovs.NewBridge(ovs.Bridge{Name: "brtun", Controller: controller, Protocol: "OpenFlow13"})
+	datapathId := ovs.GenerateDatapathID(switchName)
+	bridge, err := ovs.NewBridge(ovs.Bridge{Name: "brtun", Controller: controller, Protocol: "OpenFlow13", DatapathId: datapathId})
 
 	return bridge, err
 }

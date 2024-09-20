@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"ovs-switch/pkg/ovs"
+	"l2sm.local/ovs-switch/pkg/ovs"
 )
 
 func TestCreateTopology(t *testing.T) {

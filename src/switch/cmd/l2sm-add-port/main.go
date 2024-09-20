@@ -4,7 +4,8 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"ovs-switch/pkg/ovs"
+
+	"l2sm.local/ovs-switch/pkg/ovs"
 )
 
 // Script that takes two required arguments:
@@ -21,7 +22,7 @@ func main() {
 		return
 	}
 
-	bridge.AddPort(portName)
+	err = bridge.AddPort(portName)
 
 	if err != nil {
 		fmt.Println("Port not added: ", err)

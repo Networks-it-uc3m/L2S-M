@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+package nedpb;
+
+option go_package = "l2sm.local/ovs-switch/pkg/nedpb";
+
+service VxlanService {
+  // Creates a VxLAN with the specified IP address.
+  rpc CreateVxlan(CreateVxlanRequest) returns (CreateVxlanResponse);
+
+  // Attaches the specified interface to the bridge.
+  rpc AttachInterface(AttachInterfaceRequest) returns (AttachInterfaceResponse);
+}
+
+message CreateVxlanRequest {
+  // The IP address to attach to the VxLAN.
+  string ip_address = 1;
+}
+
+message CreateVxlanResponse {
+  // Indicates if the VxLAN was created successfully.
+  bool success = 1;
+  // Optional message providing additional information.
+  string message = 2;
+}
+
+message AttachInterfaceRequest {
+  // The name of the interface to attach to the bridge.
+  string interface_name = 1;
+}
+
+message AttachInterfaceResponse {
+  // The OpenFlow ID of the attached interface.
+  int64 interface_num = 1;
+  // The node name from the environment variable.
+  string node_name = 2;
+}

@@ -19,6 +19,7 @@ type Bridge struct {
 	Controller string
 	Name       string
 	Protocol   string
+	DatapathId string
 	Ports      []Port
 }
 
@@ -58,11 +59,18 @@ func NewBridge(bridgeConf Bridge) (Bridge, error) {
 		return bridge, errors.New("could not set brtun interface up")
 	}
 
+	if bridgeConf.DatapathId != "" {
+		err := exec.Command("ovs-vsctl", "set", "bridge", bridge.Name, fmt.Sprintf("other-config:datapath-id=%s", bridgeConf.DatapathId)).Run()
+		if err != nil {
+			return bridge, errors.New("could not set custom datapath id")
+		}
+	}
+
 	protocolString := fmt.Sprintf("protocols=%s", bridgeConf.Protocol)
 	err = exec.Command("ovs-vsctl", "set", "bridge", "brtun", protocolString).Run()
 
 	if err != nil {
-		return bridge, errors.New("could not set brtun messaing protocol to OpenFlow13")
+		return bridge, errors.New("could not set brtun messaging protocol to OpenFlow13")
 	}
 
 	bridge.Protocol = bridgeConf.Protocol

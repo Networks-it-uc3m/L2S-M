@@ -7,7 +7,8 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"ovs-switch/pkg/ovs"
+
+	"l2sm.local/ovs-switch/pkg/ovs"
 )
 
 type Node struct {
@@ -66,6 +67,10 @@ func main() {
 		}
 
 		err = connectToNeighbors(bridge, node)
+		if err != nil {
+			fmt.Println("Could not connect neighbors: ", err)
+			return
+		}
 	}
 
 	if err != nil {
