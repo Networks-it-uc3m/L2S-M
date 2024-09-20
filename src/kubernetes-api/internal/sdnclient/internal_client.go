@@ -95,7 +95,7 @@ func (c *InternalClient) AttachPodToNetwork(networkType l2smv1.NetworkType, conf
 	if err != nil {
 		return err
 	}
-	response, err := c.Session.Post(fmt.Sprintf("%s/api/port", networkType), jsonData)
+	response, err := c.Session.Post(fmt.Sprintf("/%s/api/port", networkType), jsonData)
 	if err != nil {
 		return err
 	}
