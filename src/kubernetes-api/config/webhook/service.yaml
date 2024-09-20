@@ -9,7 +9,7 @@ metadata:
     app.kubernetes.io/part-of: controllermanager
     app.kubernetes.io/managed-by: kustomize
   name: webhook-service
-  namespace: system
+  namespace: l2sm-system
 spec:
   ports:
     - port: 443

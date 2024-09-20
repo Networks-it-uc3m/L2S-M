@@ -23,7 +23,7 @@ spec:
     spec:
       containers:
         - name: l2sm-switch
-          image: alexdecb/l2sm-switch:2.6
+          image: alexdecb/l2sm-switch:2.7
           resources: {}
           env:
           - name: NODENAME
@@ -34,6 +34,11 @@ spec:
             value: "10"  
           - name: CONTROLLERIP
             value: "l2sm-controller-service"
+          - name: PODNAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+          imagePullPolicy: Always
           securityContext:
             capabilities:
               add: ["NET_ADMIN"]
