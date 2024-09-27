@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"log"
 
-	ovs "ovs-switch/pkg/ovs"
+	"l2sm.local/ovs-switch/pkg/ovs"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
