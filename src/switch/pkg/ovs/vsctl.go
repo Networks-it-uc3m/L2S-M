@@ -2,9 +2,9 @@ package ovs
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"os/exec"
+	"strconv"
 	"strings"
 )
 
@@ -45,32 +45,34 @@ func NewBridge(bridgeConf Bridge) (Bridge, error) {
 
 	bridge := Bridge{}
 
-	err = exec.Command("ovs-vsctl", "add-br", bridgeConf.Name).Run()
+	cmd := exec.Command("ovs-vsctl", "add-br", bridgeConf.Name)
+	output, err := cmd.CombinedOutput()
 
 	if err != nil {
-		return bridge, errors.New("could not create brtun interface")
+		return bridge, fmt.Errorf("could not create %s interface: %v\nOutput: %s", bridgeConf.Name, err, output)
 	}
 
 	bridge.Name = bridgeConf.Name
 
-	err = exec.Command("ip", "link", "set", bridge.Name, "up").Run()
-
+	cmd = exec.Command("ip", "link", "set", bridge.Name, "up")
+	output, err = cmd.CombinedOutput()
 	if err != nil {
-		return bridge, errors.New("could not set brtun interface up")
+		return bridge, fmt.Errorf("could not set %s interface up: %v\nOutput: %s", bridgeConf.Name, err, output)
 	}
 
 	if bridgeConf.DatapathId != "" {
 		err := exec.Command("ovs-vsctl", "set", "bridge", bridge.Name, fmt.Sprintf("other-config:datapath-id=%s", bridgeConf.DatapathId)).Run()
 		if err != nil {
-			return bridge, errors.New("could not set custom datapath id")
+			return bridge, fmt.Errorf("could not set custom datapath id: %v", err)
 		}
 	}
 
 	protocolString := fmt.Sprintf("protocols=%s", bridgeConf.Protocol)
-	err = exec.Command("ovs-vsctl", "set", "bridge", "brtun", protocolString).Run()
+	err = exec.Command("ovs-vsctl", "set", "bridge", bridge.Name, protocolString).Run()
 
 	if err != nil {
-		return bridge, errors.New("could not set brtun messaging protocol to OpenFlow13")
+		return bridge, fmt.Errorf("could not set %s messaging protocol to OpenFlow13: %v", bridgeConf.Name, err)
+
 	}
 
 	bridge.Protocol = bridgeConf.Protocol
@@ -78,7 +80,8 @@ func NewBridge(bridgeConf Bridge) (Bridge, error) {
 	err = exec.Command("ovs-vsctl", "set-controller", bridge.Name, bridgeConf.Controller).Run()
 
 	if err != nil {
-		return bridge, errors.New("could not connect to controller")
+		return bridge, fmt.Errorf("could not connect to controller: %v", err)
+
 	}
 
 	bridge.Controller = bridgeConf.Name
@@ -145,4 +148,21 @@ func (bridge *Bridge) getPorts() error {
 	}
 
 	return nil
+}
+
+func (bridge *Bridge) GetPortNumber(portName string) (int64, error) {
+	cmd := exec.Command("ovs-vsctl", "get", "Interface", portName, "ofport")
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	if err := cmd.Run(); err != nil {
+		return 0, fmt.Errorf("failed to get port number for %s: %v", portName, err)
+	}
+
+	ofportStr := strings.TrimSpace(out.String())
+	ofport, err := strconv.ParseInt(ofportStr, 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("failed to parse port number: %v", err)
+	}
+
+	return ofport, nil
 }
