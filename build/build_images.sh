@@ -2,7 +2,7 @@
 set -e
 
 # Set environment variables
-export VERSION="2.6"
+export VERSION="2.7.1"
 export DOCKERHUB_REPO="alexdecb"
 
 # Function to build image
@@ -25,6 +25,7 @@ push_image() {
 # Option 1: Build image
 if [ "$1" == "build" ]; then
   build_image "l2sm-switch" "switch"
+  build_image "l2sm-ned" "ned"
   build_image "l2sm-controller" "controller"
   build_image "l2sm-operator" "operator"
   echo "Images have been built successfully."
@@ -32,6 +33,7 @@ if [ "$1" == "build" ]; then
 # Option 2: Push image
 elif [ "$1" == "push" ]; then
   push_image "l2sm-switch"
+  push_image "l2sm-ned"
   push_image "l2sm-controller"
   push_image "l2sm-operator"
   echo "Images have been pushed successfully."
@@ -40,6 +42,8 @@ elif [ "$1" == "push" ]; then
 elif [ "$1" == "build_push" ]; then
   build_image "l2sm-switch" "switch"
   push_image "l2sm-switch"
+  build_image "l2sm-ned" "ned"
+  push_image "l2sm-ned"
   build_image "l2sm-controller" "controller"
   push_image "l2sm-controller"
   build_image "l2sm-operator" "operator"
