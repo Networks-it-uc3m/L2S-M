@@ -99,6 +99,12 @@ type SwitchTemplateSpec struct {
 	Spec SwitchPodSpec `json:"spec,omitempty"`
 }
 
+type NodeConfigSpec struct {
+	NodeName string `json:"nodeName"`
+
+	IPAddress string `json:"ipAddress"`
+}
+
 // NetworkEdgeDeviceSpec defines the desired state of NetworkEdgeDevice
 type NetworkEdgeDeviceSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
@@ -106,6 +112,9 @@ type NetworkEdgeDeviceSpec struct {
 
 	// The SDN Controller that manages the overlay network. Must specify a domain and a name.
 	NetworkController *NetworkControllerSpec `json:"networkController"`
+
+	// Node Configuration
+	NodeConfig *NodeConfigSpec `json:"nodeConfig"`
 
 	// Field exclusive to the multi-domain overlay type. If specified in other  types of overlays, the reosurce will launch an error and won't be created.
 	Neighbors []NeighborSpec `json:"neighbors,omitempty"`

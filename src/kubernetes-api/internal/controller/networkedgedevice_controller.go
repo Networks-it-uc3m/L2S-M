@@ -32,6 +32,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+
+	nedv1 "l2sm.local/ovs-switch/api/v1"
 )
 
 // NetworkEdgeDeviceReconciler reconciles a NetworkEdgeDevice object
@@ -162,23 +164,30 @@ func (r *NetworkEdgeDeviceReconciler) deleteExternalResources(ctx context.Contex
 	return nil
 }
 func (r *NetworkEdgeDeviceReconciler) createExternalResources(ctx context.Context, netEdgeDevice *l2smv1.NetworkEdgeDevice) error {
-	// Convert netEdgeDevice.Spec.Neighbors to JSON
-	neighborsJSON, err := json.Marshal(netEdgeDevice.Spec.Neighbors)
+
+	neighbors := []string{}
+	nedNeighbors, err := json.Marshal(nedv1.Node{Name: netEdgeDevice.Spec.NodeConfig.NodeName, NodeIP: netEdgeDevice.Spec.NodeConfig.IPAddress, NeighborNodes: neighbors})
 	if err != nil {
 		return err
 	}
+	nedName := fmt.Sprintf("%s-%s", netEdgeDevice.Spec.NodeConfig.NodeName, netEdgeDevice.Spec.NetworkController.Name)
 
+	nedConfig, err := json.Marshal(nedv1.NedSettings{ControllerIP: netEdgeDevice.Spec.NetworkController.Domain, NodeName: netEdgeDevice.Spec.NodeConfig.NodeName, NedName: nedName})
+	if err != nil {
+		return err
+	}
 	// Create a ConfigMap to store the neighbors JSON
 
 	constructConfigMapForNED := func(netEdgeDevice *l2smv1.NetworkEdgeDevice) (*corev1.ConfigMap, error) {
 
 		configMap := &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      fmt.Sprintf("%s-neighbors", netEdgeDevice.Name),
+				Name:      fmt.Sprintf("%s-config", netEdgeDevice.Name),
 				Namespace: netEdgeDevice.Namespace,
 			},
 			Data: map[string]string{
-				"neighbors.json": string(neighborsJSON),
+				"neighbors.json": string(nedNeighbors),
+				"config.json":    string(nedConfig),
 			},
 		}
 		if err := controllerutil.SetControllerReference(netEdgeDevice, configMap, r.Scheme); err != nil {

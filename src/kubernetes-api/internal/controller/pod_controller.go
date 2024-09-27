@@ -32,6 +32,8 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+
+	nettypes "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
 )
 
 // PodReconciler reconciles a Pod object
@@ -75,7 +77,7 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 
 	// Ensure the Multus annotation is correctly formatted and present
 
-	// Check if the object is being deleted
+	// Check if the pod is being deleted
 	if pod.GetDeletionTimestamp() != nil {
 		if utils.ContainsString(pod.GetFinalizers(), l2smFinalizer) {
 			logger.Info("L2S-M Pod deleted: detaching l2network")
@@ -118,8 +120,8 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 		return ctrl.Result{}, nil
 	}
 
-	// If it's not getting deleted, then let's check if it's been created or not
-	// Add finalizer for this CR
+	// Check if the pod has a finalizer attached to it. If not, we asume this pod is being created,
+	// so we attach the l2network to it.
 	if !utils.ContainsString(pod.GetFinalizers(), l2smFinalizer) {
 		// We add the finalizers now that the pod has been added to the network and we want to keep track of it
 		pod.SetFinalizers(append(pod.GetFinalizers(), l2smFinalizer))
@@ -128,12 +130,20 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 		}
 		logger.Info("L2S-M Pod created: attaching to l2network")
 
+		// We extract the network names and ip adresses desired for our pod.
 		networkAnnotations, err := extractNetworks(pod.Annotations[L2SM_NETWORK_ANNOTATION], r.SwitchesNamespace)
 
+		// If there's an error, probably the user did input wrongfully the networks, in this case throw an error.
 		if err != nil {
 			logger.Error(err, "l2 networks could not be extracted from the pods annotations")
+			return ctrl.Result{}, err
 		}
+
+		// We get an array of the existing L2Networks the pod's being associated to.
 		networks, err := GetL2Networks(ctx, r.Client, networkAnnotations)
+
+		// If there's an error, it mayu be that the network is not yet created ornot available. In this case,
+		// we don't let the pod create itself, and wait until the l2network is created and/or available
 		if err != nil {
 
 			logger.Error(nil, "Pod's network annotation incorrect. L2Network not attached.")
@@ -141,6 +151,7 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 			return ctrl.Result{}, err
 
 		}
+
 		// Add the pod interfaces to the sdn controller
 		multusAnnotations, ok := pod.Annotations[MULTUS_ANNOTATION_KEY]
 
@@ -149,19 +160,32 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 			return ctrl.Result{}, nil
 		}
 
+		// We get which interfaces are we using inside the pod, so we can later attach them to the sdn controller
 		multusNetAttachDefinitions, err := extractNetworks(multusAnnotations, r.SwitchesNamespace)
 
+		// If there are not the same number of multus annotations as networks, we need to throw an error as we can't
+		// reach the desired state for the user.
 		if err != nil || len(multusNetAttachDefinitions) != len(networkAnnotations) {
 			logger.Error(nil, "Error detaching the pod from the network attachment definitions")
 			return ctrl.Result{}, nil
 		}
 
+		// Now, for every network, we make a call to the sdn controller, asking for the attachment to the switch
+		// We get the openflow ID of the switch that this pod is connected to.
 		ofID := fmt.Sprintf("of:%s", utils.GenerateDatapathID(pod.Spec.NodeName))
 
 		for index, network := range networks {
-			portNumber, _ := utils.GetPortNumberFromNetAttachDef(multusNetAttachDefinitions[index].Name)
+			// We get the port number based on the name of the multus annotation. veth1 -> port num 1.
+			portNumber, err := utils.GetPortNumberFromNetAttachDef(multusNetAttachDefinitions[index].Name)
+
+			if err != nil {
+				// If there is an error, it must be that the name is not compliant, so we can't be certain of which
+				// port we are trying to attach.
+				return ctrl.Result{}, fmt.Errorf("could not get port number from the multus network annotation: %v. Can't attach pod to network", err)
+			}
 			ofPort := fmt.Sprintf("%s/%s", ofID, portNumber)
 
+			// we inform the sdn controller of this new port attachment
 			err = r.InternalClient.AttachPodToNetwork("vnets", sdnclient.VnetPortPayload{NetworkId: network.Name, Port: []string{ofPort}})
 			if err != nil {
 				logger.Error(err, "Error attaching pod to the l2network")
@@ -172,12 +196,19 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 			// and communicate with it
 			if network.Spec.Provider != nil {
 
-				gatewayNodeName, err := r.CreateNewNEDConnection(network)
+				// First we get information from the NED, required to perform the next operations.
+				// The info we need is the node name it is residing in.
+				nedNodeName := nedinterface.GetNodeName(network.Spec.Provider.Name)
+
+				// Then, we create the connection between the NED and the l2sm-switch, in the internal SDN Controller
+				nedNetworkAttachDef, err := r.ConnectInternalSwitchToNED(ctx, network.Name, nedNodeName)
 				if err != nil {
 					return ctrl.Result{}, nil
 				}
-
-				err = r.ConnectGatewaySwitchToNED(ctx, network.Name, gatewayNodeName)
+				// We attach the ned to this new network, connecting with the IDCO SDN Controller. We need
+				// The Network name so we can know which network to attach the port to.
+				// The multus network attachment definition that will be used as a bridge between the internal switch and the NED.
+				err = r.CreateNewNEDConnection(network, nedNetworkAttachDef.Name, nedNodeName)
 				if err != nil {
 					return ctrl.Result{}, nil
 				}
@@ -190,10 +221,6 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 	return ctrl.Result{}, nil
 
 }
-
-// func (r *PodReconciler) GetOpenflowId(ctx context.Context, namespace string) (string,error) {
-// 	return "",nil
-// }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *PodReconciler) SetupWithManager(mgr ctrl.Manager) error {
@@ -211,63 +238,70 @@ func (r *PodReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func (r *PodReconciler) CreateNewNEDConnection(network l2smv1.L2Network) (string, error) {
+// CreateNEDConnection is a method that given the name of the network and the
+func (r *PodReconciler) CreateNewNEDConnection(network l2smv1.L2Network, nedNetworkAttachDef, nedNodeName string) error {
 
 	clientConfig := sdnclient.ClientConfig{BaseURL: fmt.Sprintf("http://%s/onos/v1", network.Spec.Provider.Domain), Username: "karaf", Password: "karaf"}
 
 	externalClient, err := sdnclient.NewClient(sdnclient.InternalType, clientConfig)
 
 	if err != nil {
-		return "", err
-		// logger.Error(err, "no connection could be made with external sdn controller")
-	}
-	gatewayNodeName, nedPortNumber := nedinterface.GetConnectionInfo()
+		return fmt.Errorf("no connection could be made with external sdn controller: %s", err)
 
-	nedOFID := fmt.Sprintf("of:%s", utils.GenerateDatapathID(fmt.Sprintf("%s%s", gatewayNodeName, network.Spec.Provider.Name)))
+	}
+	// AddPort returns the port number to attach so we can talk directly with the IDCO
+	// It needs to know which exiting interface to add to the network
+	nedPortNumber, err := nedinterface.AttachInterface(nedNetworkAttachDef)
+
+	if err != nil {
+		return fmt.Errorf("no connection could be made with external sdn controller: %s", err)
+	}
+
+	nedOFID := fmt.Sprintf("of:%s", utils.GenerateDatapathID(fmt.Sprintf("%s-%s", nedNodeName, network.Spec.Provider.Name)))
 	nedOFPort := fmt.Sprintf("%s/%s", nedOFID, nedPortNumber)
 
 	err = externalClient.AttachPodToNetwork("vnets", sdnclient.VnetPortPayload{NetworkId: network.Name, Port: []string{nedOFPort}})
 	if err != nil {
-		return "", errors.Join(err, errors.New("could not update network attachment definition"))
+		return errors.Join(err, errors.New("could not update network attachment definition"))
 
 	}
-	return gatewayNodeName, nil
+	return nil
 }
 
-func (r *PodReconciler) ConnectGatewaySwitchToNED(ctx context.Context, networkName, gatewayNodeName string) error {
+func (r *PodReconciler) ConnectInternalSwitchToNED(ctx context.Context, networkName, nedNodeName string) (nettypes.NetworkAttachmentDefinition, error) {
 
+	// We get a free interface in the node name of the NED, this way we can interconnect the NED with the l2sm switch
 	var err error
-	netAttachDefLabel := NET_ATTACH_LABEL_PREFIX + gatewayNodeName
+	netAttachDefLabel := NET_ATTACH_LABEL_PREFIX + nedNodeName
 	netAttachDefs := GetFreeNetAttachDefs(ctx, r.Client, r.SwitchesNamespace, netAttachDefLabel)
 
 	if len(netAttachDefs.Items) == 0 {
 		err = errors.New("no interfaces available in control plane node")
 		//logger.Error(err, fmt.Sprintf("No interfaces available for node %s", gatewayNodeName))
-		return err
+		return nettypes.NetworkAttachmentDefinition{}, err
 	}
 
 	netAttachDef := &netAttachDefs.Items[0]
 
 	portNumber, _ := utils.GetPortNumberFromNetAttachDef(netAttachDef.Name)
 
-	gatewayOFID := fmt.Sprintf("of:%s", utils.GenerateDatapathID(gatewayNodeName))
+	internalSwitchOFID := fmt.Sprintf("of:%s", utils.GenerateDatapathID(nedNodeName))
 
-	gatewayOFPort := fmt.Sprintf("%s/%s", gatewayOFID, portNumber)
+	internalSwitchOFPort := fmt.Sprintf("%s/%s", internalSwitchOFID, portNumber)
 
-	err = r.InternalClient.AttachPodToNetwork("vnets", sdnclient.VnetPortPayload{NetworkId: networkName, Port: []string{gatewayOFPort}})
+	err = r.InternalClient.AttachPodToNetwork("vnets", sdnclient.VnetPortPayload{NetworkId: networkName, Port: []string{internalSwitchOFPort}})
 
 	if err != nil {
-		return err
-		//logger.Error(err, "could not make a connection between the gateway switch and the NED. Internal SDN controller error.")
+		return nettypes.NetworkAttachmentDefinition{}, fmt.Errorf("could not make a connection between the internal switch and the NED. Internal SDN controller error: %s", err)
+
 	}
 
 	netAttachDef.Labels[netAttachDefLabel] = "true"
 	err = r.Client.Update(ctx, netAttachDef)
 	if err != nil {
-		return err
-		//.Error(err, "Could not update network attachment definition")
+		return nettypes.NetworkAttachmentDefinition{}, fmt.Errorf("could not update network attachment definition: %s", err)
 
 	}
 
-	return nil
+	return *netAttachDef, nil
 }
