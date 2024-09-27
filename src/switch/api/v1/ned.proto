@@ -4,12 +4,15 @@ package nedpb;
 
 option go_package = "l2sm.local/ovs-switch/pkg/nedpb";
 
-service VxlanService {
+service NedService {
   // Creates a VxLAN with the specified IP address.
   rpc CreateVxlan(CreateVxlanRequest) returns (CreateVxlanResponse);
 
   // Attaches the specified interface to the bridge.
   rpc AttachInterface(AttachInterfaceRequest) returns (AttachInterfaceResponse);
+
+  // Returns this neds node name
+  rpc GetNodeName(GetNodeNameRequest) returns (GetNodeNameResponse);
 }
 
 message CreateVxlanRequest {
@@ -32,6 +35,11 @@ message AttachInterfaceRequest {
 message AttachInterfaceResponse {
   // The OpenFlow ID of the attached interface.
   int64 interface_num = 1;
-  // The node name from the environment variable.
-  string node_name = 2;
+}
+
+message GetNodeNameRequest {
+
+}
+message GetNodeNameResponse {
+  string node_name = 1;
 }
