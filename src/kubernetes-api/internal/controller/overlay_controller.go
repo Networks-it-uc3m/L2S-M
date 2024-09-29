@@ -89,11 +89,11 @@ func (r *OverlayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		// The object is being deleted
 		if controllerutil.ContainsFinalizer(overlay, l2smFinalizer) {
 			// our finalizer is present, so lets handle any external dependency
-			if err := r.deleteExternalResources(ctx, overlay); err != nil {
-				// if fail to delete the external dependency here, return with error
-				// so that it can be retried.
-				return ctrl.Result{}, err
-			}
+			// if err := r.deleteExternalResources(ctx, overlay); err != nil {
+			// 	// if fail to delete the external dependency here, return with error
+			// 	// so that it can be retried.
+			// 	return ctrl.Result{}, err
+			// }
 
 			// remove our finalizer from the list and update it.
 			controllerutil.RemoveFinalizer(overlay, l2smFinalizer)
@@ -120,11 +120,12 @@ func (r *OverlayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		}
 		log.Info("Overlay Launched")
 		return ctrl.Result{RequeueAfter: time.Second * 20}, nil
-	} else {
-
-		//b, _ := json.Marshal(netEdgeDevice.Spec.Neighbors)
-
 	}
+	// else {
+
+	// 	//b, _ := json.Marshal(netEdgeDevice.Spec.Neighbors)
+
+	// }
 
 	return ctrl.Result{}, nil
 }
@@ -154,10 +155,10 @@ func (r *OverlayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func (r *OverlayReconciler) deleteExternalResources(ctx context.Context, overlay *l2smv1.Overlay) error {
+// func (r *OverlayReconciler) deleteExternalResources(ctx context.Context, overlay *l2smv1.Overlay) error {
 
-	return nil
-}
+// 	return nil
+// }
 
 type TopologySwitchJson struct {
 	Nodes []NodeJson    `json:"Nodes"`
@@ -189,9 +190,7 @@ func (r *OverlayReconciler) createExternalResources(ctx context.Context, overlay
 		}
 
 		// Populate Links
-		for _, link := range overlay.Spec.Topology.Links {
-			topologySwitch.Links = append(topologySwitch.Links, link)
-		}
+		topologySwitch.Links = append(topologySwitch.Links, overlay.Spec.Topology.Links...)
 
 		// Convert TopologySwitchJson to JSON
 		topologyJSON, err := json.Marshal(topologySwitch)
