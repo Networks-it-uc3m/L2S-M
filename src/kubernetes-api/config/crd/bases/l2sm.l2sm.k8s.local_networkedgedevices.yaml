@@ -83,6 +83,17 @@ spec:
                 - domain
                 - name
                 type: object
+              nodeConfig:
+                description: Node Configuration
+                properties:
+                  ipAddress:
+                    type: string
+                  nodeName:
+                    type: string
+                required:
+                - ipAddress
+                - nodeName
+                type: object
               switchTemplate:
                 description: Template describes the virtual switch pod that will be
                   created.
@@ -4542,6 +4553,7 @@ spec:
                 type: object
             required:
             - networkController
+            - nodeConfig
             - switchTemplate
             type: object
           status:

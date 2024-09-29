@@ -94,11 +94,11 @@ func (r *NetworkEdgeDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		// The object is being deleted
 		if controllerutil.ContainsFinalizer(netEdgeDevice, l2smFinalizer) {
 			// our finalizer is present, so lets handle any external dependency
-			if err := r.deleteExternalResources(ctx, netEdgeDevice); err != nil {
-				// if fail to delete the external dependency here, return with error
-				// so that it can be retried.
-				return ctrl.Result{}, err
-			}
+			// if err := r.deleteExternalResources(ctx, netEdgeDevice); err != nil {
+			// 	// if fail to delete the external dependency here, return with error
+			// 	// so that it can be retried.
+			// 	return ctrl.Result{}, err
+			// }
 
 			// remove our finalizer from the list and update it.
 			controllerutil.RemoveFinalizer(netEdgeDevice, l2smFinalizer)
@@ -125,11 +125,12 @@ func (r *NetworkEdgeDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		}
 		log.Info("NED Launched")
 		return ctrl.Result{RequeueAfter: time.Second * 20}, nil
-	} else {
-
-		//b, _ := json.Marshal(netEdgeDevice.Spec.Neighbors)
-
 	}
+	// } else {
+
+	// 	//b, _ := json.Marshal(netEdgeDevice.Spec.Neighbors)
+
+	// }
 
 	return ctrl.Result{}, nil
 }
@@ -159,13 +160,16 @@ func (r *NetworkEdgeDeviceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func (r *NetworkEdgeDeviceReconciler) deleteExternalResources(ctx context.Context, netEdgeDevice *l2smv1.NetworkEdgeDevice) error {
+// func (r *NetworkEdgeDeviceReconciler) deleteExternalResources(ctx context.Context, netEdgeDevice *l2smv1.NetworkEdgeDevice) error {
 
-	return nil
-}
+//		return nil
+//	}
 func (r *NetworkEdgeDeviceReconciler) createExternalResources(ctx context.Context, netEdgeDevice *l2smv1.NetworkEdgeDevice) error {
 
-	neighbors := []string{}
+	neighbors := make([]string, len(netEdgeDevice.Spec.Neighbors))
+	for i, neighbor := range netEdgeDevice.Spec.Neighbors {
+		neighbors[i] = neighbor.Domain
+	}
 	nedNeighbors, err := json.Marshal(nedv1.Node{Name: netEdgeDevice.Spec.NodeConfig.NodeName, NodeIP: netEdgeDevice.Spec.NodeConfig.IPAddress, NeighborNodes: neighbors})
 	if err != nil {
 		return err
@@ -198,6 +202,9 @@ func (r *NetworkEdgeDeviceReconciler) createExternalResources(ctx context.Contex
 
 	configMap, err := constructConfigMapForNED(netEdgeDevice)
 
+	if err != nil {
+		return fmt.Errorf("could not construct the config map for the network edge device: %v", err)
+	}
 	// Create the ConfigMap in Kubernetes
 	if err := r.Client.Create(ctx, configMap); err != nil {
 		return err
@@ -209,7 +216,7 @@ func (r *NetworkEdgeDeviceReconciler) createExternalResources(ctx context.Contex
 		// Define volume mounts to be added to each container
 		volumeMounts := []corev1.VolumeMount{
 			{
-				Name:      "neighbors",
+				Name:      "configurations",
 				MountPath: "/etc/l2sm/",
 				ReadOnly:  true,
 			},
@@ -225,7 +232,7 @@ func (r *NetworkEdgeDeviceReconciler) createExternalResources(ctx context.Contex
 		// Define the volume using the created ConfigMap
 		volumes := []corev1.Volume{
 			{
-				Name: "neighbors",
+				Name: "configurations",
 				VolumeSource: corev1.VolumeSource{
 					ConfigMap: &corev1.ConfigMapVolumeSource{
 						LocalObjectReference: corev1.LocalObjectReference{
@@ -235,6 +242,10 @@ func (r *NetworkEdgeDeviceReconciler) createExternalResources(ctx context.Contex
 							{
 								Key:  "neighbors.json",
 								Path: "neighbors.json",
+							},
+							{
+								Key:  "config.json",
+								Path: "config.json",
 							},
 						},
 					},
@@ -267,6 +278,7 @@ func (r *NetworkEdgeDeviceReconciler) createExternalResources(ctx context.Contex
 						Containers:     containers,
 						Volumes:        volumes,
 						HostNetwork:    netEdgeDevice.Spec.SwitchTemplate.Spec.HostNetwork,
+						NodeName:       netEdgeDevice.Spec.NodeConfig.NodeName,
 					},
 				},
 			},
