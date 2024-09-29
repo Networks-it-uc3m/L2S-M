@@ -7,7 +7,10 @@ metadata:
 spec:
   networkController:
     name: example-network-controller
-    domain: controller.example.com
+    domain: 192.168.122.60
+  nodeConfig:
+    nodeName: ant-machine
+    ipAddress: 192.168.122.60
   neighbors:
     - node: l2sm-test-5
       domain: 10.0.0.2
@@ -16,7 +19,13 @@ spec:
       hostNetwork: true
       containers:
         - name: l2sm-switch
-          image: alexdecb/l2sm-switch:2.3
+          image: alexdecb/l2sm-ned:2.7.1
           resources: {}
+          # command: ["/bin/sh"]
+          # args: ["-c", "sleep infinity"]
+          imagePullPolicy: Always
           ports:
             - containerPort: 80
+          securityContext:
+            capabilities:
+              add: ["NET_ADMIN"]
