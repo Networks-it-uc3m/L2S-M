@@ -6,7 +6,7 @@ COPY ./src/switch/ ./build/switch/build-go.sh ./
 
 RUN chmod +x ./build-go.sh  && ./build-go.sh
 
-FROM ubuntu:latest 
+FROM ubuntu:jammy 
 
 WORKDIR /usr/local/bin
 

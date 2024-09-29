@@ -6,7 +6,7 @@ COPY ./src/switch/  ./
 
 RUN go build -v -o /usr/local/bin/ned-server ./cmd/ned-server
 
-FROM ubuntu:latest 
+FROM ubuntu:jammy 
 
 WORKDIR /usr/local/bin
 
