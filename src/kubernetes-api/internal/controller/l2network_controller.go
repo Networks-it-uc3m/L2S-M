@@ -182,12 +182,12 @@ func interDomainReconcile(network *l2smv1.L2Network, log logr.Logger) (l2smv1.Co
 	if network.Spec.Provider == nil {
 		return l2smv1.UnknownStatus, errors.New("ext-vnet doesn't have a provider specified")
 	}
-	clientConfig := sdnclient.ClientConfig{BaseURL: fmt.Sprintf("http://%s/onos/v1", network.Spec.Provider.Domain), Username: "karaf", Password: "karaf"}
+	clientConfig := sdnclient.ClientConfig{BaseURL: fmt.Sprintf("http://%s/onos", network.Spec.Provider.Domain), Username: "karaf", Password: "karaf"}
 
 	externalClient, err := sdnclient.NewClient(sdnclient.InternalType, clientConfig)
 
 	if err != nil {
-		return l2smv1.OfflineStatus, err
+		return l2smv1.OfflineStatus, fmt.Errorf("could not initialize session with external provider: %v", err)
 	}
 
 	exists, err := externalClient.CheckNetworkExists(network.Spec.Type, network.Name)
