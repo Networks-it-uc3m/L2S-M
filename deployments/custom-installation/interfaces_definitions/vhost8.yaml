@@ -3,7 +3,7 @@ apiVersion: "k8s.cni.cncf.io/v1"
 kind: NetworkAttachmentDefinition
 metadata:
   name: veth8
-  namespace: he-codeco-netma
+  namespace: l2sm-system
   labels:
     app: l2sm
 spec:
