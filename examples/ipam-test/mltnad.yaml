@@ -1,0 +1,25 @@
+apiVersion: "k8s.cni.cncf.io/v1"
+kind: NetworkAttachmentDefinition
+metadata:
+  name: my-bridge-net
+  namespace: default  # Or any namespace you want this network to be available in
+spec:
+  config: '{
+      "cniVersion": "0.3.1",
+      "name": "my-bridge-net",
+      "type": "bridge",
+      "bridge": "brtest",
+      "isGateway": true,
+      "ipMasq": false,
+      "hairpinMode": true,
+      "ipam": {
+          "type": "host-local",
+          "subnet": "10.244.1.0/24",
+          "rangeStart": "10.244.1.10",
+          "rangeEnd": "10.244.1.100",
+          "routes": [
+              { "dst": "0.0.0.0/0" }
+          ],
+          "gateway": "10.244.1.1"
+      }
+  }'
