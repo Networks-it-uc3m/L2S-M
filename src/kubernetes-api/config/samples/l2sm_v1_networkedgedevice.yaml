@@ -12,8 +12,8 @@ spec:
     nodeName: ant-machine
     ipAddress: 192.168.122.60
   neighbors:
-    - node: l2sm-test-5
-      domain: 10.0.0.2
+    - node: tucci
+      domain: 192.168.122.244
   switchTemplate:
     spec:
       hostNetwork: true
@@ -23,7 +23,7 @@ spec:
           resources: {}
           # command: ["/bin/sh"]
           # args: ["-c", "sleep infinity"]
-          imagePullPolicy: Always
+          #imagePullPolicy: Always
           ports:
             - containerPort: 80
           securityContext:
