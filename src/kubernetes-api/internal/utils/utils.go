@@ -103,3 +103,19 @@ func GenerateDatapathID(switchName string) string {
 
 	return dpid
 }
+
+type BridgeParams struct {
+	NodeName     string
+	ProviderName string
+}
+
+func GetBridgeName(params BridgeParams) string {
+	hash := sha256.New()
+	hash.Write([]byte(fmt.Sprintf("%s%s", params.NodeName, params.ProviderName)))
+	hashedBytes := hash.Sum(nil)
+	dpidBytes := hashedBytes[:4]
+
+	// Convert the bytes to a hexadecimal string
+	dpid := hex.EncodeToString(dpidBytes)
+	return fmt.Sprintf("br-%s", dpid)
+}
