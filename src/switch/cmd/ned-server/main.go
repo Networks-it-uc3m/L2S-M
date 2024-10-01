@@ -49,8 +49,7 @@ func main() {
 
 	fmt.Println("Initializing switch, connected to controller: ", settings.ControllerIP)
 
-	nedBridgeName, _ := utils.GenerateBridgeName(settings.NedName)
-	bridge, err := inits.InitializeSwitch(nedBridgeName, settings.ControllerIP)
+	bridge, err := inits.InitializeSwitch(settings.NedName, settings.ControllerIP)
 	if err != nil {
 		log.Fatalf("error initializing ned: %v", err)
 	}
@@ -113,6 +112,12 @@ func (s *server) AttachInterface(ctx context.Context, req *nedpb.AttachInterface
 	// Create a new interface and attach it to the bridge
 	newPort, err := AddInterfaceToBridge(interfaceName)
 	if err != nil {
+		return nil, fmt.Errorf("failed to create interface: %v", err)
+	}
+
+	err = s.Bridge.AddPort(newPort)
+
+	if err != nil {
 		return nil, fmt.Errorf("failed to add interface to bridge: %v", err)
 	}
 
@@ -137,14 +142,13 @@ func (s *server) AttachInterface(ctx context.Context, req *nedpb.AttachInterface
 func AddInterfaceToBridge(bridgeName string) (string, error) {
 	// Generate unique interface names
 	timestamp := time.Now().UnixNano()
-	vethName := fmt.Sprintf("veth%d", timestamp)
-	peerName := fmt.Sprintf("vpeer%d", timestamp)
+	vethName, _ := utils.GenerateInterfaceName("veth", fmt.Sprintf("%s%d", bridgeName, timestamp))
+	peerName, _ := utils.GenerateInterfaceName("vpeer", fmt.Sprintf("%s%d", bridgeName, timestamp))
 
 	// Create the veth pair
 	if err := exec.Command("ip", "link", "add", vethName, "type", "veth", "peer", "name", peerName).Run(); err != nil {
 		return "", fmt.Errorf("failed to create veth pair: %v", err)
 	}
-
 	// Set both interfaces up
 	if err := exec.Command("ip", "link", "set", vethName, "up").Run(); err != nil {
 		return "", fmt.Errorf("failed to set %s up: %v", vethName, err)
@@ -153,12 +157,11 @@ func AddInterfaceToBridge(bridgeName string) (string, error) {
 		return "", fmt.Errorf("failed to set %s up: %v", peerName, err)
 	}
 
-	// Add one end to the Linux bridge
-	if err := exec.Command("ip", "link", "set", vethName, "master", bridgeName).Run(); err != nil {
-		return "", fmt.Errorf("failed to add %s to bridge %s: %v", vethName, bridgeName, err)
+	if err := exec.Command("ip", "link", "set", peerName, "master", bridgeName).Run(); err != nil {
+		return "", fmt.Errorf("failed to add %s to bridge %s: %v", peerName, bridgeName, err)
 	}
 
-	return peerName, nil
+	return vethName, nil
 }
 
 func takeArguments() (string, string, error) {

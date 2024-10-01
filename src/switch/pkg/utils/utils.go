@@ -6,7 +6,7 @@ import (
 	"fmt"
 )
 
-func GenerateBridgeName(uniqueIdentifier string) (string, error) {
+func GenerateInterfaceName(prefix, uniqueIdentifier string) (string, error) {
 	// Create a SHA-256 hash of the input string
 	hash := sha256.New()
 	_, err := hash.Write([]byte(uniqueIdentifier))
@@ -20,5 +20,5 @@ func GenerateBridgeName(uniqueIdentifier string) (string, error) {
 	digestedName := fullHash[:5]
 
 	// Return the formatted bridge name
-	return fmt.Sprintf("br-%s", digestedName), nil
+	return fmt.Sprintf("%s%s", prefix, digestedName), nil
 }
