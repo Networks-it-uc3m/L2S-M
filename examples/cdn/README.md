@@ -63,13 +63,13 @@ kubectl create -f ./examples/cdn/v-network-2.yaml
 ### 2. Verify Network Creation
 
 Note: This step is optional, but it will help you understand how L2S-M internally work, if you already know a bit about SDN and network overlays. 
-   - Check the logs in the `l2sm-controller` and `l2sm-operator` to ensure that the virtual networks have been successfully created.
+   - Check the logs in the `l2sm-controller` and `l2sm-controller-manager` to ensure that the virtual networks have been successfully created.
 
 ```bash
-kubectl get net-attach-def
+kubectl get l2networks
 ```
 ```bash
-kubectl logs l2sm-operator-667fc88c57-p7krv
+kubectl logs l2sm-controller-manager-55d7b6ccdd-8tbqr
 ```
 ```bash
 kubectl logs l2sm-controller-d647b7fb5-kb2f7

@@ -12,12 +12,12 @@ spec:
       labels:
         app: test4
       annotations:
-        k8s.v1.cni.cncf.io/networks: v-network-2
+        l2sm/networks: '[{"name": "v-network-2","ips": ["10.0.2.2/24"]}]'
     spec:
       containers:
         - name: content-server
           image: alexdecb/video-server-test:1
-          command: ["/bin/sh", "-c", "ip a add 10.0.2.2/24 dev net1 && ip route add 10.0.1.0/24 via 10.0.2.1 dev net1 && trap : TERM INT; sleep infinity & wait"]
+          command: ["/bin/sh", "-c", "ip route add 10.0.1.0/24 via 10.0.2.1 dev net1 && trap : TERM INT; sleep infinity & wait"]
           imagePullPolicy: Always
           securityContext:
             capabilities:

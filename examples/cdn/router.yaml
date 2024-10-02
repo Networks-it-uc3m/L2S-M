@@ -5,16 +5,12 @@ metadata:
   labels:
     app: test4
   annotations:
-    k8s.v1.cni.cncf.io/networks: v-network-1, v-network-2
+    l2sm/networks: '[{"name": "v-network-1","ips": ["10.0.1.1/24"]}, {"name": "v-network-2","ips": ["10.0.2.1/24"]}]'
 spec:
-  # securityContext:
-  #  sysctls:
-  #       - name: net.ipv4.ip_forward
-  #         value: "1"
   containers:
   - name: router
     command: ["/bin/ash", "-c"]
-    args: ["echo 'net.ipv4.ip_forward = 1' >> /etc/sysctl.conf && sysctl -p &&  ip addr add 10.0.1.1/24 dev net1 && ip addr add 10.0.2.1/24 dev net2 && 
+    args: ["echo 'net.ipv4.ip_forward = 1' >> /etc/sysctl.conf && sysctl -p && 
             trap : TERM INT; sleep infinity & wait"]
     image: alpine:latest
     securityContext:

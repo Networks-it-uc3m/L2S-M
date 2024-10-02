@@ -1,5 +1,5 @@
 apiVersion: l2sm.l2sm.k8s.local/v1
-kind: L2SMNetwork
+kind: L2Network
 metadata:
   name: v-network-1
 spec:
