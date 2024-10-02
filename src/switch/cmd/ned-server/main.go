@@ -12,12 +12,12 @@ import (
 	"google.golang.org/grpc"
 
 	// Adjust the import path based on your module path
-	nedv1 "l2sm.local/ovs-switch/api/v1"
+	nedv1 "github.com/Networks-it-uc3m/l2sm-switch/api/v1"
 
-	"l2sm.local/ovs-switch/internal/inits"
-	"l2sm.local/ovs-switch/pkg/nedpb"
-	"l2sm.local/ovs-switch/pkg/ovs"
-	"l2sm.local/ovs-switch/pkg/utils"
+	"github.com/Networks-it-uc3m/l2sm-switch/internal/inits"
+	"github.com/Networks-it-uc3m/l2sm-switch/pkg/nedpb"
+	"github.com/Networks-it-uc3m/l2sm-switch/pkg/ovs"
+	"github.com/Networks-it-uc3m/l2sm-switch/pkg/utils"
 )
 
 const (

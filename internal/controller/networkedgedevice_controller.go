@@ -33,7 +33,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	nedv1 "l2sm.local/ovs-switch/api/v1"
+	nedv1 "github.com/Networks-it-uc3m/l2sm-switch/api/v1"
 )
 
 // NetworkEdgeDeviceReconciler reconciles a NetworkEdgeDevice object

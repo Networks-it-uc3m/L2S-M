@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package nedpb;
 
-option go_package = "l2sm.local/ovs-switch/pkg/nedpb";
+option go_package = "github.com/Networks-it-uc3m/l2sm-switch/pkg/nedpb";
 
 service NedService {
   // Creates a VxLAN with the specified IP address.

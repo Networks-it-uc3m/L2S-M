@@ -6,7 +6,7 @@ import (
 	"log"
 	"time"
 
-	"l2sm.local/ovs-switch/pkg/nedpb"
+	"github.com/Networks-it-uc3m/l2sm-switch/pkg/nedpb"
 
 	"google.golang.org/grpc"
 )

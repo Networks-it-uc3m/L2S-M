@@ -7,8 +7,8 @@ import (
 	"os/exec"
 	"regexp"
 
-	topo "l2sm.local/ovs-switch/api/v1"
-	"l2sm.local/ovs-switch/pkg/ovs"
+	topo "github.com/Networks-it-uc3m/l2sm-switch/api/v1"
+	"github.com/Networks-it-uc3m/l2sm-switch/pkg/ovs"
 )
 
 func InitializeSwitch(switchName, controllerIP string) (ovs.Bridge, error) {

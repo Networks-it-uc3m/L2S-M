@@ -1,4 +1,4 @@
-module l2sm.local/ovs-switch
+module github.com/Networks-it-uc3m/l2sm-switch
 
 go 1.21.7
 

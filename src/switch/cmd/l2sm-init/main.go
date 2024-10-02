@@ -7,7 +7,7 @@ import (
 	"os/exec"
 	"regexp"
 
-	"l2sm.local/ovs-switch/pkg/ovs"
+	"github.com/Networks-it-uc3m/l2sm-switch/pkg/ovs"
 )
 
 // Script that takes two required arguments:

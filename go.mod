@@ -12,14 +12,14 @@ require (
 	k8s.io/api v0.29.0
 	k8s.io/apimachinery v0.29.0
 	k8s.io/client-go v0.29.0
-	l2sm.local/ovs-switch v0.0.0
+	github.com/Networks-it-uc3m/l2sm-switch v1.0.0
 	sigs.k8s.io/controller-runtime v0.17.0
 
 )
 
 require google.golang.org/genproto/googleapis/rpc v0.0.0-20240814211410-ddb44dafa142 // indirect
 
-replace l2sm.local/ovs-switch => ../switch
+// replace github.com/Networks-it-uc3m/l2sm-switch => ../switch
 
 require (
 	github.com/beorn7/perks v1.0.1 // indirect

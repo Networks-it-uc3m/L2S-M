@@ -8,7 +8,7 @@ import (
 	"net"
 	"os"
 
-	"l2sm.local/ovs-switch/pkg/ovs"
+	"github.com/Networks-it-uc3m/l2sm-switch/pkg/ovs"
 )
 
 type Node struct {
