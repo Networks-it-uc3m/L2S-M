@@ -1,5 +1,0 @@
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: l2sm-operator
-  namespace: he-codeco-netma
