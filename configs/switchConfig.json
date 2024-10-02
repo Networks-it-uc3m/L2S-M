@@ -1,8 +1,0 @@
-{
-  "Nodes": [
-    {"name": "l2sm1", "nodeIP": "10.1.14.29"},{"name": "l2sm2", "nodeIP": "10.1.72.109"}
-  ],
-  "Links": [
-    {"endpointA": "l2sm1", "endpointB": "l2sm2"}
-  ]
-}

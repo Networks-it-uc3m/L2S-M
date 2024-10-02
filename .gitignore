@@ -1,4 +1,3 @@
-configs/networkTopology.json
 .vscode
-src/kubernetes-api/dist/install.yaml
-src/kubernetes-api/bin
+tls.b64
+bin/

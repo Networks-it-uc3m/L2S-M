@@ -120,10 +120,10 @@ docker-buildx: ## Build and push docker image for the manager for cross-platform
 .PHONY: build-installer
 build-installer: manifests generate kustomize ## Generate a consolidated YAML with CRDs and deployment.
 	mkdir -p dist
-	echo "" > dist/install.yaml
-	echo "---" >> dist/install.yaml  # Add a document separator before appending
+	echo "" > deployments/install.yaml
+	echo "---" >> deployments/install.yaml  # Add a document separator before appending
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
-	$(KUSTOMIZE) build config/default >> dist/install.yaml
+	$(KUSTOMIZE) build config/default >> deployments/install.yaml
 
 ##@ Deployment
 
