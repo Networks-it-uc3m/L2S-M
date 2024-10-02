@@ -3,7 +3,7 @@ package sdnclient
 import (
 	"errors"
 
-	l2smv1 "l2sm.k8s.local/controllermanager/api/v1"
+	l2smv1 "github.com/Networks-it-uc3m/L2S-M/api/v1"
 )
 
 type ClientType string

@@ -24,7 +24,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"l2sm.k8s.local/controllermanager/test/utils"
+	"github.com/Networks-it-uc3m/L2S-M/test/utils"
 )
 
 const namespace = "l2network-system"

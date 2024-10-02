@@ -1,4 +1,4 @@
-module l2sm.k8s.local/controllermanager
+module github.com/Networks-it-uc3m/L2S-M
 
 go 1.21.7
 

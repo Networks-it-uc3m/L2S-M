@@ -9,8 +9,8 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	l2smv1 "github.com/Networks-it-uc3m/L2S-M/api/v1"
 	nedpb "github.com/Networks-it-uc3m/l2sm-switch/pkg/nedpb"
-	l2smv1 "l2sm.k8s.local/controllermanager/api/v1"
 )
 
 // GetConnectionInfo communicates with the NED via gRPC and returns the InterfaceNum and NodeName.

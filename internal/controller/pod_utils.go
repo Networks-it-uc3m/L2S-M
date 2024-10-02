@@ -8,10 +8,10 @@ import (
 	"strings"
 	"time"
 
+	l2smv1 "github.com/Networks-it-uc3m/L2S-M/api/v1"
 	nettypes "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
-	l2smv1 "l2sm.k8s.local/controllermanager/api/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
