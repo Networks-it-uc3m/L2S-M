@@ -21,10 +21,9 @@ If you want more information about the original idea of L2S-M and its initial de
 
 Did you like L2S-M and want to use it in your K8s infrastructure or project? Please, feel free to do so, and don't forget to cite us! 
 
-### Projects where L2S-M is being used:
-- H2020 FISHY Project: https://fishy-project.eu (grant agreement 952644) 
-- True5G Project: (PID2019-108713RB-C52 / AEI / 10.13039/501100011033)
-- H2020 Labyrinth project: https://labyrinth2020.eu/ (grant agreement 861696).
+### Demo video
+
+This [video](https://youtube.com/watch?v=Oj2gzm-YxYE&si=bV9eN77wTlXQZY3Y) exemplifies the process to create virtual networks in Kubernetes using the L2S-M open-source software. More concretely, it shows how L2S is used to create a simple content distribution network on a Kubernetes cluster.
 
 ### Inter-cluster communications
 We are currently working on a solution to enable communications among workloads deployed on differente Kubernetes clusters. The solution enables the creation and deletion of virtual link-layer networks to connect application workloads running in different virtualization domains. This way, it supports inter-domain link-layer communications among remote workloads.  
@@ -38,9 +37,28 @@ In the [following section](./additional-info) of the repository, you can find a 
 
 L2S-M has been presented in the following events:
 
-* [Open Source Mano (OSM) #13 plenary meeting (01/06/2022)](https://github.com/Networks-it-uc3m/L2S-M/blob/main/additional%20info/OSM%2313%20Plenary%20Meeting.pdf): In this meeting, L2S-M was presented as a solution to enable virtual networking to deploy Cloud Network Functions (CNFs) in K8s clusters. Moreover, the potential use of L2S-M to become the basis for a feature to be introduced in OSM's code was discussed as well.
+* ETSI Network Operator Council Meeting #195 (June 2023)
 
-* [FIHY Summer Camp (20/04/2023)](https://drcn2023.upc.edu/FISHYSummerCamp.html). In this summer camp, we described the utilization of L2S-M in next-generation secured communication scenarios, which are covered in the H2020 FIHSY and Labyrinth projects (see Acnkowledgemnt sections).
+* [ETSI Open Source MANO (OSM) Proof-of-Concept: OSM PoC 14 Leveraging OSM virtual networking in Kubernetes clusters](https://osm.etsi.org/wikipub/index.php/OSM_PoC_14_Leveraging_OSM_virtual_networking_in_Kubernetes_clusters)
+
+* Demo in the [ETSI OSM MR14 Ecosystem Day](https://osm.etsi.org/wikipub/index.php/OSM-MR14_Ecosystem_Day) (March 2023)
+
+* [FIHY Summer Camp (20/04/2023)](https://drcn2023.upc.edu/FISHYSummerCamp.html). In this summer camp, we described the utilization of L2S-M in next-generation secured communication scenarios, which are covered in the H2020 FIHSY and Labyrinth projects (March 2023).
+
+* [Open Source Mano (OSM) #13 plenary meeting (June 2022)](https://github.com/Networks-it-uc3m/L2S-M/blob/main/additional%20info/OSM%2313%20Plenary%20Meeting.pdf): In this meeting, L2S-M was presented as a solution to enable virtual networking to deploy Cloud Network Functions (CNFs) in K8s clusters. Moreover, the potential use of L2S-M to become the basis for a feature to be introduced in OSM's code was discussed as well.
+
+### Use cases where L2S-M has been used:
+The following publications and references showcase various use cases where L2S-M was used as the basis for providing secure communications within one, or multiple, Kubernetes clusters:
+
+* **Fishy Reference Framework:** Complex experimentation platform developed to support the H2020 FISHY project use cases & its main functionalities. L2S-M was utilised as a component that provided secured communications between all FISHY functionalities and elements, either virtualised or physical. 
+    - I. Vidal et al., 'A Multi-domain Testbed for Collaborative Research on the IoT-Edge-Cloud Continuum,' in 2023 20th Annual IEEE International Conference on Sensing, Communication, and Networking (SECON), 2023, pp. 394--395. *DOI: 10.1109/SECON58729.2023.10287436*.
+
+* **Smart Campus use case:** This use case was centred around the deployment of a "Content Delivery Network" (CDN) for distributing audiovisual content in a Univeristy environment composed of multiple edge and cloud K8s clusters. L2S-M provided inter-cluster and intra-cluster networking to securely connect all its elements.
+    - L. F. Gonzalez, I. Vidal, F. Valera, R. Martin, and D. Artalejo, 'A Link-Layer Virtual Networking Solution for Cloud-Native Network Function Virtualisation Ecosystems: L2S-M,' Future Internet, vol. 15, no. 8, 2023.* *DOI: 10.3390/fi15080274*. [Online]. Available [here.](https://www.mdpi.com/1999-5903/15/8/274)
+
+* **Secure Federated Learning use case:** This use case, done in collaboration with the University of Bristol, was centred around the implementation of a secured federated learning infrastructure. L2S-M enabled the isolated and secured communication between the FL clients and the server.
+    - J. M. Parra-Ullauri, L. F. Gonzalez, A. Bravalheri, R. Hussain, X. Vasilakos, I. Vidal, F. Valera, R. Nejabati, and D. Simeonidou, 'Privacy Preservation in Kubernetes-based Federated Learning: A Networking Approach,' in IEEE INFOCOM2023 - IEEE Conference on Computer CommunicationsWorkshops (INFOCOMWKSHPS), 2023, pp. 1--7. *DOI: 10.1109/INFOCOMWKSHPS57453.2023.10225925*.
+
 
 ### How to reach us
 
@@ -54,4 +72,9 @@ Do you have any doubts about L2S-M or its installation? Do you want to provide f
 
 
 ### Acknowledment
-The work in this open-source project has partially been supported by the European H2020 FISHY Project (grant agreement 952644) and by the H2020 Labyrinth project (grant agreement 861696).
+The work in this open-source project has partially been supported by the European Horizon NEMO project (grant agreement 101070118), the European Horizon CODECO project (grant agreement 101092696), and by the national 6GINSPIRE project (PID2022-137329OB-C429). 
+
+### Other projects where L2S-M has been used
+- H2020 FISHY Project: https://fishy-project.eu (grant agreement 952644) 
+- True5G Project: (PID2019-108713RB-C52 / AEI / 10.13039/501100011033)
+- H2020 Labyrinth project: https://labyrinth2020.eu/ (grant agreement 861696).

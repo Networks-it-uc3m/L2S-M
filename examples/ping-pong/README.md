@@ -50,6 +50,10 @@ To assist you with the deployment of your first application with L2S-M, you can 
 
 ```bash
 kubectl create -f ./examples/ping-pong/ping.yaml
+```
+
+And then:
+``` bash
 kubectl create -f ./examples/ping-pong/pong.yaml
 ```
 
