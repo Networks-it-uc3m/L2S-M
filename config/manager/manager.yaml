@@ -76,7 +76,7 @@ spec:
         - name: CONTROLLER_PORT
           value: "8181"
         - name: SWITCHES_NAMESPACE
-          value: "he-codeco-netma"
+          value: "l2sm-system"
         image: controller:latest
         name: manager
         securityContext:
