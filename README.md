@@ -1,4 +1,4 @@
-# L2S-M 
+# Multi domain L2S-M
 Welcome to the official repository of L2S-M, a **Kubernetes operator** that enables virtual networking in K8s clusters.
 
 Link-Layer Secure connectivity for Microservice platforms (L2S-M) is a K8s networking solution that complements the CNI plugin approach of K8s to create and manage virtual networks in K8s clusters. These virtual networks allow workloads (pods) to have isolated link-layer connectivity with other pods in a K8s cluster, regardless of the k8s node where they are actually deployed. L2S-M enables the creation/deletion of virtual networks on-demand, as well as attaching/detaching pods to that networks. The solution is seamlessly integrated within the K8s environment, through a K8s operator:
