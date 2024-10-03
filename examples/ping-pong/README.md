@@ -5,25 +5,24 @@ All the necessary descriptors can be found in the *'./examples/ping-pong/'* dire
 
 This guide will assume that all commands are executed within the L2S-M directory.
 
+## Pre-requisites
+
+In order to get this example moving, it's required to have L2S-M installed alongside an overlay topology deployed. You can learn how to do so in [the overlay example section](../overlay-setup).
+
 ### Creating our first virtual network
 
 First of all, let's see the details of an L2S-M virtual network. This is the descriptor corresponding to the virtual network that will be used in this example: ping-network
 
 ```yaml
-apiVersion: "k8s.cni.cncf.io/v1"
-kind: NetworkAttachmentDefinition
+apiVersion: l2sm.l2sm.k8s.local/v1
+kind: L2Network
 metadata:
   name: ping-network
 spec:
-  config: '{
-      "cniVersion": "0.3.0",
-      "type": "dummy",
-      "device": "l2sm-vNet"
-    }'
+  type: vnet
 ```
-As you can see, L2S-M virtual networks are a [NetworkAttachmentDefinition](https://github.com/k8snetworkplumbingwg/multus-cni/blob/master/docs/quickstart.md) from MULTUS. In order to build a new network, just changing its name in the "metadata" field will define a new network. 
+As you can see, L2S-M virtual networks are custom CRDs, the L2Networks. In order to build a new network, just changing its name in the "metadata" field will define a new network. 
 
-**Warning**: Do not change the config section from the descriptor; the *l2sm-vNet* is an abstract interface used by the L2S-M operator to manage the virtual networks in the K8s cluster.
 
 To create the virtual network in your cluster, use the appropriate *kubectl* command as if you were building any other K8s resource:
 
@@ -40,11 +39,12 @@ After creating our first virtual network, it is time to attach some pods to it. 
 For example, to add one deployment to ping-network, enter the following annotation in your descriptor in its metadata:
 
 ```yaml
+labels:
+  l2sm: "true"
 annotations:
-  k8s.v1.cni.cncf.io/networks: ping-network
+  l2sm/networks: ping-network
 ```
 
-If you want to add your own Multus annotations, you are free to do so! L2S-M will not interfere with the standard Multus behavior, so feel free to add your additional annotations if you need them.
 
 To assist you with the deployment of your first application with L2S-M, you can use the pod definitions available in this repository. To deploy both "ping-pong" pods (which are simple Ubuntu alpine containers), use the following commands:
 
