@@ -3,12 +3,17 @@
 
 This example demonstrates the isolation of traffic between pods using custom networks with L2S-M. In this scenario, two networks, v-network-1 and v-network-2, are created, and three pods (cdn-server, router, and content-server) are connected. The objective is to showcase how traffic can be isolated through a router connecting the two networks.
 
+## Pre-requisites
+
+In order to get this example moving, it's required to have L2S-M installed alongside an overlay topology deployed. You can learn how to do so in [the overlay example section](../overlay-setup).
+
 ## Topology
 This example can be seen in action [in the screencast provided](#procedure), where it's presented a Cluster scenario with three nodes, where a Pod will be deployed in each Node, as shown in the following figure:
 
 <p align="center">
   <img src="../../assets/video-server-example.svg" width="400">
 </p>
+
 
 The following example doesn't really need a three Node scenario, it can be used with just a Node in the Cluster. Through the example guide, we will create the following resources:
 
@@ -39,6 +44,8 @@ Note: The configurations specified can be seen in each Pod YAML specification.
   - IP: 10.0.2.2
   - Network: v-network-2
 
+
+It's required to specify which node you want to schedule your pod in, in order to do so, change the "NodeName" field inside the yaml files.
 ## Procedure
 
 Follow the steps below to demonstrate the isolation of traffic between pods using custom networks with L2S-M. You can watch a screencast of how this operates and how it should follow through this youtube video: 

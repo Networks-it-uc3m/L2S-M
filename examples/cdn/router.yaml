@@ -4,6 +4,7 @@ metadata:
   name: router
   labels:
     app: test4
+    l2sm: "true"
   annotations:
     l2sm/networks: '[{"name": "v-network-1","ips": ["10.0.1.1/24"]}, {"name": "v-network-2","ips": ["10.0.2.1/24"]}]'
 spec:
@@ -17,5 +18,5 @@ spec:
       privileged: true
       capabilities:
         add: ["NET_ADMIN"]
-  #nodeName: test-l2sm-uc3m-polito-2
+  nodeName: test-l2sm-uc3m-polito-2
 

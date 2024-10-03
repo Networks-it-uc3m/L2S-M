@@ -4,6 +4,7 @@ metadata:
   name: cdn-server
   labels:
     app: test4
+    l2sm: "true"
   annotations:
     l2sm/networks: '[{"name": "v-network-1", "ips":["10.0.1.2/24"]}]'
 spec:
@@ -14,4 +15,4 @@ spec:
     securityContext:
       capabilities:
         add: ["NET_ADMIN"]
-  #nodeName: test-l2sm-uc3m-polito-1
+  nodeName: test-l2sm-uc3m-polito-1
