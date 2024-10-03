@@ -6,7 +6,7 @@ The following figure outlines a high-level overview of L2S-M, with an illustrati
 
 ![alt text](../assets/v1_architecture.png?raw=true)
 
-**NOTE**: The current version of L2S-M utilizes an infrastructure of virtual switches based on [Open Virtual Switch (OVS)](http://www.openvswitch.org). The integration of physical switches is currently ongoing.
+**NOTE**: The current version of L2S-M utilizes an infrastructure of virtual switches based on [Open Virtual Switch (OVS)](http://www.openvswitch.org). This implementation can be followed up in https://github.com/Networks-it-uc3m/l2sm-switch .
 
 In L2S-M, a k8s node deploys a virtual SDN switch or is connected to a physical SDN switch. Virtual switches are interconnected through point-to-point links. These links are established using IP tunnels (based on VXLAN technologies). This way, SDN switches build an overlay network that interconnects all the K8s nodes. L2S-M uses an SDN controller to install forwarding rules on the virtual/physical switches. This way, data traffic among workloads is appropriately distributed through isolated virtual networks (i.e., the SDN controller instructs the switches which ports should be used to forward and/or block incoming/outgoing traffic).
 
@@ -14,6 +14,6 @@ Specifically for K8s clusters, the element in charge of managing the creation, d
 
 To provide isolation among virtual networks, the operator interacts with the SDN controller component to communicate which ports are associated with each virtual network, updating its status every time a pod is deployed/deleted. Using this information, the SDN controller injects the corresponding rules in the switches, forwarding and/or blocking traffic according to the virtual networks being used at each moment.
 
-**NOTE**: The current version of L2S-M utilizes a simple-switch implementation based on the [RYU](https://ryu.readthedocs.io/en/latest/) SDN controller. An SDN application to specifically support virtual network isolation is currently under implementation.
+**NOTE**: The current version of L2S-M utilizes a custom implementation of SDN controller. This sdn controller implementation can be seen at https://github.com/Networks-it-uc3m/l2sm-controller .
 
-More information on how to deploy virtualise workloads attached to virtual networks can be seen in the [ping-pong](https://github.com/Networks-it-uc3m/L2S-M/tree/main/examples/ping-pong) example.
+More information on how to use this solution can be seen in the [how to use guide](./general-use.md).
