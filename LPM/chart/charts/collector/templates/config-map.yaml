@@ -1,0 +1,29 @@
+{{- range .Values.global.nodes }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .name }}-config
+data:
+  config.json: |
+    {
+      "Nodename": "{{ .name  }}",
+      "MetricsNeighbourNodes": [
+        {{- $root := . }}
+        {{- $first := true }}
+        {{- range $index, $elem := $.Values.global.nodes }}
+        {{- if ne  $elem.name $root.name }}
+        {{- if eq  $first false }},{{end}}
+        {
+          "name": "{{ $elem.name }}",
+          "ip": "{{ (split "/" $elem.ip)._0 }}",
+          "rttInterval": {{ $elem.metrics.rttInterval }},
+          "throughputInterval": {{ $elem.metrics.throughputInterval }},
+          "jitterInterval": {{ $elem.metrics.jitterInterval }}
+        }
+        {{- $first = false }}
+        {{- end }}
+        {{- end }}
+      ]
+    }
+---
+{{- end }}
