@@ -1,0 +1,28 @@
+name: Sync to GitLab
+
+on:
+  push:
+    branches:
+      - nemo
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout GitHub repository
+        uses: actions/checkout@v3
+        with:
+          ref: nemo
+
+      - name: Configure Git
+        run: |
+          git config user.name "Tjaarda1"
+          git config user.email "100383348@alumnos.uc3m.es"
+
+      - name: Add GitLab remote
+        run: |
+          git remote add gitlab https://oauth2:${{ secrets.GITLAB_TOKEN }}@gitlab.eclipse.org/eclipse-research-labs/nemo-project/nemo-infrastructure-management/federated-meta-network-cluster-controller/multi-domain-l2s-m.git
+
+      - name: Push to GitLab
+        run: |
+          git push gitlab nemo:development

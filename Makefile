@@ -22,6 +22,8 @@ CONTAINER_TOOL ?= sudo docker
 SHELL = /usr/bin/env bash -o pipefail
 .SHELLFLAGS = -ec
 
+REPOSITORY=L2S-M
+
 .PHONY: all
 all: build
 
@@ -182,6 +184,22 @@ undeploy-dev: kustomize ## Undeploy validating and mutating webhooks from the K8
 	$(KUSTOMIZE) build config/dev | $(KUBECTL) delete --ignore-not-found=$(ignore-not-found) -f -
 
 
+# Define file extensions for various formats
+FILES := $(shell find . -type f \( -name "*.go" -o -name "*.json" -o -name "*.yaml" -o -name "*.yml" -o -name "*.md" \))
+
+# Install the addlicense tool if not installed
+.PHONY: install-tools
+install-tools:
+	@go install github.com/google/addlicense@latest
+
+# Add license headers to the files
+.PHONY: add-license
+add-license: install-tools
+	@for file in $(FILES); do \
+		addlicense -f ./hack/LICENSE.txt -l apache "$${file}"; \
+	done
+
+
 ##@ Dependencies
 
 ## Location to install dependencies to
@@ -222,6 +240,7 @@ golangci-lint: $(GOLANGCI_LINT) ## Download golangci-lint locally if necessary.
 $(GOLANGCI_LINT): $(LOCALBIN)
 	$(call go-install-tool,$(GOLANGCI_LINT),github.com/golangci/golangci-lint/cmd/golangci-lint,${GOLANGCI_LINT_VERSION})
 
+
 # go-install-tool will 'go install' any package with custom target and name of binary, if it doesn't exist
 # $1 - target path with name of binary (ideally with version)
 # $2 - package url which can be installed
@@ -235,3 +254,4 @@ GOBIN=$(LOCALBIN) go install $${package} ;\
 mv "$$(echo "$(1)" | sed "s/-$(3)$$//")" $(1) ;\
 }
 endef
+
