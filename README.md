@@ -13,7 +13,8 @@ The figure outlines the design of L2S-M. See [how L2S-M works](./additional-info
 
 If you want to learn how to install L2S-M in your cluster, see the [installation guide](./deployments) of this repository to start its installation.
 
-Did you already install the operator and  you cannot wait to start building your own virtual networks in your K8s cluster? Check out our [ping-pong](./examples/ping-pong) example!
+
+Did you already install the operator and  you cannot wait to start building your own virtual networks in your K8s cluster? Check out our [general usage guide](./additional-info/general-use.md)! If you're more interested in seeing a simple working example, you can start out with the [ping pong example](./examples/ping-pong/).
 
 If you want more information about the original idea of L2S-M and its initial design, you can check our latest publication in the [IEEE Network journal](https://ieeexplore.ieee.org/document/9740640):
 
@@ -26,11 +27,10 @@ Did you like L2S-M and want to use it in your K8s infrastructure or project? Ple
 This [video](https://youtube.com/watch?v=Oj2gzm-YxYE&si=bV9eN77wTlXQZY3Y) exemplifies the process to create virtual networks in Kubernetes using the L2S-M open-source software. More concretely, it shows how L2S is used to create a simple content distribution network on a Kubernetes cluster.
 
 ### Inter-cluster communications
-We are currently working on a solution to enable communications among workloads deployed on differente Kubernetes clusters. The solution enables the creation and deletion of virtual link-layer networks to connect application workloads running in different virtualization domains. This way, it supports inter-domain link-layer communications among remote workloads.  
 
-The solution can work jointly with L2S-M or be used standalone through the [Multus CNI](https://github.com/k8snetworkplumbingwg/multus-cni). Details can be checked [here](https://github.com/Networks-it-uc3m/snd-based-inter-cluster-communications/blob/main/README.md).
+One of the most interesting features L2S-M has is that it enables communications among workloads deployed on differente Kubernetes clusters. You can perform the creation and deletion of virtual link-layer networks to connect application workloads running in different virtualization domains. This way, it supports inter-domain link-layer communications among remote workloads.  
 
-The solution enables the creation and deletion of virtual link-layer networks to connect application workloads running in different virtualization domains. This way, it supports inter-domain link-layer communications among remote workloads.
+The solution can work jointly with L2S-M or be used standalone through the [Multus CNI](https://github.com/k8snetworkplumbingwg/multus-cni). Details can be checked [here](./additional-info/inter-cluster.md). Even though the inter-cluster solution is meant to be used via [the multi-domain client](http://github.com/Networks-it-uc3m/l2sm-md), we provide examples of how can you manually set up an entire inter-cluster virtual overlay network in the [inter cluster setup guide](./examples/inter-cluster-setup/).  If you have your infrastructure ready, you can go ahead to the [inter cluster networks example](./examples/inter-cluster-network)!
 
 ### Additional information about L2S-M
 In the [following section](./additional-info) of the repository, you can find a series of documents and slides that provide additional information about L2S-M, including presentations where our solution has been showcased to the public in various events.
@@ -71,10 +71,10 @@ Do you have any doubts about L2S-M or its installation? Do you want to provide f
 - Diego R. Lopez: diego.r.lopez@telefonica.com (Telefónica I+D)
 
 
-### Acknowledment
+### Acknowledgement
 The work in this open-source project has partially been supported by the European Horizon NEMO project (grant agreement 101070118), the European Horizon CODECO project (grant agreement 101092696), and by the national 6GINSPIRE project (PID2022-137329OB-C429). 
 
-### Other projects where L2S-M has been used
+#### Other projects where L2S-M has been used
 - H2020 FISHY Project: https://fishy-project.eu (grant agreement 952644) 
 - True5G Project: (PID2019-108713RB-C52 / AEI / 10.13039/501100011033)
 - H2020 Labyrinth project: https://labyrinth2020.eu/ (grant agreement 861696).
