@@ -9,33 +9,4 @@ metadata:
     app.kubernetes.io/created-by: controllermanager
   name: overlay-sample
 spec:
-  networkController:
-    name: example-network-controller
-    domain: controller.example.com
-  topology:
-    nodes:
-      - ant-machine
-      - mole
-    links:
-      - endpointA: ant-machine
-        endpointB: mole
-  switchTemplate:
-    spec:
-      containers:
-        - name: l2sm-switch
-          image: alexdecb/l2sm-switch:2.6
-          resources: {}
-          env:
-          - name: NODENAME
-            valueFrom:
-              fieldRef:
-                fieldPath: spec.nodeName
-          - name: NVETHS
-            value: "10"  
-          - name: CONTROLLERIP
-            value: "l2sm-controller-service"
-          securityContext:
-            capabilities:
-              add: ["NET_ADMIN"]
-          ports:
-            - containerPort: 80
+  # TODO(user): Add fields here

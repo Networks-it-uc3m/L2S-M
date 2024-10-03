@@ -5,7 +5,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"net"
 	"os"
 	"ovs-switch/pkg/ovs"
 )
@@ -13,7 +12,7 @@ import (
 type Node struct {
 	Name          string   `json:"name"`
 	NodeIP        string   `json:"nodeIP"`
-	NeighborNodes []string `json:"neighborNodes,omitempty"`
+	NeighborNodes []string `json:"neighborNodes"`
 }
 
 type Link struct {
@@ -122,18 +121,7 @@ func createTopology(bridge ovs.Bridge, topology Topology, nodeName string) error
 
 	nodeMap := make(map[string]string)
 	for _, node := range topology.Nodes {
-		var nodeIP string
-		if net.ParseIP(nodeIP) != nil {
-			nodeIP = node.NodeIP
-		} else {
-			ips, err := net.LookupHost(node.NodeIP)
-			if err != nil || len(ips) == 0 {
-				fmt.Printf("Failed to resolve %s\n", node.NodeIP)
-				continue
-			}
-			nodeIP = ips[0]
-		}
-		nodeMap[node.Name] = nodeIP
+		nodeMap[node.Name] = node.NodeIP
 	}
 
 	localIp := nodeMap[nodeName]

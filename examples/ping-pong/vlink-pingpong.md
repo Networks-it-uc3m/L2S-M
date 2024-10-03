@@ -69,6 +69,7 @@ metadata:
   name: ping
   labels:
     app: ping-pong
+    l2sm: "true"
   annotations:
     l2sm/networks:  '[
             { "name": "vlink-sample",
@@ -98,6 +99,7 @@ metadata:
   name: pong
   labels:
     app: ping-pong
+    l2sm: "true"
   annotations:
     l2sm/networks:  '[
             { "name": "vlink-sample",

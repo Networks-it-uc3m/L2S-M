@@ -16,4 +16,4 @@ To provide isolation among virtual networks, the operator interacts with the SDN
 
 **NOTE**: The current version of L2S-M utilizes a simple-switch implementation based on the [RYU](https://ryu.readthedocs.io/en/latest/) SDN controller. An SDN application to specifically support virtual network isolation is currently under implementation.
 
-More information on how to deploy virtualise workloads attached to virtual networks can be seen in the [ping-pong](https://github.com/Networks-it-uc3m/L2S-M/tree/main/descriptors) example.
+More information on how to deploy virtualise workloads attached to virtual networks can be seen in the [ping-pong](../examples/ping-pong/) example.
