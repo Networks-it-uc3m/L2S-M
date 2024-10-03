@@ -1,0 +1,27 @@
+apiVersion: l2sm.l2sm.k8s.local/v1
+kind: L2Network
+metadata:
+  name: vlink-sample
+spec:
+  type: vlink
+  config: |
+    {
+      "overlay-parameters": {
+        "path": {
+          "name": "first-path",
+          "FromEndpoint": "node-a",
+          "ToEndpoint": "node-e",
+          "links": ["link-ac","link-cd","link-de"],
+          "capabilities": {
+            "bandwidthBits": "20M",
+            "latencyNanos": "8e5"
+          }
+        },
+        "reverse-path": {
+          "name": "second-path",
+          "fromEndpoint": "node-e",
+          "toEndpoint": "node-a",
+          "links": ["link-ed","link-db","link-ba"]
+        }
+      }
+    }
