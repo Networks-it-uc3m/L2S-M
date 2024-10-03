@@ -1,0 +1,29 @@
+apiVersion: l2sm.l2sm.k8s.local/v1
+kind: NetworkEdgeDevice
+metadata:
+  name: example-ned
+  labels:
+    app: l2sm
+spec:
+  networkController:
+    name: idco-controller
+    domain: 192.168.122.60
+  nodeConfig:
+    nodeName: ant-machine
+    ipAddress: 192.168.122.60
+  neighbors:
+    - node: tucci
+      domain: 192.168.122.244
+  switchTemplate:
+    spec:
+      hostNetwork: true
+      containers:
+        - name: l2sm-ned
+          image: alexdecb/l2sm-ned:2.7.1
+          resources: {}
+          command: ["./setup_ned.sh"]
+          ports:
+            - containerPort: 80
+          securityContext:
+            capabilities:
+              add: ["NET_ADMIN"]

@@ -1,0 +1,9 @@
+apiVersion: l2sm.l2sm.k8s.local/v1
+kind: L2Network
+metadata:
+  name: ping-network
+spec:
+  type: vnet
+  provider:
+    name: idco-controller
+    domain: "192.168.122.60:8181"
