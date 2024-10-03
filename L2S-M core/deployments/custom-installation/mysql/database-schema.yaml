@@ -1,0 +1,78 @@
+#-------------------------------------------------------------------------------
+# Copyright 2024  Universidad Carlos III de Madrid
+# 
+# Licensed under the Apache License, Version 2.0 (the "License"); you may not
+# use this file except in compliance with the License.  You may obtain a copy
+# of the License at
+# 
+#   http://www.apache.org/licenses/LICENSE-2.0
+# 
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+# License for the specific language governing permissions and limitations under
+# the License.
+# 
+# SPDX-License-Identifier: Apache-2.0
+#-------------------------------------------------------------------------------
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mysql-schema
+data:
+  init.sql: |
+  
+    CREATE DATABASE IF NOT EXISTS l2sm;
+    USE l2sm;
+
+    CREATE TABLE networks (
+      id INT PRIMARY KEY AUTO_INCREMENT,
+      name VARCHAR(255) NOT NULL,
+      type ENUM('vlink', 'vnet', 'ext-vnet') NOT NULL,
+      UNIQUE KEY unique_network_name (name, type)
+    );
+
+    CREATE TABLE switches (
+      id INT PRIMARY KEY AUTO_INCREMENT,
+      node_name VARCHAR(255) NOT NULL,
+      openflowId TEXT,
+      ip VARCHAR(15)
+    );
+
+    CREATE TABLE neds (
+      id INT PRIMARY KEY AUTO_INCREMENT,
+      node_name VARCHAR(255) NOT NULL,
+      provider VARCHAR(255) NOT NULL,
+      openflowId TEXT,
+      ip VARCHAR(15)
+    );
+
+    CREATE TABLE interfaces (
+      id INT PRIMARY KEY AUTO_INCREMENT,
+      name VARCHAR(255),
+      pod VARCHAR(255),
+      switch_id INT,
+      ned_id INT,
+      network_id INT,
+      FOREIGN KEY (switch_id) REFERENCES switches(id),
+      FOREIGN KEY (ned_id) REFERENCES neds(id),
+      FOREIGN KEY (network_id) REFERENCES networks(id)
+    );
+
+    -- Define the one-to-many relationship between switches and interfaces
+    ALTER TABLE interfaces
+    ADD CONSTRAINT fk_switch_interface
+    FOREIGN KEY (switch_id)
+    REFERENCES switches(id);
+
+    -- Define the one-to-many relationship between neds and interfaces
+    ALTER TABLE interfaces
+    ADD CONSTRAINT fk_ned_interface
+    FOREIGN KEY (ned_id)
+    REFERENCES neds(id);
+
+    -- Define the many-to-one relationship between networks and interfaces
+    ALTER TABLE interfaces
+    ADD CONSTRAINT fk_network_interface
+    FOREIGN KEY (network_id)
+    REFERENCES networks(id);

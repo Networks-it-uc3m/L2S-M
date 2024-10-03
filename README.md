@@ -59,7 +59,6 @@ The following publications and references showcase various use cases where L2S-M
 * **Secure Federated Learning use case:** This use case, done in collaboration with the University of Bristol, was centred around the implementation of a secured federated learning infrastructure. L2S-M enabled the isolated and secured communication between the FL clients and the server.
     - J. M. Parra-Ullauri, L. F. Gonzalez, A. Bravalheri, R. Hussain, X. Vasilakos, I. Vidal, F. Valera, R. Nejabati, and D. Simeonidou, 'Privacy Preservation in Kubernetes-based Federated Learning: A Networking Approach,' in IEEE INFOCOM2023 - IEEE Conference on Computer CommunicationsWorkshops (INFOCOMWKSHPS), 2023, pp. 1--7. *DOI: 10.1109/INFOCOMWKSHPS57453.2023.10225925*.
 
-
 ### How to reach us
 
 Do you have any doubts about L2S-M or its installation? Do you want to provide feedback about the solution? Please, do not hesitate to contact us out through e-mail!

@@ -1,0 +1,18 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Kopf Run: l2sm-operator",
+            "type": "node-terminal",
+            "request": "launch",
+            "command": "kopf run ${workspaceFolder}/src/operator/l2sm-operator.py",
+            "env": {
+                "CONTROLLER_IP": "10.152.183.3", 
+                "DATABASE_IP": "10.152.183.132",
+                "MYSQL_USER": "l2sm",
+                "MYSQL_PASSWORD": "l2sm",
+                "MYSQL_DATABASE": "l2sm"
+            }
+        }
+    ]
+}

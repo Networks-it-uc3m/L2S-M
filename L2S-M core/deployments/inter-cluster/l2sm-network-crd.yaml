@@ -1,0 +1,56 @@
+#-------------------------------------------------------------------------------
+# Copyright 2024  Universidad Carlos III de Madrid
+# 
+# Licensed under the Apache License, Version 2.0 (the "License"); you may not
+# use this file except in compliance with the License.  You may obtain a copy
+# of the License at
+# 
+#   http://www.apache.org/licenses/LICENSE-2.0
+# 
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+# License for the specific language governing permissions and limitations under
+# the License.
+# 
+# SPDX-License-Identifier: Apache-2.0
+#-------------------------------------------------------------------------------
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: l2sm-networks.l2sm.k8s.local
+spec:
+  group: l2sm.k8s.local
+  versions:
+    - name: v1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                type:
+                  type: string
+                config:
+                  type: string 
+                  nullable: true
+                signature:
+                  type: string
+                  nullable: true
+            status:
+              type: object
+              properties:
+                connectedPods:
+                  type: array
+                  items:
+                    type: string
+  scope: Namespaced
+  names:
+    plural: l2sm-networks
+    singular: l2sm-network
+    kind: L2SMNetwork
+    shortNames:
+      - l2sm-net
