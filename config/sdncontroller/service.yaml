@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: controller-service
+spec:
+  selector:
+    app: controller
+  ports:
+  - name: of13-port
+    protocol: TCP
+    port: 6633
+    targetPort: 6633
+  - name: http-port
+    protocol: TCP
+    port: 8181
+    targetPort: 8181
+  type: ClusterIP

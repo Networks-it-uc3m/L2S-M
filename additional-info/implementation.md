@@ -107,5 +107,5 @@ its dependencies.
 Users can just run kubectl apply -f <URL for YAML BUNDLE> to install the project, i.e.:
 
 ```sh
-kubectl apply -f https://raw.githubusercontent.com/<org>/L2S-M/<tag or branch>/deployments/install.yaml
+kubectl apply -f https://raw.githubusercontent.com/<org>/L2S-M/<tag or branch>/deployments/l2sm-deployment.yaml
 ```

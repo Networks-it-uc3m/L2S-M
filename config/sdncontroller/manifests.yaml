@@ -1,17 +1,16 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: l2sm-controller
-  namespace: l2sm-system
+  name: controller
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: l2sm-controller
+      app: controller
   template:
     metadata:
       labels:
-        app: l2sm-controller
+        app: controller
     spec:
       containers:
       - name: l2sm-controller
@@ -26,22 +25,3 @@ spec:
         - containerPort: 6633
         - containerPort: 8181
         # imagePullPolicy: Always
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: l2sm-controller-service
-  namespace: l2sm-system
-spec:
-  selector:
-    app: l2sm-controller
-  ports:
-  - name: of13-port
-    protocol: TCP
-    port: 6633
-    targetPort: 6633
-  - name: http-port
-    protocol: TCP
-    port: 8181
-    targetPort: 8181
-  type: ClusterIP

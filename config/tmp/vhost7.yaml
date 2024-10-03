@@ -3,7 +3,6 @@ apiVersion: "k8s.cni.cncf.io/v1"
 kind: NetworkAttachmentDefinition
 metadata:
   name: veth7
-  namespace: l2sm-system
   labels:
     app: l2sm
 spec:

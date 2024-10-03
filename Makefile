@@ -119,11 +119,12 @@ docker-buildx: ## Build and push docker image for the manager for cross-platform
 
 .PHONY: build-installer
 build-installer: manifests generate kustomize ## Generate a consolidated YAML with CRDs and deployment.
-	mkdir -p dist
-	echo "" > deployments/install.yaml
-	echo "---" >> deployments/install.yaml  # Add a document separator before appending
+	echo "" > deployments/l2sm-deployment.yaml
+	echo "---" >> deployments/l2sm-deployment.yaml  # Add a document separator before appending
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
-	$(KUSTOMIZE) build config/default >> deployments/install.yaml
+	$(KUSTOMIZE) build config/default >> deployments/l2sm-deployment.yaml
+	$(KUSTOMIZE) build config/tmp >> deployments/l2sm-deployment.yaml
+
 
 ##@ Deployment
 
@@ -143,9 +144,11 @@ uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified 
 deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 	$(KUSTOMIZE) build config/default | $(KUBECTL) apply -f -
+	$(KUSTOMIZE) build config/tmp | $(KUBECTL) apply -f -
 
 .PHONY: undeploy
 undeploy: kustomize ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
+	$(KUSTOMIZE) build config/tmp | $(KUBECTL) delete --ignore-not-found=$(ignore-not-found) -f -
 	$(KUSTOMIZE) build config/default | $(KUBECTL) delete --ignore-not-found=$(ignore-not-found) -f -
 
 .PHONY: webhook-certs
@@ -168,14 +171,16 @@ webhook-certs: ## generate self-signed cert and key for local webhook developmen
 # 			-subj '/CN=local-webhook'
 ##@ Webhook
 
-.PHONY: deploy-webhook
-deploy-webhook: webhook-certs manifests kustomize ## Deploy validating and mutating webhooks to the K8s cluster specified in ~/.kube/config.
+.PHONY: deploy-dev
+deploy-dev: webhook-certs manifests kustomize ## Deploy validating and mutating webhooks to the K8s cluster specified in ~/.kube/config.
 	sed -i'' -e 's/caBundle: .*/caBundle: $(shell cat /tmp/k8s-webhook-server/tls.b64)/' ./config/dev/webhookcainjection_patch.yaml
 	$(KUSTOMIZE) build config/dev | $(KUBECTL) apply -f -
 
-.PHONY: undeploy-webhook
-undeploy-webhook: kustomize ## Undeploy validating and mutating webhooks from the K8s cluster specified in ~/.kube/config.
+
+.PHONY: undeploy-dev
+undeploy-dev: kustomize ## Undeploy validating and mutating webhooks from the K8s cluster specified in ~/.kube/config.
 	$(KUSTOMIZE) build config/dev | $(KUBECTL) delete --ignore-not-found=$(ignore-not-found) -f -
+
 
 ##@ Dependencies
 

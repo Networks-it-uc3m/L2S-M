@@ -8,19 +8,12 @@ This guide details the necessary steps to install the L2S-M Kubernetes operator 
 
 2. Install the Multus CNI Plugin in your K8s cluster. For more information on how to install Multus in your cluster, check their [official GitHub repository](https://github.com/k8snetworkplumbingwg/multus-cni).
 
-3. The host-device CNI plugin must be able to be used in your cluster. If it is not present in your K8s distribution, you can find how to install it in your K8s cluster in their [official GitHub repository](https://github.com/containernetworking/plugins).
+3. Install the Cert-Manager in your K8s cluster. For more information on how to install Cert-Manager in your cluster, check their official installation guide.
 
-4. Your K8s Control-Plane node must be able to deploy K8s pods for the operator to work. Remove its master and control-plane taints using the following command:
-```bash
-kubectl taint nodes --all node-role.kubernetes.io/control-plane- node-role.kubernetes.io/master-
-```
-5. It is neccessary to label your control-plane node as the "control-plane" of the cluster. To do so, get the names of your Kubernetes nodes, select the control-plane and apply the "control-plane" label with the following command:
+4. The host-device CNI plugin must be able to be used in your cluster. If it is not present in your K8s distribution, you can find how to install it in your K8s cluster in their [official GitHub repository](https://github.com/containernetworking/plugins). 
 
-```bash
-kubectl get nodes
-kubectl label nodes [your-control-plane-node] dedicated=control-plane
-```
- 
+5. Make sure that packages are forwarded by default: `sudo  iptables -P FORWARD ACCEPT`
+
 ## Install L2S-M
 
 Installing L2S-M can be done by using a single command:
@@ -32,24 +25,16 @@ kubectl create -f ./deployments/l2sm-deployment.yaml
 The installation will take around a minute to finish, and to check that everyting is running properly, you may run the following command:
 
 ```bash
-kubectl get pods -o wide
+kubectl get pods -o wide -n l2sm-system
 ```
 
 Which should give you an output like this:
 
 ```bash
-NAME                               READY   STATUS    RESTARTS   AGE    IP           NODE    NOMINATED NODE   READINESS GATES
-l2sm-controller-56b45487b7-nglns   1/1     Running   0          129m   10.1.72.72   l2sm2   <none>           <none>
-l2sm-operator-7794c5f66d-b9nsf     2/2     Running   0          119m   10.1.14.45   l2sm1   <none>           <none>
-l2sm-switch-49qpq                  1/1     Running   0          129m   10.1.14.63   l2sm1   <none>           <none>
-l2sm-switch-2g696                  1/1     Running   0          129m   10.1.72.73   l2sm2   <none>           <none>
+NAME                                        READY   STATUS    RESTARTS   AGE    IP           NODE    NOMINATED NODE   READINESS GATES
+l2sm-controller-56b45487b7-nglns             1/1     Running   0          129m   10.1.72.72   l2sm2   <none>           <none>
+l2sm-controller-manager-7794c5f66d-b9nsf     2/2     Running   0          119m   10.1.14.45   l2sm1   <none>           <none>
 ```
-With the components: _l2sm-controller_, _l2sm-operator_ and one _l2sm-switch_ for **each** node in the cluster. 
 
-After the installation, you can start using L2S-M in one Node. If your Cluster has more than one Node, additional steps must be done, to configure which Nodes are connected between themselves as can be seen in the next subsection, configuring the VxLAN tunnels.
 
-## Configuring VxLANs
-
-Each Node enables the creation of custom L2S-M networks, as can be seen in the [examples section.](../examples/) But for communicating pods that are in different Nodes of the cluster, additional configuration must be done, the VxLAN tunnels between them.
-
-But don't worry! A guide on how this is configured step by step is outlined in [the vxlan configuration guide.](../deployments/vxlans.md)
+After the installation, you can start using L2S-M. The first thing you want to do is to create an overlay topology, that will be the basis of the virtual network creations, but don't worry! Check out the [overlay setup guide](../examples/overlay-setup/) for more information.

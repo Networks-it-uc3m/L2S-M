@@ -1,0 +1,12 @@
+namespace: l2sm-system
+resources:
+- vhost1.yaml
+- vhost2.yaml
+- vhost3.yaml
+- vhost4.yaml
+- vhost5.yaml
+- vhost6.yaml
+- vhost7.yaml
+- vhost8.yaml
+- vhost9.yaml
+- vhost10.yaml

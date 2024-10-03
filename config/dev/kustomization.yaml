@@ -1,5 +1,5 @@
 # # Adds namespace to all resources.
-# namespace: l2sm-system
+#namespace: l2sm-system
 
 # # Value of this field is prepended to the
 # # names of all resources, e.g. a deployment named
@@ -12,7 +12,8 @@ resources:
 # [WEBHOOK] To enable webhook, uncomment all the sections with [WEBHOOK] prefix including the one in
 # crd/kustomization.yaml
 - ../webhook
-
+- ../sdncontroller
+- ../tmp
 patches:
 - path: webhookcainjection_patch.yaml
 
