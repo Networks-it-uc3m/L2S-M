@@ -1,0 +1,28 @@
+name: Sync to Codeco Intracom Gitlab
+
+on:
+  push:
+    branches:
+      - codeco-vlinks
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout GitHub repository
+        uses: actions/checkout@v3
+        with:
+          ref: codeco-vlinks
+
+      - name: Configure Git
+        run: |
+          git config user.name "Tjaarda1"
+          git config user.email "100383348@alumnos.uc3m.es"
+
+      - name: Add GitLab remote
+        run: |
+          git remote add gitlab https://oauth2:${{ secrets.GITLAB_CODECO_TOKEN }}@colab-repo.intracom-telecom.com/colab-projects/he-codeco/netma/secure-connectivity.git
+
+      - name: Push to GitLab
+        run: |
+          git push gitlab codeco-vlinks:development
