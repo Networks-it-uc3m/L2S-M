@@ -125,6 +125,7 @@ build-installer: manifests generate kustomize ## Generate a consolidated YAML wi
 	echo "---" >> deployments/l2sm-deployment.yaml  # Add a document separator before appending
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 	$(KUSTOMIZE) build config/default >> deployments/l2sm-deployment.yaml
+	echo "---" >> deployments/l2sm-deployment.yaml  # Add a document separator before appending
 	$(KUSTOMIZE) build config/tmp >> deployments/l2sm-deployment.yaml
 
 
