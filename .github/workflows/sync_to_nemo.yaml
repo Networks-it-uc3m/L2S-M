@@ -21,8 +21,8 @@ jobs:
 
       - name: Add GitLab remote
         run: |
-          git remote add gitlab https://oauth2:${{ secrets.GITLAB_TOKEN }}@gitlab.eclipse.org/eclipse-research-labs/nemo-project/nemo-infrastructure-management/federated-meta-network-cluster-controller/multi-domain-l2s-m.git
+          git remote add nemo-gitlab https://oauth2:${{ secrets.GITLAB_TOKEN }}@gitlab.eclipse.org/eclipse-research-labs/nemo-project/nemo-infrastructure-management/federated-meta-network-cluster-controller/multi-domain-l2s-m.git
 
       - name: Push to GitLab
         run: |
-          git push gitlab nemo:development
+          git push nemo-gitlab nemo:development
