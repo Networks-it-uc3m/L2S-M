@@ -59,6 +59,18 @@ rules:
 - apiGroups:
   - l2sm.l2sm.k8s.local
   resources:
+  - configmaps
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - l2sm.l2sm.k8s.local
+  resources:
   - l2networks
   verbs:
   - create
@@ -138,6 +150,18 @@ rules:
   - l2sm.l2sm.k8s.local
   resources:
   - replicasets
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - l2sm.l2sm.k8s.local
+  resources:
+  - services
   verbs:
   - create
   - delete
