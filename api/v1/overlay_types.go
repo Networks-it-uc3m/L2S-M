@@ -45,11 +45,12 @@ type OverlaySpec struct {
 	// selecting the nodes that are going to be linked.
 	Topology *TopologySpec `json:"topology,omitempty"`
 
-	// Field exclusive to the multi-domain overlay type. If specified in other  types of overlays, the reosurce will launch an error and won't be created.
-	Neighbors []NeighborSpec `json:"neighbors,omitempty"`
-
 	// Template describes the virtual switch pod that will be created.
 	SwitchTemplate *SwitchTemplateSpec `json:"switchTemplate"`
+
+	// Interface number specifies how many interfaces the switch should have predefined (if used with multus)
+	//+kubebuilder:default:value=10
+	InterfaceNumber int `json:"interfaceNumber,omitempty"`
 }
 
 // OverlayStatus defines the observed state of Overlay

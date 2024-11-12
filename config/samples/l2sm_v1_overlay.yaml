@@ -44,14 +44,6 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: spec.nodeName
-          - name: NVETHS
-            value: "10"  
-          - name: CONTROLLERIP
-            value: "l2sm-controller-service"
-          - name: PODNAME
-            valueFrom:
-              fieldRef:
-                fieldPath: metadata.name
           imagePullPolicy: Always
           securityContext:
             capabilities:

@@ -5,6 +5,7 @@ go 1.21.7
 toolchain go1.22.5
 
 require (
+	github.com/Networks-it-uc3m/l2sm-switch v1.0.2
 	github.com/go-logr/logr v1.4.1
 	github.com/onsi/ginkgo/v2 v2.14.0
 	github.com/onsi/gomega v1.30.0
@@ -12,7 +13,6 @@ require (
 	k8s.io/api v0.29.0
 	k8s.io/apimachinery v0.29.0
 	k8s.io/client-go v0.29.0
-	github.com/Networks-it-uc3m/l2sm-switch v1.0.0
 	sigs.k8s.io/controller-runtime v0.17.0
 
 )
