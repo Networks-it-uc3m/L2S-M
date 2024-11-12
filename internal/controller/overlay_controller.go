@@ -44,12 +44,14 @@ type OverlayReconciler struct {
 var replicaSetOwnerKeyOverlay = ".metadata.controller.overlay"
 
 // +kubebuilder:rbac:groups=l2sm.l2sm.k8s.local,resources=configmaps,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=l2sm.l2sm.k8s.local,resources=configmaps,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=l2sm.l2sm.k8s.local,resources=services,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=l2sm.l2sm.k8s.local,resources=replicasets,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=apps,resources=replicasets,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=l2sm.l2sm.k8s.local,resources=overlays,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=l2sm.l2sm.k8s.local,resources=overlays/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=l2sm.l2sm.k8s.local,resources=overlays/finalizers,verbs=update
+// +kubebuilder:rbac:groups=k8s.cni.cncf.io,resources=network-attachment-definitions,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -92,11 +94,11 @@ func (r *OverlayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		// The object is being deleted
 		if controllerutil.ContainsFinalizer(overlay, l2smFinalizer) {
 			// our finalizer is present, so lets handle any external dependency
-			// if err := r.deleteExternalResources(ctx, overlay); err != nil {
-			// 	// if fail to delete the external dependency here, return with error
-			// 	// so that it can be retried.
-			// 	return ctrl.Result{}, err
-			// }
+			if err := r.deleteExternalResources(ctx, overlay); err != nil {
+				// if fail to delete the external dependency here, return with error
+				// so that it can be retried.
+				return ctrl.Result{}, err
+			}
 
 			// remove our finalizer from the list and update it.
 			controllerutil.RemoveFinalizer(overlay, l2smFinalizer)
@@ -158,10 +160,14 @@ func (r *OverlayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-// func (r *OverlayReconciler) deleteExternalResources(ctx context.Context, overlay *l2smv1.Overlay) error {
-
-// 	return nil
-// }
+func (r *OverlayReconciler) deleteExternalResources(ctx context.Context, overlay *l2smv1.Overlay) error {
+	opts := []client.DeleteAllOfOption{
+		client.InNamespace(overlay.Namespace),
+		client.MatchingLabels{"overlay": overlay.Name},
+	}
+	r.Client.DeleteAllOf(ctx, &nettypes.NetworkAttachmentDefinition{}, opts...)
+	return nil
+}
 
 type OverlayConfigJson struct {
 	ControllerIp string `json:"ControllerIp"`
@@ -311,7 +317,7 @@ func (r *OverlayReconciler) createExternalResources(ctx context.Context, overlay
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      fmt.Sprintf("%s-veth%d", overlay.Name, i),
 					Namespace: overlay.Namespace,
-					Labels:    map[string]string{"app": "l2sm"},
+					Labels:    map[string]string{"app": "l2sm", "overlay": overlay.Name},
 				},
 				Spec: nettypes.NetworkAttachmentDefinitionSpec{
 					Config: fmt.Sprintf(`{
