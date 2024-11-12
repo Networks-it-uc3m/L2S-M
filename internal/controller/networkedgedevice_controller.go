@@ -22,6 +22,7 @@ import (
 
 	l2smv1 "github.com/Networks-it-uc3m/L2S-M/api/v1"
 	"github.com/Networks-it-uc3m/L2S-M/internal/utils"
+	switchv1 "github.com/Networks-it-uc3m/l2sm-switch/api/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -30,8 +31,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-
-	nedv1 "github.com/Networks-it-uc3m/l2sm-switch/api/v1"
 )
 
 // NetworkEdgeDeviceReconciler reconciles a NetworkEdgeDevice object
@@ -168,13 +167,13 @@ func (r *NetworkEdgeDeviceReconciler) createExternalResources(ctx context.Contex
 	for i, neighbor := range netEdgeDevice.Spec.Neighbors {
 		neighbors[i] = neighbor.Domain
 	}
-	nedNeighbors, err := json.Marshal(nedv1.Node{Name: netEdgeDevice.Spec.NodeConfig.NodeName, NodeIP: netEdgeDevice.Spec.NodeConfig.IPAddress, NeighborNodes: neighbors})
+	nedNeighbors, err := json.Marshal(switchv1.Node{Name: netEdgeDevice.Spec.NodeConfig.NodeName, NodeIP: netEdgeDevice.Spec.NodeConfig.IPAddress, NeighborNodes: neighbors})
 	if err != nil {
 		return err
 	}
 	nedName := utils.GetBridgeName(utils.BridgeParams{NodeName: netEdgeDevice.Spec.NodeConfig.NodeName, ProviderName: netEdgeDevice.Spec.NetworkController.Name})
 
-	nedConfig, err := json.Marshal(nedv1.NedSettings{ControllerIP: netEdgeDevice.Spec.NetworkController.Domain, NodeName: netEdgeDevice.Spec.NodeConfig.NodeName, NedName: nedName})
+	nedConfig, err := json.Marshal(switchv1.NedSettings{ControllerIP: netEdgeDevice.Spec.NetworkController.Domain, NodeName: netEdgeDevice.Spec.NodeConfig.NodeName, NedName: nedName})
 	if err != nil {
 		return err
 	}
