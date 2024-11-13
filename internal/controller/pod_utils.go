@@ -159,7 +159,7 @@ func GenerateAnnotations(overlayName string, ammount int) string {
 	annotationsString := []string{}
 	var newAnnotation string
 	for i := 1; i <= ammount; i++ {
-		newAnnotation = fmt.Sprintf(`{"name": "%s-veth%d", "ips": ["fe80::58d0:b8ff:fe%s:%s/64"]}`, overlayName, i, fmt.Sprintf("%02d", i), Generate4byteChunk)
+		newAnnotation = fmt.Sprintf(`{"name": "%s-veth%d", "ips": ["fe80::58d0:b8ff:fe%s:%s/64"]}`, overlayName, i, fmt.Sprintf("%02d", i), Generate4byteChunk())
 		annotationsString = append(annotationsString, newAnnotation)
 	}
 
@@ -169,9 +169,9 @@ func GenerateAnnotations(overlayName string, ammount int) string {
 func Generate4byteChunk() string {
 
 	// Generating the interface ID (64 bits)
-	interfaceID := rand.Uint64()
+	interfaceID := rand.Uint64() & 0xffff
 
-	// Formatting to a 16 character hexadecimal string
+	// Formatting to a 4 character hexadecimal string
 	interfaceIDHex := fmt.Sprintf("%04x", interfaceID)
 
 	return interfaceIDHex
