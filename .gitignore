@@ -1,3 +1,5 @@
 .vscode
 tls.b64
 bin/
+plugins/
+.env

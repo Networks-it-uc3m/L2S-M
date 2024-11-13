@@ -12,21 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
-apiVersion: "k8s.cni.cncf.io/v1"
-kind: NetworkAttachmentDefinition
+apiVersion: v1
+kind: Service
 metadata:
-  name: veth3
-  labels:
-    app: l2sm
+  name: controller-service
 spec:
-  config: '{
-      "cniVersion": "0.3.0",
-      "type": "bridge",
-      "bridge": "br3",
-      "mtu": 1400,
-      "device": "veth3",
-        "ipam": {
-          "type":"static"
-        }
-    }'
+  type: NodePort
+  ports:
+    - name: http-port
+      protocol: TCP
+      port: 8181
+      targetPort: 8181
+      nodePort: 30000

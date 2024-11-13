@@ -15,7 +15,7 @@ endif
 # Be aware that the target commands are only tested with Docker which is
 # scaffolded by default. However, you might want to replace it to use other
 # tools. (i.e. podman)
-CONTAINER_TOOL ?= sudo docker
+CONTAINER_TOOL ?= docker
 
 # Setting SHELL to bash allows bash commands to be executed by recipes.
 # Options are set to exit when a recipe line exits non-zero or a piped command fails.
@@ -125,8 +125,6 @@ build-installer: manifests generate kustomize ## Generate a consolidated YAML wi
 	echo "---" >> deployments/l2sm-deployment.yaml  # Add a document separator before appending
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 	$(KUSTOMIZE) build config/default >> deployments/l2sm-deployment.yaml
-	echo "---" >> deployments/l2sm-deployment.yaml  # Add a document separator before appending
-	$(KUSTOMIZE) build config/tmp >> deployments/l2sm-deployment.yaml
 
 
 ##@ Deployment
@@ -147,11 +145,9 @@ uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified 
 deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 	$(KUSTOMIZE) build config/default | $(KUBECTL) apply -f -
-	$(KUSTOMIZE) build config/tmp | $(KUBECTL) apply -f -
 
 .PHONY: undeploy
 undeploy: kustomize ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
-	$(KUSTOMIZE) build config/tmp | $(KUBECTL) delete --ignore-not-found=$(ignore-not-found) -f -
 	$(KUSTOMIZE) build config/default | $(KUBECTL) delete --ignore-not-found=$(ignore-not-found) -f -
 
 .PHONY: webhook-certs
@@ -159,27 +155,29 @@ webhook-certs: ## generate self-signed cert and key for local webhook developmen
 	mkdir -p /tmp/k8s-webhook-server/serving-certs
 	openssl req -x509 -newkey rsa:2048 -nodes -keyout /tmp/k8s-webhook-server/serving-certs/tls.key -out /tmp/k8s-webhook-server/serving-certs/tls.crt -days 365 -config ./config/dev/openssl.cnf -batch -subj '/CN=local-webhook'
 	cat /tmp/k8s-webhook-server/serving-certs/tls.crt | base64 -w0 > /tmp/k8s-webhook-server/tls.b64
-# $(eval B64_CERT := $(shell cat /tmp/k8s-webhook-server/tls.b64))
-# echo $(B64_CERT)
-# cat /tmp/k8s-webhook-server/tls.b64
 
 
 
-# openssl req -x509 \
-# 			-newkey rsa:2048 \
-# 			-nodes \
-# 			-keyout /tmp/k8s-webhook-server/serving-certs/tls.key \
-# 			-out /tmp/k8s-webhook-server/serving-certs/tls.crt \
-# 			-days 365 \
-# 			-subj '/CN=local-webhook'
-##@ Webhook
 
+
+
+
+.PHONY: create-cluster
+create-cluster:
+	kind create cluster --config ./examples/quickstart/kind-cluster.yaml
+	./hack/install_dependencies.sh
+
+.PHONY: delete-cluster
+delete-cluster:
+	kind delete cluster --name l2sm-test
+	sudo rm -r ./plugins/
+	
 .PHONY: deploy-dev
 deploy-dev: webhook-certs manifests kustomize ## Deploy validating and mutating webhooks to the K8s cluster specified in ~/.kube/config.
 	sed -i'' -e 's/caBundle: .*/caBundle: $(shell cat /tmp/k8s-webhook-server/tls.b64)/' ./config/dev/webhookcainjection_patch.yaml
 	$(KUSTOMIZE) build config/dev | $(KUBECTL) apply -f -
-
-
+	echo -e "CONTROLLER_IP=localhost\nCONTROLLER_PORT=30000" > .env
+	
 .PHONY: undeploy-dev
 undeploy-dev: kustomize ## Undeploy validating and mutating webhooks from the K8s cluster specified in ~/.kube/config.
 	$(KUSTOMIZE) build config/dev | $(KUBECTL) delete --ignore-not-found=$(ignore-not-found) -f -
