@@ -253,12 +253,7 @@ func (r *OverlayReconciler) createExternalResources(ctx context.Context, overlay
 		// Define volume mounts to be added to each container
 		volumeMounts := []corev1.VolumeMount{
 			{
-				Name:      "topology",
-				MountPath: "/etc/l2sm/",
-				ReadOnly:  true,
-			},
-			{
-				Name:      "configuration",
+				Name:      "config",
 				MountPath: "/etc/l2sm/",
 				ReadOnly:  true,
 			},
@@ -274,7 +269,7 @@ func (r *OverlayReconciler) createExternalResources(ctx context.Context, overlay
 		// Define the volume using the created ConfigMap
 		volumes := []corev1.Volume{
 			{
-				Name: "topology",
+				Name: "config",
 				VolumeSource: corev1.VolumeSource{
 					ConfigMap: &corev1.ConfigMapVolumeSource{
 						LocalObjectReference: corev1.LocalObjectReference{
@@ -285,18 +280,6 @@ func (r *OverlayReconciler) createExternalResources(ctx context.Context, overlay
 								Key:  "topology.json",
 								Path: "topology.json",
 							},
-						},
-					},
-				},
-			},
-			{
-				Name: "configuration",
-				VolumeSource: corev1.VolumeSource{
-					ConfigMap: &corev1.ConfigMapVolumeSource{
-						LocalObjectReference: corev1.LocalObjectReference{
-							Name: configMap.Name,
-						},
-						Items: []corev1.KeyToPath{
 							{
 								Key:  "config.json",
 								Path: "config.json",
@@ -329,7 +312,7 @@ func (r *OverlayReconciler) createExternalResources(ctx context.Context, overlay
 						  "ipam": {
 							"type":"static"
 						  }
-					  }`, overlay.Name, i, overlay.Name, i),
+					  }`, "", i, overlay.Name, i),
 				},
 			}
 			networkAttachmentDefinitions = append(networkAttachmentDefinitions, auxNetAttachDef)
