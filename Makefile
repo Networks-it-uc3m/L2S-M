@@ -189,7 +189,7 @@ FILES := $(shell find . -type f \( -name "*.go" -o -name "*.json" -o -name "*.ya
 # Install the addlicense tool if not installed
 .PHONY: install-tools
 install-tools:
-	@go install github.com/google/addlicense@latest
+	GOBIN=$(LOCALBIN) go install github.com/google/addlicense@latest
 
 # Add license headers to the files
 .PHONY: add-license
