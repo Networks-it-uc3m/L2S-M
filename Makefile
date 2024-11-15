@@ -1,9 +1,10 @@
 
 # Image URL to use all building/pushing image targets
-IMG ?= alexdecb/l2sm-controller-manager:2.7.1
+IMG ?= alexdecb/l2sm-controller-manager:2.7.2
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.29.0
 
+DEV_IP = 163.117.139.220
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
 GOBIN=$(shell go env GOPATH)/bin
@@ -153,9 +154,9 @@ undeploy: kustomize ## Undeploy controller from the K8s cluster specified in ~/.
 .PHONY: webhook-certs
 webhook-certs: ## generate self-signed cert and key for local webhook development
 	mkdir -p /tmp/k8s-webhook-server/serving-certs
-	openssl req -x509 -newkey rsa:2048 -nodes -keyout /tmp/k8s-webhook-server/serving-certs/tls.key -out /tmp/k8s-webhook-server/serving-certs/tls.crt -days 365 -config ./config/dev/openssl.cnf -batch -subj '/CN=local-webhook'
+	sed  -e 's/{{IP_2}}/$(DEV_IP)/' ./config/dev/openssl.cnf > /tmp/openssl.cnf
+	openssl req -x509 -newkey rsa:2048 -nodes -keyout /tmp/k8s-webhook-server/serving-certs/tls.key -out /tmp/k8s-webhook-server/serving-certs/tls.crt -days 365 -config /tmp/openssl.cnf -batch -subj '/CN=local-webhook'
 	cat /tmp/k8s-webhook-server/serving-certs/tls.crt | base64 -w0 > /tmp/k8s-webhook-server/tls.b64
-
 
 
 
@@ -175,6 +176,7 @@ delete-cluster:
 .PHONY: deploy-dev
 deploy-dev: webhook-certs manifests kustomize ## Deploy validating and mutating webhooks to the K8s cluster specified in ~/.kube/config.
 	sed -i'' -e 's/caBundle: .*/caBundle: $(shell cat /tmp/k8s-webhook-server/tls.b64)/' ./config/dev/webhookcainjection_patch.yaml
+	sed -i'' -e 's|url: .*|url: https://$(DEV_IP):9443/mutate-v1-pod|' ./config/dev/webhookcainjection_patch.yaml
 	$(KUSTOMIZE) build config/dev | $(KUBECTL) apply -f -
 	echo -e "CONTROLLER_IP=localhost\nCONTROLLER_PORT=30000" > .env
 	
