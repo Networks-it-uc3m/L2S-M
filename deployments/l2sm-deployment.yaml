@@ -4780,26 +4780,11 @@ spec:
           spec:
             description: OverlaySpec defines the desired state of Overlay
             properties:
-              neighbors:
-                description: Field exclusive to the multi-domain overlay type. If
-                  specified in other  types of overlays, the reosurce will launch
-                  an error and won't be created.
-                items:
-                  properties:
-                    domain:
-                      description: |-
-                        Domain where the neighbor's NED switch can be reached at. Must be a valid IP Address or Domain name, reachable from the node the NED
-                        is going to be deployed at.
-                      type: string
-                    node:
-                      description: Name of the cluster the link is going to be made
-                        upon.
-                      type: string
-                  required:
-                  - domain
-                  - node
-                  type: object
-                type: array
+              interfaceNumber:
+                default: 10
+                description: Interface number specifies how many interfaces the switch
+                  should have predefined (if used with multus)
+                type: integer
               networkController:
                 description: The SDN Controller that manages the overlay network.
                   Must specify a domain and a name.
@@ -9407,6 +9392,18 @@ rules:
 - apiGroups:
   - ""
   resources:
+  - configmaps
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
   - pods
   verbs:
   - create
@@ -9431,9 +9428,21 @@ rules:
   - patch
   - update
 - apiGroups:
-  - l2sm.l2sm.k8s.local
+  - ""
   resources:
-  - configmaps
+  - services
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - k8s.cni.cncf.io
+  resources:
+  - network-attachment-definitions
   verbs:
   - create
   - delete
@@ -9524,18 +9533,6 @@ rules:
   - l2sm.l2sm.k8s.local
   resources:
   - replicasets
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - l2sm.l2sm.k8s.local
-  resources:
-  - services
   verbs:
   - create
   - delete
@@ -9915,113 +9912,3 @@ webhooks:
     resources:
     - pods
   sideEffects: None
----
-apiVersion: k8s.cni.cncf.io/v1
-kind: NetworkAttachmentDefinition
-metadata:
-  labels:
-    app: l2sm
-  name: veth1
-  namespace: l2sm-system
-spec:
-  config: '{ "cniVersion": "0.3.0", "type": "bridge", "bridge": "br1", "mtu": 1400,
-    "device": "veth1", "ipam": { "type":"static" } }'
----
-apiVersion: k8s.cni.cncf.io/v1
-kind: NetworkAttachmentDefinition
-metadata:
-  labels:
-    app: l2sm
-  name: veth10
-  namespace: l2sm-system
-spec:
-  config: '{ "cniVersion": "0.3.0", "type": "bridge", "bridge": "br10", "mtu": 1400,
-    "device": "veth10", "ipam": { "type":"static" } }'
----
-apiVersion: k8s.cni.cncf.io/v1
-kind: NetworkAttachmentDefinition
-metadata:
-  labels:
-    app: l2sm
-  name: veth2
-  namespace: l2sm-system
-spec:
-  config: '{ "cniVersion": "0.3.0", "type": "bridge", "bridge": "br2", "mtu": 1400,
-    "device": "veth2", "ipam": { "type":"static" } }'
----
-apiVersion: k8s.cni.cncf.io/v1
-kind: NetworkAttachmentDefinition
-metadata:
-  labels:
-    app: l2sm
-  name: veth3
-  namespace: l2sm-system
-spec:
-  config: '{ "cniVersion": "0.3.0", "type": "bridge", "bridge": "br3", "mtu": 1400,
-    "device": "veth3", "ipam": { "type":"static" } }'
----
-apiVersion: k8s.cni.cncf.io/v1
-kind: NetworkAttachmentDefinition
-metadata:
-  labels:
-    app: l2sm
-  name: veth4
-  namespace: l2sm-system
-spec:
-  config: '{ "cniVersion": "0.3.0", "type": "bridge", "bridge": "br4", "mtu": 1400,
-    "device": "veth4", "ipam": { "type":"static" } }'
----
-apiVersion: k8s.cni.cncf.io/v1
-kind: NetworkAttachmentDefinition
-metadata:
-  labels:
-    app: l2sm
-  name: veth5
-  namespace: l2sm-system
-spec:
-  config: '{ "cniVersion": "0.3.0", "type": "bridge", "bridge": "br5", "mtu": 1400,
-    "device": "veth5", "ipam": { "type":"static" } }'
----
-apiVersion: k8s.cni.cncf.io/v1
-kind: NetworkAttachmentDefinition
-metadata:
-  labels:
-    app: l2sm
-  name: veth6
-  namespace: l2sm-system
-spec:
-  config: '{ "cniVersion": "0.3.0", "type": "bridge", "bridge": "br6", "mtu": 1400,
-    "device": "veth6", "ipam": { "type":"static" } }'
----
-apiVersion: k8s.cni.cncf.io/v1
-kind: NetworkAttachmentDefinition
-metadata:
-  labels:
-    app: l2sm
-  name: veth7
-  namespace: l2sm-system
-spec:
-  config: '{ "cniVersion": "0.3.0", "type": "bridge", "bridge": "br7", "mtu": 1400,
-    "device": "veth7", "ipam": { "type":"static" } }'
----
-apiVersion: k8s.cni.cncf.io/v1
-kind: NetworkAttachmentDefinition
-metadata:
-  labels:
-    app: l2sm
-  name: veth8
-  namespace: l2sm-system
-spec:
-  config: '{ "cniVersion": "0.3.0", "type": "bridge", "bridge": "br8", "mtu": 1400,
-    "device": "veth8", "ipam": { "type":"static" } }'
----
-apiVersion: k8s.cni.cncf.io/v1
-kind: NetworkAttachmentDefinition
-metadata:
-  labels:
-    app: l2sm
-  name: veth9
-  namespace: l2sm-system
-spec:
-  config: '{ "cniVersion": "0.3.0", "type": "bridge", "bridge": "br9", "mtu": 1400,
-    "device": "veth9", "ipam": { "type":"static" } }'
