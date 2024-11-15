@@ -33,6 +33,18 @@ rules:
 - apiGroups:
   - ""
   resources:
+  - configmaps
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
   - pods
   verbs:
   - create
@@ -57,9 +69,9 @@ rules:
   - patch
   - update
 - apiGroups:
-  - k8s.cni.cncf.io
+  - ""
   resources:
-  - network-attachment-definitions
+  - services
   verbs:
   - create
   - delete
@@ -69,9 +81,9 @@ rules:
   - update
   - watch
 - apiGroups:
-  - l2sm.l2sm.k8s.local
+  - k8s.cni.cncf.io
   resources:
-  - configmaps
+  - network-attachment-definitions
   verbs:
   - create
   - delete
@@ -162,18 +174,6 @@ rules:
   - l2sm.l2sm.k8s.local
   resources:
   - replicasets
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - l2sm.l2sm.k8s.local
-  resources:
-  - services
   verbs:
   - create
   - delete

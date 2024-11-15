@@ -43,10 +43,8 @@ type OverlayReconciler struct {
 
 var replicaSetOwnerKeyOverlay = ".metadata.controller.overlay"
 
-// +kubebuilder:rbac:groups=l2sm.l2sm.k8s.local,resources=configmaps,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=l2sm.l2sm.k8s.local,resources=configmaps,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=l2sm.l2sm.k8s.local,resources=services,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=l2sm.l2sm.k8s.local,resources=replicasets,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=core,resources=services,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=apps,resources=replicasets,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=l2sm.l2sm.k8s.local,resources=overlays,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=l2sm.l2sm.k8s.local,resources=overlays/status,verbs=get;update;patch
