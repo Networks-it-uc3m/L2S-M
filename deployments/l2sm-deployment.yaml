@@ -9774,9 +9774,7 @@ spec:
           value: l2sm-controller-service.l2sm-system.svc.cluster.local
         - name: CONTROLLER_PORT
           value: "8181"
-        - name: SWITCHES_NAMESPACE
-          value: l2sm-system
-        image: alexdecb/l2sm-controller-manager:2.7.1
+        image: alexdecb/l2sm-controller-manager:2.7.2
         livenessProbe:
           httpGet:
             path: /healthz
