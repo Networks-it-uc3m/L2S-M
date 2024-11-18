@@ -150,9 +150,14 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 
 		// Add the pod interfaces to the sdn controller
 		multusAnnotations, ok := pod.Annotations[MULTUS_ANNOTATION_KEY]
+		// if ok {
+
+		// 	logger.Info(multusAnnotations)
+		// 	return ctrl.Result{Requeue: true}, fmt.Errorf("back")
+		// 		}
 
 		if !ok {
-			logger.Error(nil, "Error detaching the pod from the network attachment definitions")
+			logger.Error(nil, "Error getting the pod network attachment definitions annotations")
 			return ctrl.Result{}, nil
 		}
 

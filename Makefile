@@ -174,7 +174,7 @@ delete-cluster:
 	sudo rm -r ./plugins/
 	
 .PHONY: deploy-dev
-deploy-dev: webhook-certs manifests kustomize ## Deploy validating and mutating webhooks to the K8s cluster specified in ~/.kube/config.
+deploy-dev: webhook-certs install manifests kustomize ## Deploy validating and mutating webhooks to the K8s cluster specified in ~/.kube/config.
 	sed -i'' -e 's/caBundle: .*/caBundle: $(shell cat /tmp/k8s-webhook-server/tls.b64)/' ./config/dev/webhookcainjection_patch.yaml
 	sed -i'' -e 's|url: .*|url: https://$(DEV_IP):9443/mutate-v1-pod|' ./config/dev/webhookcainjection_patch.yaml
 	$(KUSTOMIZE) build config/dev | $(KUBECTL) apply -f -
