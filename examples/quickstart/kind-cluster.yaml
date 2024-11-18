@@ -12,21 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: l2sm-test
+networking:
+    disableDefaultCNI: true  # Disable Kindnet, we will use Flannel as the primary CNI plugin
+    podSubnet: "10.244.0.0/16"  # Flannel requires this CIDR
+nodes:
+- role: control-plane
+  image: kindest/node:v1.26.6
+  extraPortMappings:
+    - containerPort: 30000  
+      hostPort: 30000       
+      protocol: TCP
+- role: worker
+  image: kindest/node:v1.26.6
+- role: worker
+  image: kindest/node:v1.26.6
 
-apiVersion: "k8s.cni.cncf.io/v1"
-kind: NetworkAttachmentDefinition
-metadata:
-  name: veth1
-  labels:
-    app: l2sm
-spec:
-  config: '{
-      "cniVersion": "0.3.0",
-      "type": "bridge",
-      "bridge": "br1",
-      "mtu": 1400,
-      "device": "veth1",
-        "ipam": {
-          "type":"static"
-        }
-    }'

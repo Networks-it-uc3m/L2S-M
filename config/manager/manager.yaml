@@ -89,8 +89,8 @@ spec:
           value: l2sm-controller-service.l2sm-system.svc.cluster.local
         - name: CONTROLLER_PORT
           value: "8181"
-        - name: SWITCHES_NAMESPACE
-          value: "l2sm-system"
+        # - name: SWITCHES_NAMESPACE
+        #   value: "l2sm-system"
         image: controller:latest
         name: manager
         securityContext:

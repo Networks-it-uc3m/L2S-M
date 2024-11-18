@@ -53,26 +53,11 @@ spec:
           spec:
             description: OverlaySpec defines the desired state of Overlay
             properties:
-              neighbors:
-                description: Field exclusive to the multi-domain overlay type. If
-                  specified in other  types of overlays, the reosurce will launch
-                  an error and won't be created.
-                items:
-                  properties:
-                    domain:
-                      description: |-
-                        Domain where the neighbor's NED switch can be reached at. Must be a valid IP Address or Domain name, reachable from the node the NED
-                        is going to be deployed at.
-                      type: string
-                    node:
-                      description: Name of the cluster the link is going to be made
-                        upon.
-                      type: string
-                  required:
-                  - domain
-                  - node
-                  type: object
-                type: array
+              interfaceNumber:
+                default: 10
+                description: Interface number specifies how many interfaces the switch
+                  should have predefined (if used with multus)
+                type: integer
               networkController:
                 description: The SDN Controller that manages the overlay network.
                   Must specify a domain and a name.

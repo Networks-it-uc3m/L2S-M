@@ -388,11 +388,6 @@ func (in *OverlaySpec) DeepCopyInto(out *OverlaySpec) {
 		*out = new(TopologySpec)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.Neighbors != nil {
-		in, out := &in.Neighbors, &out.Neighbors
-		*out = make([]NeighborSpec, len(*in))
-		copy(*out, *in)
-	}
 	if in.SwitchTemplate != nil {
 		in, out := &in.SwitchTemplate, &out.SwitchTemplate
 		*out = new(SwitchTemplateSpec)
