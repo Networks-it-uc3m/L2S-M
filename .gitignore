@@ -3,3 +3,4 @@ tls.b64
 bin/
 plugins/
 .env
+examples2/
