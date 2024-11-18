@@ -27,7 +27,8 @@ resources:
 # crd/kustomization.yaml
 - ../webhook
 - ../sdncontroller
-- ../tmp
+# - ../tmp
 patches:
 - path: webhookcainjection_patch.yaml
+- path: sdncontroller_patch.yaml
 

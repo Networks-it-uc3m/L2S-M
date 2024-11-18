@@ -22,6 +22,7 @@ import (
 
 	l2smv1 "github.com/Networks-it-uc3m/L2S-M/api/v1"
 	"github.com/Networks-it-uc3m/L2S-M/internal/utils"
+	nettypes "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -30,6 +31,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+
+	switchv1 "github.com/Networks-it-uc3m/l2sm-switch/api/v1"
 )
 
 // OverlayReconciler reconciles a Overlay object
@@ -40,11 +43,13 @@ type OverlayReconciler struct {
 
 var replicaSetOwnerKeyOverlay = ".metadata.controller.overlay"
 
-// +kubebuilder:rbac:groups=l2sm.l2sm.k8s.local,resources=replicasets,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=core,resources=services,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=apps,resources=replicasets,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=l2sm.l2sm.k8s.local,resources=overlays,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=l2sm.l2sm.k8s.local,resources=overlays/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=l2sm.l2sm.k8s.local,resources=overlays/finalizers,verbs=update
+// +kubebuilder:rbac:groups=k8s.cni.cncf.io,resources=network-attachment-definitions,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -87,11 +92,11 @@ func (r *OverlayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		// The object is being deleted
 		if controllerutil.ContainsFinalizer(overlay, l2smFinalizer) {
 			// our finalizer is present, so lets handle any external dependency
-			// if err := r.deleteExternalResources(ctx, overlay); err != nil {
-			// 	// if fail to delete the external dependency here, return with error
-			// 	// so that it can be retried.
-			// 	return ctrl.Result{}, err
-			// }
+			if err := r.deleteExternalResources(ctx, overlay); err != nil {
+				// if fail to delete the external dependency here, return with error
+				// so that it can be retried.
+				return ctrl.Result{}, err
+			}
 
 			// remove our finalizer from the list and update it.
 			controllerutil.RemoveFinalizer(overlay, l2smFinalizer)
@@ -153,10 +158,18 @@ func (r *OverlayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-// func (r *OverlayReconciler) deleteExternalResources(ctx context.Context, overlay *l2smv1.Overlay) error {
+func (r *OverlayReconciler) deleteExternalResources(ctx context.Context, overlay *l2smv1.Overlay) error {
+	opts := []client.DeleteAllOfOption{
+		client.InNamespace(overlay.Namespace),
+		client.MatchingLabels{"overlay": overlay.Name},
+	}
+	r.Client.DeleteAllOf(ctx, &nettypes.NetworkAttachmentDefinition{}, opts...)
+	return nil
+}
 
-// 	return nil
-// }
+type OverlayConfigJson struct {
+	ControllerIp string `json:"ControllerIp"`
+}
 
 type TopologySwitchJson struct {
 	Nodes []NodeJson    `json:"Nodes"`
@@ -174,21 +187,31 @@ func (r *OverlayReconciler) createExternalResources(ctx context.Context, overlay
 	constructConfigMapForOverlay := func(overlay *l2smv1.Overlay) (*corev1.ConfigMap, error) {
 
 		// Construct the TopologySwitchJson
-		topologySwitch := TopologySwitchJson{}
+		topologySwitch := switchv1.Topology{}
+
+		overlayConfig := switchv1.OverlaySettings{ControllerIp: overlay.Spec.NetworkController.Domain,
+			InterfacesNumber: overlay.Spec.InterfaceNumber,
+			OverlayName:      overlay.Name}
 
 		overlayName := overlay.ObjectMeta.Name
 
 		// Populate Nodes
 		for _, nodeName := range overlay.Spec.Topology.Nodes {
-			node := NodeJson{
+			node := switchv1.Node{
 				Name:   nodeName,
-				NodeIP: fmt.Sprintf("l2sm-switch-%s-%s", overlayName, nodeName),
+				NodeIP: utils.GenerateServiceName(overlayName, nodeName),
 			}
 			topologySwitch.Nodes = append(topologySwitch.Nodes, node)
 		}
 
 		// Populate Links
-		topologySwitch.Links = append(topologySwitch.Links, overlay.Spec.Topology.Links...)
+		for _, overlayLink := range overlay.Spec.Topology.Links {
+			link := switchv1.Link{
+				EndpointNodeA: overlayLink.EndpointA,
+				EndpointNodeB: overlayLink.EndpointB,
+			}
+			topologySwitch.Links = append(topologySwitch.Links, link)
+		}
 
 		// Convert TopologySwitchJson to JSON
 		topologyJSON, err := json.Marshal(topologySwitch)
@@ -196,6 +219,10 @@ func (r *OverlayReconciler) createExternalResources(ctx context.Context, overlay
 			return nil, err
 		}
 
+		configJSON, err := json.Marshal(overlayConfig)
+		if err != nil {
+			return nil, err
+		}
 		configMap := &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      fmt.Sprintf("%s-topology", overlay.Name),
@@ -203,6 +230,7 @@ func (r *OverlayReconciler) createExternalResources(ctx context.Context, overlay
 			},
 			Data: map[string]string{
 				"topology.json": string(topologyJSON),
+				"config.json":   string(configJSON),
 			},
 		}
 		if err := controllerutil.SetControllerReference(overlay, configMap, r.Scheme); err != nil {
@@ -218,12 +246,12 @@ func (r *OverlayReconciler) createExternalResources(ctx context.Context, overlay
 		return err
 	}
 
-	constructNodeResourcesForOverlay := func(overlay *l2smv1.Overlay) ([]*appsv1.ReplicaSet, []*corev1.Service, error) {
+	constructNodeResourcesForOverlay := func(overlay *l2smv1.Overlay) ([]*appsv1.ReplicaSet, []*corev1.Service, []*nettypes.NetworkAttachmentDefinition, error) {
 
 		// Define volume mounts to be added to each container
 		volumeMounts := []corev1.VolumeMount{
 			{
-				Name:      "topology",
+				Name:      "config",
 				MountPath: "/etc/l2sm/",
 				ReadOnly:  true,
 			},
@@ -239,7 +267,7 @@ func (r *OverlayReconciler) createExternalResources(ctx context.Context, overlay
 		// Define the volume using the created ConfigMap
 		volumes := []corev1.Volume{
 			{
-				Name: "topology",
+				Name: "config",
 				VolumeSource: corev1.VolumeSource{
 					ConfigMap: &corev1.ConfigMapVolumeSource{
 						LocalObjectReference: corev1.LocalObjectReference{
@@ -250,15 +278,46 @@ func (r *OverlayReconciler) createExternalResources(ctx context.Context, overlay
 								Key:  "topology.json",
 								Path: "topology.json",
 							},
+							{
+								Key:  "config.json",
+								Path: "config.json",
+							},
 						},
 					},
 				},
 			},
 		}
 
+		switchInterfacesAnnotations := GenerateAnnotations(overlay.Name, overlay.Spec.InterfaceNumber)
+
+		var networkAttachmentDefinitions []*nettypes.NetworkAttachmentDefinition
+		var auxNetAttachDef *nettypes.NetworkAttachmentDefinition
+
+		for i := 1; i <= overlay.Spec.InterfaceNumber; i++ {
+			auxNetAttachDef = &nettypes.NetworkAttachmentDefinition{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      fmt.Sprintf("%s-veth%d", overlay.Name, i),
+					Namespace: overlay.Namespace,
+					Labels:    map[string]string{"app": "l2sm", "overlay": overlay.Name},
+				},
+				Spec: nettypes.NetworkAttachmentDefinitionSpec{
+					Config: fmt.Sprintf(`{
+						"cniVersion": "0.3.0",
+						"type": "bridge",
+						"bridge": "%s-br%d",
+						"mtu": 1400,
+						"device": "%s-veth%d",
+						  "ipam": {
+							"type":"static"
+						  }
+					  }`, "", i, overlay.Name, i),
+				},
+			}
+			networkAttachmentDefinitions = append(networkAttachmentDefinitions, auxNetAttachDef)
+		}
+
 		var replicaSets []*appsv1.ReplicaSet
 		var services []*corev1.Service
-
 		for _, node := range overlay.Spec.Topology.Nodes {
 
 			name := fmt.Sprintf("%s-%s-%s", "l2sm-switch", node, utils.GenerateHash(overlay))
@@ -283,27 +342,7 @@ func (r *OverlayReconciler) createExternalResources(ctx context.Context, overlay
 								"app": name,
 							},
 							Annotations: map[string]string{
-								"k8s.v1.cni.cncf.io/networks": `[{
-									"name": "veth1", "ips": ["fe80::58d0:b8ff:fe42:debf/64"]
-								}, {
-									"name": "veth2", "ips": ["fe80::58d0:b8ff:fe42:debe/64"]
-								}, {
-									"name": "veth3", "ips": ["fe80::58d0:b8ff:fe42:debd/64"]
-								}, {
-									"name": "veth4", "ips": ["fe80::58d0:b8ff:fe42:debc/64"]
-								}, {
-									"name": "veth5", "ips": ["fe80::58d0:b8ff:fe42:debb/64"]
-								}, {
-									"name": "veth6", "ips": ["fe80::58d0:b8ff:fe42:deba/64"]
-								}, {
-									"name": "veth7", "ips": ["fe80::58d0:b8ff:fe42:deb9/64"]
-								}, {
-									"name": "veth8", "ips": ["fe80::58d0:b8ff:fe42:deb8/64"]
-								}, {
-									"name": "veth9", "ips": ["fe80::58d0:b8ff:fe42:deb7/64"]
-								}, {
-									"name": "veth10", "ips": ["fe80::58d0:b8ff:fe42:deb6/64"]
-								}]`,
+								MULTUS_ANNOTATION_KEY: switchInterfacesAnnotations,
 							},
 						},
 						Spec: corev1.PodSpec{
@@ -324,7 +363,7 @@ func (r *OverlayReconciler) createExternalResources(ctx context.Context, overlay
 				replicaSet.Labels[k] = v
 			}
 			if err := controllerutil.SetControllerReference(overlay, replicaSet, r.Scheme); err != nil {
-				return nil, nil, err
+				return nil, nil, nil, err
 			}
 
 			replicaSets = append(replicaSets, replicaSet)
@@ -332,7 +371,7 @@ func (r *OverlayReconciler) createExternalResources(ctx context.Context, overlay
 			// Create a headless service for the ReplicaSet
 			service := &corev1.Service{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      fmt.Sprintf("l2sm-switch-%s-%s", overlay.Name, node),
+					Name:      utils.GenerateServiceName(overlay.Name, node),
 					Namespace: overlay.Namespace,
 					Labels:    map[string]string{"app": name},
 				},
@@ -349,20 +388,24 @@ func (r *OverlayReconciler) createExternalResources(ctx context.Context, overlay
 			}
 
 			if err := controllerutil.SetControllerReference(overlay, service, r.Scheme); err != nil {
-				return nil, nil, err
+				return nil, nil, nil, err
 			}
 
 			services = append(services, service)
 		}
 
-		return replicaSets, services, nil
+		return replicaSets, services, networkAttachmentDefinitions, nil
 	}
 
-	replicaSets, services, err := constructNodeResourcesForOverlay(overlay)
+	replicaSets, services, netAttachDefs, err := constructNodeResourcesForOverlay(overlay)
 	if err != nil {
 		return err
 	}
-
+	for _, netAttachDef := range netAttachDefs {
+		if err = r.Client.Create(ctx, netAttachDef); err != nil {
+			return err
+		}
+	}
 	for _, replicaSet := range replicaSets {
 		if err = r.Client.Create(ctx, replicaSet); err != nil {
 			return err

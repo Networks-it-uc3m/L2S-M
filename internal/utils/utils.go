@@ -20,6 +20,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"hash/fnv"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -132,4 +133,12 @@ func GetBridgeName(params BridgeParams) string {
 	// Convert the bytes to a hexadecimal string
 	dpid := hex.EncodeToString(dpidBytes)
 	return fmt.Sprintf("br-%s", dpid)
+}
+
+func GenerateServiceName(overlayName, nodeName string) string {
+	hash := fnv.New32() // Using FNV hash for a compact hash, but still 32 bits
+	hash.Write([]byte(fmt.Sprintf("%s%s", overlayName, nodeName)))
+	sum := hash.Sum32()
+	// Encode the hash as a base32 string and take the first 4 characters
+	return fmt.Sprintf("l2sm-switch-%04x", sum) // H
 }
