@@ -199,7 +199,7 @@ func (r *OverlayReconciler) createExternalResources(ctx context.Context, overlay
 		for _, nodeName := range overlay.Spec.Topology.Nodes {
 			node := switchv1.Node{
 				Name:   nodeName,
-				NodeIP: fmt.Sprintf("l2sm-switch-%s-%s", overlayName, nodeName),
+				NodeIP: utils.GenerateServiceName(overlayName, nodeName),
 			}
 			topologySwitch.Nodes = append(topologySwitch.Nodes, node)
 		}
@@ -371,7 +371,7 @@ func (r *OverlayReconciler) createExternalResources(ctx context.Context, overlay
 			// Create a headless service for the ReplicaSet
 			service := &corev1.Service{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      fmt.Sprintf("l2sm-switch-%s-%s", overlay.Name, node),
+					Name:      utils.GenerateServiceName(overlay.Name, node),
 					Namespace: overlay.Namespace,
 					Labels:    map[string]string{"app": name},
 				},
