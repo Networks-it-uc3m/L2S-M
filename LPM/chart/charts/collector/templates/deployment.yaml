@@ -18,7 +18,7 @@ spec:
       nodeName: {{ .name }}
       containers:
       - name: lpm-container
-        image: alexdecb/lpm-collector:1.1
+        image: alexdecb/lpm-collector:1.1.1
         workingDir: /usr/src/app
         securityContext:
           capabilities:

@@ -27,7 +27,7 @@ spec:
             - name: data-volume
               mountPath: /prometheus
         - name: exporter
-          image: alexdecb/lpm-exporter:1.1
+          image: alexdecb/lpm-exporter:1.1.1
           imagePullPolicy: Always
           # command: ["/bin/ash", "-c", "sleep infinity & wait"]
           # args:
