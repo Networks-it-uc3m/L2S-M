@@ -37,9 +37,15 @@ For example, to add one deployment to ping-network, enter the following annotati
 
 ```yaml
 annotations:
-   l2sm/networks: ping-network
+  l2sm/networks: ping-network
 ```
 
+The pod needs to have the l2sm label as well, so the l2sm application knows which pod has to be managed.
+
+```yaml
+labels:
+  l2sm: "true"
+```
 If you want to add your own Multus annotations, you are free to do so! L2S-M will not interfere with the standard Multus behavior, so feel free to add your additional annotations if you need them.
 
 To assist you with the deployment of your first application with L2S-M, you can use the pod definitions available in this repository. To deploy both "ping-pong" pods (which are simple Ubuntu alpine containers), use the following commands:

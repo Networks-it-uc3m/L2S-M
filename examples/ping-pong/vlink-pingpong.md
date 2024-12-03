@@ -22,7 +22,7 @@ The first step involves creating a `vlink` network, named "vlink-sample", using 
 
 ```yaml
 apiVersion: l2sm.k8s.local/v1
-kind: L2SMNetwork
+kind: L2Network
 metadata:
   name: vlink-sample
 spec:
@@ -69,7 +69,6 @@ metadata:
   name: ping
   labels:
     app: ping-pong
-    l2sm: "true"
   annotations:
     l2sm/networks:  '[
             { "name": "vlink-sample",
@@ -99,7 +98,6 @@ metadata:
   name: pong
   labels:
     app: ping-pong
-    l2sm: "true"
   annotations:
     l2sm/networks:  '[
             { "name": "vlink-sample",
