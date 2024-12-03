@@ -4539,7 +4539,15 @@ spec:
                 properties:
                   links:
                     items:
-                      type: string
+                      properties:
+                        endpointA:
+                          type: string
+                        endpointB:
+                          type: string
+                      required:
+                      - endpointA
+                      - endpointB
+                      type: object
                     type: array
                   nodes:
                     items:

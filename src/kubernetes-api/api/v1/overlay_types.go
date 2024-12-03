@@ -20,9 +20,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+type Link struct {
+	EndpointA string `json:"endpointA"`
+	EndpointB string `json:"endpointB"`
+}
 type TopologySpec struct {
 	Nodes []string `json:"nodes"`
-	Links []string `json:"links"`
+	Links []Link   `json:"links"`
 }
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!

@@ -10010,7 +10010,7 @@ spec:
           sleep 5;
       containers:
       - name: l2sm-switch
-        image: alexdecb/l2sm-switch:2.5
+        image: alexdecb/l2sm-switch:2.5.1
         # imagePullPolicy: Always
         #args: ["setup_switch.sh && sleep infinity"]
         env:
