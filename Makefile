@@ -197,7 +197,7 @@ install-tools:
 .PHONY: add-license
 add-license: install-tools
 	@for file in $(FILES); do \
-		addlicense -f ./hack/LICENSE.txt -l apache "$${file}"; \
+		$(LOCALBIN)/addlicense -f ./hack/LICENSE.txt -l apache "$${file}"; \
 	done
 
 
