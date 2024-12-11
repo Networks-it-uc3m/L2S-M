@@ -61,6 +61,8 @@ spec:
       labels:
         app: l2sm-controller
     spec:
+      nodeSelector:
+        kubernetes.io/arch: amd64
       containers:
       - name: l2sm-controller
         image: alexdecb/l2sm-controller:2.4
@@ -9747,6 +9749,8 @@ spec:
       labels:
         control-plane: controller-manager
     spec:
+      nodeSelector:
+        kubernetes.io/arch: amd64
       containers:
       - args:
         - --health-probe-bind-address=:8081
@@ -10025,8 +10029,7 @@ spec:
         securityContext:
           capabilities:
             add: ["NET_ADMIN"]
-      nodeSelector:
-        kubernetes.io/arch: amd64
+      
 
 ---
 
@@ -10300,6 +10303,8 @@ metadata:
   labels:
     app: mysql
 spec:
+  nodeSelector:
+    kubernetes.io/arch: amd64
   containers:
   - name: mysql
     image: mysql:5.7
