@@ -24,7 +24,7 @@ type Link struct {
 }
 type TopologySpec struct {
 	Nodes []string `json:"nodes"`
-	Links []Link   `json:"links"`
+	Links []Link   `json:"links,omitempty"`
 }
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!

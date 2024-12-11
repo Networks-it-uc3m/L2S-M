@@ -15,12 +15,6 @@
 apiVersion: l2sm.l2sm.k8s.local/v1
 kind: Overlay
 metadata:
-  labels:
-    app.kubernetes.io/name: overlay
-    app.kubernetes.io/instance: overlay-sample
-    app.kubernetes.io/part-of: controllermanager
-    app.kubernetes.io/managed-by: kustomize
-    app.kubernetes.io/created-by: controllermanager
   name: overlay-sample
 spec:
   networkController:
