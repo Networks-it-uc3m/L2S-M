@@ -1,6 +1,7 @@
 #!/bin/bash
 
 wget -q https://github.com/containernetworking/plugins/releases/download/v1.6.0/cni-plugins-linux-amd64-v1.6.0.tgz
+mkdir -p plugins/bin
 tar -xf cni-plugins-linux-amd64-v1.6.0.tgz -C plugins/bin
 rm cni-plugins-linux-amd64-v1.6.0.tgz
 
