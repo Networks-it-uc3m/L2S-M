@@ -12,6 +12,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/homedir"
@@ -19,11 +20,8 @@ import (
 
 const (
 	NumCRs           = 50
-	MaxCreateWorkers = 10
-	MaxCheckWorkers  = 10
-	StatusTimeout    = 2 * time.Minute
-	StatusInterval   = 5 * time.Second
-	DeleteWorkers    = 10
+	MaxCreateWorkers = 10 // Number of concurrent creators
+	MaxWatchWorkers  = 10 // Number of concurrent watchers
 )
 
 func TestCreateL2Networks(t *testing.T) {
@@ -42,11 +40,9 @@ func TestCreateL2Networks(t *testing.T) {
 		t.Fatalf("Error building kubeconfig: %v", err)
 	}
 
-	// Customize the rate limiter
-	config.QPS = 50    // Adjust as needed
-	config.Burst = 100 // Adjust as needed
-	// Optionally, set a custom RateLimiter
-	// config.RateLimiter = flowcontrol.NewTokenBucketRateLimiter(50, 100)
+	// Customize the rate limiter to allow more concurrent requests
+	config.QPS = 100
+	config.Burst = 200
 
 	// Create a dynamic client with the customized config
 	dynClient, err := dynamic.NewForConfig(config)
@@ -71,6 +67,7 @@ func TestCreateL2Networks(t *testing.T) {
 	crNames := make([]string, 0, NumCRs)
 	createErrCh := make(chan error, NumCRs)
 
+	// Start create workers
 	for i := 0; i < MaxCreateWorkers; i++ {
 		createWg.Add(1)
 		go func() {
@@ -97,6 +94,7 @@ func TestCreateL2Networks(t *testing.T) {
 					return
 				}
 
+				// Protect shared slice
 				createMu.Lock()
 				crNames = append(crNames, crName)
 				createMu.Unlock()
@@ -104,14 +102,17 @@ func TestCreateL2Networks(t *testing.T) {
 		}()
 	}
 
+	// Send creation tasks
 	for i := 0; i < NumCRs; i++ {
 		createCh <- i
 	}
 	close(createCh)
 
+	// Wait for creators to finish
 	createWg.Wait()
 	close(createErrCh)
 
+	// Check for creation errors
 	if len(crNames) != NumCRs {
 		for err := range createErrCh {
 			t.Error(err)
@@ -122,67 +123,71 @@ func TestCreateL2Networks(t *testing.T) {
 	elapsed := time.Since(startTime)
 	t.Logf("Created %d L2Network CRs in %s", NumCRs, elapsed)
 
-	// Status Checking Phase
+	// Status Checking Phase using Watches
 	checkStartTime := time.Now()
-	timeout := StatusTimeout
-	deadline := time.Now().Add(timeout)
+	statusTimeout := 1 * time.Minute // Adjust as needed
 
 	checkCh := make(chan string, NumCRs)
 	var checkWg sync.WaitGroup
 	checkErrCh := make(chan error, NumCRs)
 
-	for i := 0; i < MaxCheckWorkers; i++ {
+	// Start watch workers
+	for i := 0; i < MaxWatchWorkers; i++ {
 		checkWg.Add(1)
 		go func() {
 			defer checkWg.Done()
 			for crName := range checkCh {
-				for {
-					cr, err := dynClient.Resource(l2networkGVR).Namespace(namespace).Get(ctx, crName, metav1.GetOptions{})
-					if err != nil {
-						checkErrCh <- fmt.Errorf("failed to get L2Network %s: %v", crName, err)
-						return
-					}
+				// Set up a watch for the specific CR
+				watcher, err := dynClient.Resource(l2networkGVR).Namespace(namespace).Watch(ctx, metav1.ListOptions{
+					FieldSelector:  fmt.Sprintf("metadata.name=%s", crName),
+					TimeoutSeconds: int64Ptr(int64(statusTimeout.Seconds())),
+				})
+				if err != nil {
+					checkErrCh <- fmt.Errorf("failed to set up watch for %s: %v", crName, err)
+					continue
+				}
 
-					status, found, err := unstructured.NestedString(cr.Object, "status", "internalConnectivity")
-					if err != nil {
-						checkErrCh <- fmt.Errorf("error retrieving status for %s: %v", crName, err)
-						return
-					}
-					if found && status == "Available" {
-						break
-					}
+				available := false
+				for event := range watcher.ResultChan() {
+					if event.Type == watch.Modified || event.Type == watch.Added {
+						cr, ok := event.Object.(*unstructured.Unstructured)
+						if !ok {
+							continue
+						}
 
-					if time.Now().After(deadline) {
-						checkErrCh <- fmt.Errorf("L2Network %s did not become 'Available' before timeout", crName)
-						return
-					}
+						status, found, err := unstructured.NestedString(cr.Object, "status", "internalConnectivity")
+						if err != nil || !found {
+							continue
+						}
 
-					time.Sleep(StatusInterval)
+						if status == "Available" {
+							available = true
+							break
+						}
+					}
+				}
+
+				watcher.Stop()
+
+				if !available {
+					checkErrCh <- fmt.Errorf("L2Network %s did not become 'Available' within timeout", crName)
 				}
 			}
 		}()
 	}
 
+	// Send check tasks
 	for _, crName := range crNames {
 		checkCh <- crName
 	}
 	close(checkCh)
 
-	doneCh := make(chan struct{})
-	go func() {
-		checkWg.Wait()
-		close(doneCh)
-	}()
-
-	select {
-	case <-doneCh:
-		// All checks completed
-	case <-time.After(timeout + StatusInterval):
-		t.Fatalf("Status checks did not complete within expected time")
-	}
-
+	// Wait for checkers to finish
+	checkWg.Wait()
 	close(checkErrCh)
-	if len(crNames) != NumCRs {
+
+	// Check for status errors
+	if len(checkErrCh) > 0 {
 		for err := range checkErrCh {
 			t.Error(err)
 		}
@@ -198,7 +203,8 @@ func TestCreateL2Networks(t *testing.T) {
 	var deleteWg sync.WaitGroup
 	deleteErrCh := make(chan error, NumCRs)
 
-	for i := 0; i < DeleteWorkers; i++ {
+	// Start delete workers
+	for i := 0; i < MaxCreateWorkers; i++ { // Reusing MaxCreateWorkers for deletion
 		deleteWg.Add(1)
 		go func() {
 			defer deleteWg.Done()
@@ -211,18 +217,25 @@ func TestCreateL2Networks(t *testing.T) {
 		}()
 	}
 
+	// Send delete tasks
 	for _, crName := range crNames {
 		deleteCh <- crName
 	}
 	close(deleteCh)
 
+	// Wait for deletions to finish
 	deleteWg.Wait()
 	close(deleteErrCh)
 
+	// Check for deletion errors
 	for err := range deleteErrCh {
 		t.Error(err)
 	}
 
 	deleteElapsed := time.Since(deleteStartTime)
 	t.Logf("Deleted %d L2Network CRs in %s", NumCRs, deleteElapsed)
+}
+
+func int64Ptr(i int64) *int64 {
+	return &i
 }
