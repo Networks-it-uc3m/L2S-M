@@ -4553,7 +4553,6 @@ spec:
                       type: string
                     type: array
                 required:
-                - links
                 - nodes
                 type: object
             required:
