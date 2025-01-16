@@ -49,6 +49,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: prometheus-{{.Values.global.network.name}}
+  namespace: {{ $.Values.global.namespace }}
 spec:
   selector:
     app: prometheus-{{.Values.global.network.name}}
