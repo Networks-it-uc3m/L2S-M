@@ -9280,7 +9280,6 @@ spec:
                       type: string
                     type: array
                 required:
-                - links
                 - nodes
                 type: object
             required:
@@ -9771,7 +9770,7 @@ spec:
           value: l2sm-controller-service.l2sm-system.svc.cluster.local
         - name: CONTROLLER_PORT
           value: "8181"
-        image: alexdecb/l2sm-controller-manager:2.7.2
+        image: alexdecb/l2sm-controller-manager:2.7.3
         livenessProbe:
           httpGet:
             path: /healthz
