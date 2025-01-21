@@ -201,14 +201,14 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 				ned, err := nedinterface.GetNetworkEdgeDevice(ctx, r.Client, network.Spec.Provider.Name)
 
 				if err != nil {
-					fmt.Printf("error getting NED: %v", err)
+					logger.Error(err, "error getting NED")
 					return ctrl.Result{}, nil
 
 				}
 				// Then, we create the connection between the NED and the l2sm-switch, in the internal SDN Controller
 				nedNetworkAttachDef, err := r.ConnectInternalSwitchToNED(ctx, network.Name, ned.Spec.NodeConfig.NodeName)
 				if err != nil {
-					fmt.Printf("error connecting NED: %v", err)
+					logger.Error(err, "error connecting NED")
 					return ctrl.Result{}, nil
 				}
 				// We attach the ned to this new network, connecting with the IDCO SDN Controller. We need
@@ -222,7 +222,7 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 				}
 				err = r.CreateNewNEDConnection(network, fmt.Sprintf("br%s", bridgeName), ned)
 				if err != nil {
-					fmt.Printf("error attaching NED to the l2network: %v", err)
+					logger.Error(err, "error attaching NED to the l2network")
 
 					return ctrl.Result{}, nil
 				}
