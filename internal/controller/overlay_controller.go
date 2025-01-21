@@ -304,7 +304,7 @@ func (r *OverlayReconciler) createExternalResources(ctx context.Context, overlay
 					Config: fmt.Sprintf(`{
 						"cniVersion": "0.3.0",
 						"type": "bridge",
-						"bridge": "%s-br%d",
+						"bridge": "%sbr%d",
 						"mtu": 1400,
 						"device": "%s-veth%d",
 						  "ipam": {
