@@ -105,8 +105,7 @@ func GetFreeNetAttachDefs(ctx context.Context, c client.Client, switchesNamespac
 	nodeRequirement, _ := labels.NewRequirement(label, selection.NotIn, []string{"true"})
 	l2smRequirement, _ := labels.NewRequirement("app", selection.Equals, []string{"l2sm"})
 
-	nodeSelector.Add(*nodeRequirement)
-	nodeSelector.Add(*l2smRequirement)
+	nodeSelector = nodeSelector.Add(*l2smRequirement, *nodeRequirement)
 
 	listOptions := client.ListOptions{LabelSelector: nodeSelector, Namespace: switchesNamespace}
 
