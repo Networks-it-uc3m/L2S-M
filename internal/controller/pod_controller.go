@@ -58,6 +58,7 @@ type PodReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.17.0/pkg/reconcile
 func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+
 	logger := log.FromContext(ctx)
 
 	pod := &corev1.Pod{}
@@ -72,8 +73,16 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 		return ctrl.Result{}, nil
 
 	}
+	if _, ok := pod.GetAnnotations()[MULTUS_ANNOTATION_KEY]; !ok {
+		// Check if the 'l2sm/error' annotation is present. If it is, we leave the pod as the warning is already done and we dont want to attach it
+		if msg, ok := pod.GetAnnotations()[ERROR_ANNOTATION]; ok {
+			CreateErrorEvent(ctx, r.Client, pod, msg, "NoInterfacesAvailable")
+		} else {
+			r.Update(ctx, pod)
+		}
+		return ctrl.Result{}, nil
 
-	// Ensure the Multus annotation is correctly formatted and present
+	}
 
 	// Check if the pod is being deleted
 	if pod.GetDeletionTimestamp() != nil {
@@ -124,6 +133,15 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 		if err := r.Update(ctx, pod); err != nil {
 			return ctrl.Result{}, err
 		}
+		if _, ok := pod.GetAnnotations()[MULTUS_ANNOTATION_KEY]; !ok {
+			// Check if the 'l2sm/error' annotation is present. If it is, we leave the pod as the warning is already done and we dont want to attach it
+			if msg, ok := pod.GetAnnotations()[ERROR_ANNOTATION]; ok {
+				CreateErrorEvent(ctx, r.Client, pod, msg, "NoInterfacesAvailable")
+			}
+			return ctrl.Result{}, nil
+
+		}
+
 		logger.Info("L2S-M Pod created: attaching to l2network")
 
 		// We extract the network names and ip adresses desired for our pod.
