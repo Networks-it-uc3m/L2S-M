@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	corev1 "k8s.io/api/core/v1"
@@ -27,7 +28,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
-// +kubebuilder:webhook:path=/mutate-v1-pod,mutating=true,failurePolicy=fail,groups="",resources=pods,verbs=create;update,versions=v1,name=mpod.kb.io
+// +kubebuilder:webhook:path=/mutate-v1-pod,mutating=true,failurePolicy=fail,groups="",resources=pods,verbs=update,versions=v1,name=mpod.kb.io
 type PodAnnotator struct {
 	Client            client.Client
 	Decoder           *admission.Decoder
@@ -36,8 +37,7 @@ type PodAnnotator struct {
 
 func (a *PodAnnotator) Handle(ctx context.Context, req admission.Request) admission.Response {
 	log := log.FromContext(ctx)
-	log.Info("Registering pod")
-
+	log.Info("Webhook: registering pod")
 	// First we decode the pod
 	pod := &corev1.Pod{}
 	err := a.Decoder.Decode(req, pod)
@@ -45,10 +45,16 @@ func (a *PodAnnotator) Handle(ctx context.Context, req admission.Request) admiss
 		log.Error(err, "Error decoding pod")
 		return admission.Errored(http.StatusBadRequest, err)
 	}
-	if pod.Spec.NodeName == "" {
-		return admission.Errored(http.StatusBadRequest, fmt.Errorf("pod hasn't got a node assigned to it"))
+	if !pod.ObjectMeta.DeletionTimestamp.IsZero() {
+		return admission.Allowed("Allowing pod's deletion")
 	}
 
+	if pod.Spec.NodeName == "" {
+		return admission.Allowed("Waiting for scheduler to assign node")
+	}
+	if _, ok := pod.Annotations[ERROR_ANNOTATION]; ok {
+		return admission.Allowed("Already errored creation")
+	}
 	// Check if the pod has the annotation l2sm/networks. This webhook operation only will happen if so. Else, it will just
 	// let the creation begin.
 	if annot, ok := pod.Annotations[L2SM_NETWORK_ANNOTATION]; ok {
@@ -58,13 +64,14 @@ func (a *PodAnnotator) Handle(ctx context.Context, req admission.Request) admiss
 		netAttachDefLabel := NET_ATTACH_LABEL_PREFIX + pod.Spec.NodeName
 		// We extract which networks the user intends to attach the pod to. If there is any error, or the
 		// Networks aren't created, the pod will be set as errored, until a network is created.
-		networks, err := extractNetworks(annot, a.SwitchesNamespace)
+		netAnnotations, err := extractNetworks(annot, a.SwitchesNamespace)
 		if err != nil {
 			log.Error(err, "L2S-M Network annotations could not be extracted")
 			return admission.Errored(http.StatusInternalServerError, err)
 		}
 
-		if _, err := GetL2Networks(ctx, a.Client, networks); err != nil {
+		networkResources, err := GetL2NetworksMap(ctx, a.Client, netAnnotations)
+		if err != nil {
 			log.Info("Pod's network annotation incorrect. L2Network not attached.")
 			// return admission.Allowed("Pod's network annotation incorrect. L2Network not attached.")
 
@@ -77,22 +84,60 @@ func (a *PodAnnotator) Handle(ctx context.Context, req admission.Request) admiss
 
 		// If there are no available network attachment definitions, we can't attach the pod to the desired networks
 		// So, we launch an error.
-		if len(netAttachDefs.Items) < len(networks) {
-			log.Info(fmt.Sprintf("No interfaces available for node %s", pod.Spec.NodeName))
-			return admission.Allowed("No interfaces available for node")
+		if len(netAttachDefs.Items) < len(netAnnotations) {
+			msg := fmt.Sprintf("No interfaces available for node %s", pod.Spec.NodeName)
+			return patchErrorPod(req, pod, &log, msg)
 		}
-
 		// Now we create the multus annotations, by using the network attachment definition name
 		// And the desired IP address.
-		for index, network := range networks {
+		for index, netAnnot := range netAnnotations {
 
+			network, ok := networkResources[netAnnot.Name]
+			if !ok {
+				log.Error(err, "Could not retrieve l2network")
+			}
+			var assignIPAddr []string
 			netAttachDef := &netAttachDefs.Items[index]
-			newAnnotation := NetworkAnnotation{Name: netAttachDef.Name, IPAdresses: network.IPAdresses, Namespace: a.SwitchesNamespace}
+			newAnnotation := NetworkAnnotation{Name: netAttachDef.Name, Namespace: a.SwitchesNamespace}
+
+			if len(netAnnot.IPAdresses) != 0 {
+
+				assignIPAddr = netAnnot.IPAdresses
+			} else {
+
+				if network.Spec.NetworkCIDR != "" {
+
+					nextIP, subnet, err := GetNextAvailableIP(network.Spec.NetworkCIDR, network.Status.LastAssignedIP, network.Status.AssignedIPs)
+
+					network.Status.LastAssignedIP = nextIP
+					assignIPAddr = append(assignIPAddr, nextIP+subnet)
+					if err != nil {
+						log.Error(err, "No available IP addresses for network", "network", network.Name)
+					}
+				}
+
+			}
+			if len(assignIPAddr) != 0 {
+				newAnnotation.IPAdresses = assignIPAddr
+
+			}
+			network.Status.ConnectedPodCount++
+			if network.Status.AssignedIPs == nil {
+				network.Status.AssignedIPs = make(map[string]string)
+			}
+
+			// Now safely assign the IP to the pod
+			network.Status.AssignedIPs[network.Status.LastAssignedIP] = pod.Name
 			netAttachDef.Labels[netAttachDefLabel] = "true"
 
 			err = a.Client.Update(ctx, netAttachDef)
 			if err != nil {
 				log.Error(err, "Could not update network attachment definition")
+
+			}
+			err = a.Client.Status().Update(ctx, &network)
+			if err != nil {
+				log.Error(err, "Could not update l2network status")
 
 			}
 			multusAnnotations = append(multusAnnotations, newAnnotation)
@@ -117,4 +162,16 @@ func (a *PodAnnotator) Handle(ctx context.Context, req admission.Request) admiss
 func (a *PodAnnotator) InjectDecoder(d *admission.Decoder) error {
 	a.Decoder = d
 	return nil
+}
+
+// patchPod marshals the mutated pod and returns a patch response.
+func patchErrorPod(req admission.Request, pod *corev1.Pod, logger *logr.Logger, errorMessage string) admission.Response {
+	pod.Annotations[ERROR_ANNOTATION] = errorMessage
+
+	marshaledPod, err := json.Marshal(pod)
+	if err != nil {
+		logger.Error(err, "Error marshaling Pod")
+		return admission.Errored(http.StatusInternalServerError, err)
+	}
+	return admission.PatchResponseFromRaw(req.Object.Raw, marshaledPod)
 }
