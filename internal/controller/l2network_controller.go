@@ -102,6 +102,7 @@ func (r *L2NetworkReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		}
 		log.Info("Network created in SDN controller", "NetworkID", network.Name)
 		r.updateControllerStatus(ctx, network, l2smv1.OnlineStatus)
+		network.Status.AssignedIPs = make(map[string]string)
 		network.SetFinalizers(append(network.GetFinalizers(), l2smFinalizer))
 		if err := r.Update(ctx, network); err != nil {
 			return ctrl.Result{}, err
@@ -149,8 +150,6 @@ func (r *L2NetworkReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	// 	log.Error(statusUpdateErr, "unable to update L2Network provider status")
 	// 	return ctrl.Result{}, statusUpdateErr
 	// }
-
-	log.Info("something in the rain")
 	return ctrl.Result{}, nil
 }
 
