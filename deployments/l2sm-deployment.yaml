@@ -47,8 +47,8 @@ spec:
       jsonPath: .status.internalConnectivity
       name: AVAILABILITY
       type: string
-    - description: Internal SDN Controller Connectivity
-      jsonPath: .status.connectedPods
+    - description: Number of pods in the network
+      jsonPath: .status.connectedPodCount
       name: CONNECTED_PODS
       type: integer
     - jsonPath: .metadata.creationTimestamp
@@ -84,6 +84,8 @@ spec:
                   as additional configuration depending on the type of network. Check
                   each type of network for specific configuration definitions.
                 type: string
+              networkCIDR:
+                type: string
               provider:
                 description: Provider is an optional field representing a provider
                   spec. Check the provider spec definition for more details
@@ -103,18 +105,21 @@ spec:
                 - vnet
                 - vlink
                 type: string
+                x-kubernetes-preserve-unknown-fields: true
             required:
             - type
             type: object
           status:
             description: L2NetworkStatus defines the observed state of L2Network
             properties:
-              connectedPods:
-                description: Existing Pods in the cluster, connected to the specific
-                  network
-                items:
+              assignedIPs:
+                additionalProperties:
                   type: string
-                type: array
+                description: Existing Pods in the network
+                type: object
+              connectedPodCount:
+                default: 0
+                type: integer
               internalConnectivity:
                 default: Unavailable
                 description: Status of the connectivity to the internal SDN Controller.
@@ -124,6 +129,9 @@ spec:
                 - Available
                 - Unavailable
                 - Unknown
+                type: string
+              lastAssignedIP:
+                description: Last assigned IP, used for sequential allocation
                 type: string
               providerConnectivity:
                 description: Status of the connectivity to the external provider SDN
@@ -9770,7 +9778,7 @@ spec:
           value: l2sm-controller-service.l2sm-system.svc.cluster.local
         - name: CONTROLLER_PORT
           value: "8181"
-        image: alexdecb/l2sm-controller-manager:2.7.3
+        image: alexdecb/l2sm-controller-manager:2.8.0
         livenessProbe:
           httpGet:
             path: /healthz
@@ -9895,7 +9903,7 @@ webhooks:
       name: l2sm-webhook-service
       namespace: l2sm-system
       path: /mutate-v1-pod
-  failurePolicy: Ignore
+  failurePolicy: Fail
   name: mpod.kb.io
   objectSelector:
     matchLabels:
@@ -9906,7 +9914,6 @@ webhooks:
     apiVersions:
     - v1
     operations:
-    - CREATE
     - UPDATE
     resources:
     - pods
