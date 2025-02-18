@@ -50,6 +50,9 @@ var replicaSetOwnerKeyOverlay = ".metadata.controller.overlay"
 //+kubebuilder:rbac:groups=l2sm.l2sm.k8s.local,resources=overlays/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=l2sm.l2sm.k8s.local,resources=overlays/finalizers,verbs=update
 // +kubebuilder:rbac:groups=k8s.cni.cncf.io,resources=network-attachment-definitions,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=l2sm.l2sm.k8s.local,resources=overlays,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=l2sm.l2sm.k8s.local,resources=overlays/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=l2sm.l2sm.k8s.local,resources=overlays/finalizers,verbs=update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.

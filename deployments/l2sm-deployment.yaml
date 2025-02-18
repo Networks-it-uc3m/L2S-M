@@ -9614,7 +9614,7 @@ spec:
         - name: CONTROLLER_PORT
           value: "8181"
         - name: DNS_PORT_NUMBER
-          value: "30053"
+          value: "30808"
         image: alexdecb/l2sm-controller-manager:2.8.0
         livenessProbe:
           httpGet:
