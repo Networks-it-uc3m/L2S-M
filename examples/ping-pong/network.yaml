@@ -18,3 +18,4 @@ metadata:
   name: ping-network
 spec:
   type: vnet
+  networkCIDR: "189.243.0.0/24"

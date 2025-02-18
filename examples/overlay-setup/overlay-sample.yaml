@@ -19,7 +19,7 @@ metadata:
 spec:
   networkController:
     name: l2sm-test-sdn
-    domain: "l2sm-controller-service.l2sm-system.svc"
+    domain: "controller-service.default.svc"
   topology:
     nodes:
       - l2sm-test-control-plane

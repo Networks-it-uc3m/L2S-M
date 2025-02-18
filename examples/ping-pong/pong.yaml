@@ -20,7 +20,7 @@ metadata:
     app: ping-pong
     l2sm: "true"
   annotations:
-    l2sm/networks: ping-network
+    l2sm/networks: '[{"name": "ping-network"}]'
 spec:
   containers:
   - name: router
@@ -30,4 +30,4 @@ spec:
       capabilities:
         add: ["NET_ADMIN"]
   # Use this parameter if you want to place the pod in a specific node
-  nodeName: mole
+  # nodeName: l2sm-test-worker
