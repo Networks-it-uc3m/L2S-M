@@ -21,3 +21,4 @@ spec:
   provider:
     name: idco-controller
     domain: "192.168.122.60:8181"
+    networkCIDR: 10.0.0.0/16
