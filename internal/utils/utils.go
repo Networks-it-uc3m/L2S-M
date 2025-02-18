@@ -21,6 +21,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"hash/fnv"
+	"net"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -141,4 +142,13 @@ func GenerateServiceName(overlayName, nodeName string) string {
 	sum := hash.Sum32()
 	// Encode the hash as a base32 string and take the first 4 characters
 	return fmt.Sprintf("l2sm-switch-%04x", sum) // H
+}
+
+func ChangePortNumber(address, newPort string) string {
+	host, _, err := net.SplitHostPort(address)
+	if err != nil {
+		// TODO: Return error
+		return address
+	}
+	return net.JoinHostPort(host, newPort)
 }

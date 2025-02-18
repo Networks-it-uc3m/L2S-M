@@ -38,6 +38,7 @@ const (
 	L2SM_NETWORK_ANNOTATION = "l2sm/networks"
 	MULTUS_ANNOTATION_KEY   = "k8s.v1.cni.cncf.io/networks"
 	ERROR_ANNOTATION        = "l2sm/error"
+	L2SM_PODNAME_LABEL      = "l2sm/app"
 )
 
 type NetworkAnnotation struct {

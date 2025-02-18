@@ -18,9 +18,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 
 	l2smv1 "github.com/Networks-it-uc3m/L2S-M/api/v1"
+	"github.com/Networks-it-uc3m/L2S-M/internal/dnsinterface"
+	"github.com/Networks-it-uc3m/L2S-M/internal/env"
 	"github.com/Networks-it-uc3m/L2S-M/internal/nedinterface"
 	"github.com/Networks-it-uc3m/L2S-M/internal/sdnclient"
 	"github.com/Networks-it-uc3m/L2S-M/internal/utils"
@@ -214,6 +215,21 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 			// and communicate with it
 			if network.Spec.Provider != nil {
 				logger.Info("Attaching pod to the external sdn controller")
+
+				// We create a DNS Client for registring this pod in an external DNS
+				dnsClient := dnsinterface.DNSClient{ServerAddress: utils.ChangePortNumber(network.Spec.Provider.Domain, env.GetDNSPortNumber()), Scope: "inter"}
+
+				podName := pod.GetName()
+
+				if appName, ok := pod.GetLabels()[L2SM_PODNAME_LABEL]; ok {
+					podName = appName
+				}
+
+				err = dnsClient.AddDNSEntry(podName, network.Name, multusNetAttachDefinitions[index].IPAdresses[0])
+
+				if err != nil {
+					logger.Error(err, "error adding dns entry")
+				}
 				// First we get information from the NED, required to perform the next operations.
 				// The info we need is the node name it is residing in.
 				ned, err := nedinterface.GetNetworkEdgeDevice(ctx, r.Client, network.Spec.Provider.Name)
@@ -259,7 +275,7 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 func (r *PodReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	var err error
 	// Initialize the InternalClient with the base URL of the SDN controller
-	clientConfig := sdnclient.ClientConfig{BaseURL: fmt.Sprintf("http://%s:%s/onos", os.Getenv("CONTROLLER_IP"), os.Getenv("CONTROLLER_PORT")), Username: "karaf", Password: "karaf"}
+	clientConfig := sdnclient.ClientConfig{BaseURL: fmt.Sprintf("http://%s:%s/onos", env.GetControllerIP(), env.GetControllerPort()), Username: "karaf", Password: "karaf"}
 
 	r.InternalClient, err = sdnclient.NewClient(sdnclient.InternalType, clientConfig)
 	if err != nil {
