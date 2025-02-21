@@ -66,6 +66,7 @@ func (a *PodAnnotator) Handle(ctx context.Context, req admission.Request) admiss
 
 		selectedNode := nodeList.Items[rand.Intn(len(nodeList.Items))].Name
 		log.Info("Selected node", "node", selectedNode)
+		pod.Spec.NodeName = selectedNode
 	}
 	if _, ok := pod.Annotations[ERROR_ANNOTATION]; ok {
 		return admission.Allowed("Already errored creation")
@@ -122,7 +123,8 @@ func (a *PodAnnotator) Handle(ctx context.Context, req admission.Request) admiss
 
 				if network.Spec.NetworkCIDR != "" {
 					addressRange := network.Spec.NetworkCIDR
-					_, subnet, err := net.ParseCIDR(addressRange)
+					_, ipNet, err := net.ParseCIDR(addressRange)
+					subnet, _ := ipNet.Mask.Size()
 					subnetMask := fmt.Sprintf("/%d", subnet)
 
 					if err != nil {
@@ -152,7 +154,8 @@ func (a *PodAnnotator) Handle(ctx context.Context, req admission.Request) admiss
 			}
 
 			// Now safely assign the IP to the pod
-			network.Status.AssignedIPs[network.Status.LastAssignedIP] = pod.Name
+			assignedIPAddress, _, _ := net.ParseCIDR(newAnnotation.IPAdresses[0])
+			network.Status.AssignedIPs[assignedIPAddress.String()] = pod.Name
 			netAttachDef.Labels[netAttachDefLabel] = "true"
 
 			err = a.Client.Update(ctx, netAttachDef)
