@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math/rand"
 	"net"
 	"net/http"
 
@@ -51,7 +52,20 @@ func (a *PodAnnotator) Handle(ctx context.Context, req admission.Request) admiss
 	}
 
 	if pod.Spec.NodeName == "" {
-		return admission.Allowed("Waiting for scheduler to assign node")
+		// List available nodes.
+		nodeList := &corev1.NodeList{}
+		if err := a.Client.List(ctx, nodeList); err != nil {
+			log.Error(err, "Error listing nodes")
+			return admission.Errored(http.StatusInternalServerError, err)
+		}
+		if len(nodeList.Items) == 0 {
+			return admission.Errored(http.StatusInternalServerError, fmt.Errorf("no available nodes"))
+		}
+
+		// Seed the random number generator.
+
+		selectedNode := nodeList.Items[rand.Intn(len(nodeList.Items))].Name
+		log.Info("Selected node", "node", selectedNode)
 	}
 	if _, ok := pod.Annotations[ERROR_ANNOTATION]; ok {
 		return admission.Allowed("Already errored creation")

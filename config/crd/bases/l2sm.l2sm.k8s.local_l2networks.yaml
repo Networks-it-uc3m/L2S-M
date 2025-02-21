@@ -71,6 +71,15 @@ spec:
                   each type of network for specific configuration definitions.
                 type: string
               networkCIDR:
+                description: |-
+                  NetworkCIDR defines the overall network CIDR used for routing pod interfaces.
+                  This value represents the broader network segment that encompasses all pod IPs,
+                  e.g. 10.101.0.0/16.
+                type: string
+              podAddressRange:
+                description: |-
+                  PodAddressRange specifies the specific pool of IP addresses that can be assigned to pods.
+                  This range should be a subset of the overall network CIDR, e.g. 10.101.2.0/24.
                 type: string
               provider:
                 description: Provider is an optional field representing a provider

@@ -36,7 +36,7 @@ webhooks:
         path: /mutate-v1-pod
       caBundle: ""
     rules:
-      - operations: [ "UPDATE" ]
+      - operations: [ "CREATE" ]
         apiGroups: [""]
         apiVersions: ["v1"]
         resources: ["pods"]
