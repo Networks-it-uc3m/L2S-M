@@ -16,13 +16,10 @@ package controller
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
-	l2smv1 "github.com/Networks-it-uc3m/L2S-M/api/v1"
 	"github.com/Networks-it-uc3m/L2S-M/internal/dnsinterface"
 	"github.com/Networks-it-uc3m/L2S-M/internal/env"
-	"github.com/Networks-it-uc3m/L2S-M/internal/nedinterface"
 	"github.com/Networks-it-uc3m/L2S-M/internal/sdnclient"
 	"github.com/Networks-it-uc3m/L2S-M/internal/utils"
 	"github.com/go-logr/logr"
@@ -31,8 +28,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-
-	nettypes "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
 )
 
 // PodReconciler reconciles a Pod object
@@ -230,36 +225,7 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 				if err != nil {
 					logger.Error(err, "error adding dns entry")
 				}
-				// First we get information from the NED, required to perform the next operations.
-				// The info we need is the node name it is residing in.
-				ned, err := nedinterface.GetNetworkEdgeDevice(ctx, r.Client, network.Spec.Provider.Name)
 
-				if err != nil {
-					logger.Error(err, "error getting NED")
-					return ctrl.Result{}, nil
-
-				}
-				// Then, we create the connection between the NED and the l2sm-switch, in the internal SDN Controller
-				nedNetworkAttachDef, err := r.ConnectInternalSwitchToNED(ctx, network.Name, ned.Spec.NodeConfig.NodeName)
-				if err != nil {
-					logger.Error(err, "error connecting NED")
-					return ctrl.Result{}, nil
-				}
-				// We attach the ned to this new network, connecting with the IDCO SDN Controller. We need
-				// The Network name so we can know which network to attach the port to.
-				// The multus network attachment definition that will be used as a bridge between the internal switch and the NED.
-				bridgeName, err := utils.GetPortNumberFromNetAttachDef(nedNetworkAttachDef.Name)
-				if err != nil {
-					// If there is an error, it must be that the name is not compliant, so we can't be certain of which
-					// port we are trying to attach.
-					return ctrl.Result{}, fmt.Errorf("could not get port number from the multus network annotation: %v. Can't attach pod to network", err)
-				}
-				err = r.CreateNewNEDConnection(network, fmt.Sprintf("br%s", bridgeName), ned)
-				if err != nil {
-					logger.Error(err, "error attaching NED to the l2network")
-
-					return ctrl.Result{}, nil
-				}
 				logger.Info("Connected pod to inter-domain network")
 
 			}
@@ -285,73 +251,4 @@ func (r *PodReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&corev1.Pod{}).
 		Complete(r)
-}
-
-// CreateNEDConnection is a method that given the name of the network and the
-func (r *PodReconciler) CreateNewNEDConnection(network l2smv1.L2Network, nedNetworkAttachDef string, ned l2smv1.NetworkEdgeDevice) error {
-
-	clientConfig := sdnclient.ClientConfig{BaseURL: fmt.Sprintf("http://%s/onos", network.Spec.Provider.Domain), Username: "karaf", Password: "karaf"}
-
-	fmt.Println(clientConfig)
-	externalClient, err := sdnclient.NewClient(sdnclient.InternalType, clientConfig)
-
-	if err != nil {
-		return fmt.Errorf("no connection could be made with external sdn controller: %s", err)
-
-	}
-	// AddPort returns the port number to attach so we can talk directly with the IDCO
-	// It needs to know which exiting interface to add to the network
-	nedPortNumber, err := nedinterface.AttachInterface(fmt.Sprintf("%s:50051", ned.Spec.NodeConfig.IPAddress), nedNetworkAttachDef)
-
-	if err != nil {
-		return fmt.Errorf("no connection could be made with ned: %v", err)
-	}
-
-	nedOFID := fmt.Sprintf("of:%s", utils.GenerateDatapathID(utils.GetBridgeName(utils.BridgeParams{NodeName: ned.Spec.NodeConfig.NodeName, ProviderName: network.Spec.Provider.Name})))
-	nedOFPort := fmt.Sprintf("%s/%s", nedOFID, nedPortNumber)
-
-	err = externalClient.AttachPodToNetwork(network.Spec.Type, sdnclient.VnetPortPayload{NetworkId: network.Name, Port: []string{nedOFPort}})
-	if err != nil {
-		return errors.Join(err, errors.New("could not update network attachment definition"))
-
-	}
-	return nil
-}
-
-func (r *PodReconciler) ConnectInternalSwitchToNED(ctx context.Context, networkName, nedNodeName string) (nettypes.NetworkAttachmentDefinition, error) {
-
-	// We get a free interface in the node name of the NED, this way we can interconnect the NED with the l2sm switch
-	var err error
-	netAttachDefLabel := NET_ATTACH_LABEL_PREFIX + nedNodeName
-	netAttachDefs := GetFreeNetAttachDefs(ctx, r.Client, r.SwitchesNamespace, netAttachDefLabel)
-
-	if len(netAttachDefs.Items) == 0 {
-		err = errors.New("no interfaces available in control plane node")
-		//logger.Error(err, fmt.Sprintf("No interfaces available for node %s", gatewayNodeName))
-		return nettypes.NetworkAttachmentDefinition{}, err
-	}
-
-	netAttachDef := &netAttachDefs.Items[0]
-
-	portNumber, _ := utils.GetPortNumberFromNetAttachDef(netAttachDef.Name)
-
-	internalSwitchOFID := fmt.Sprintf("of:%s", utils.GenerateDatapathID(nedNodeName))
-
-	internalSwitchOFPort := fmt.Sprintf("%s/%s", internalSwitchOFID, portNumber)
-
-	err = r.InternalClient.AttachPodToNetwork("vnets", sdnclient.VnetPortPayload{NetworkId: networkName, Port: []string{internalSwitchOFPort}})
-
-	if err != nil {
-		return nettypes.NetworkAttachmentDefinition{}, fmt.Errorf("could not make a connection between the internal switch and the NED. Internal SDN controller error: %s", err)
-
-	}
-
-	netAttachDef.Labels[netAttachDefLabel] = "true"
-	err = r.Client.Update(ctx, netAttachDef)
-	if err != nil {
-		return nettypes.NetworkAttachmentDefinition{}, fmt.Errorf("could not update network attachment definition: %s", err)
-
-	}
-
-	return *netAttachDef, nil
 }

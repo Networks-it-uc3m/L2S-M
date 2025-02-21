@@ -127,8 +127,9 @@ func main() {
 	}
 
 	if err = (&controller.L2NetworkReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:            mgr.GetClient(),
+		Scheme:            mgr.GetScheme(),
+		SwitchesNamespace: env.GetSwitchesNamespace(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "L2Network")
 		os.Exit(1)
