@@ -61,7 +61,14 @@ type L2NetworkSpec struct {
 	// Provider is an optional field representing a provider spec. Check the provider spec definition for more details
 	Provider *ProviderSpec `json:"provider,omitempty"`
 
+	// NetworkCIDR defines the overall network CIDR used for routing pod interfaces.
+	// This value represents the broader network segment that encompasses all pod IPs,
+	// e.g. 10.101.0.0/16.
 	NetworkCIDR string `json:"networkCIDR,omitempty"`
+
+	// PodAddressRange specifies the specific pool of IP addresses that can be assigned to pods.
+	// This range should be a subset of the overall network CIDR, e.g. 10.101.2.0/24.
+	PodAddressRange string `json:"podAddressRange,omitempty"`
 }
 
 // L2NetworkStatus defines the observed state of L2Network

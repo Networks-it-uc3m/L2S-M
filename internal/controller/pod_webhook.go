@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
 
 	"github.com/go-logr/logr"
@@ -106,11 +107,21 @@ func (a *PodAnnotator) Handle(ctx context.Context, req admission.Request) admiss
 			} else {
 
 				if network.Spec.NetworkCIDR != "" {
+					addressRange := network.Spec.NetworkCIDR
+					_, subnet, err := net.ParseCIDR(addressRange)
+					subnetMask := fmt.Sprintf("/%d", subnet)
 
-					nextIP, subnet, err := GetNextAvailableIP(network.Spec.NetworkCIDR, network.Status.LastAssignedIP, network.Status.AssignedIPs)
+					if err != nil {
+						log.Error(err, "NetworkCIDR couldn't be parsed correctly", "network", network.Name)
+					}
+
+					if network.Spec.PodAddressRange != "" {
+						addressRange = network.Spec.PodAddressRange
+					}
+					nextIP, _, err := GetNextAvailableIP(addressRange, network.Status.LastAssignedIP, network.Status.AssignedIPs)
 
 					network.Status.LastAssignedIP = nextIP
-					assignIPAddr = append(assignIPAddr, nextIP+subnet)
+					assignIPAddr = append(assignIPAddr, nextIP+subnetMask)
 					if err != nil {
 						log.Error(err, "No available IP addresses for network", "network", network.Name)
 					}
