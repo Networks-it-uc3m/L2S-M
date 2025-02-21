@@ -30,7 +30,7 @@ func GetDNSPortNumber() string {
 }
 
 func GetSwitchesNamespace() string {
-	return getEnv("SWITCHES_NAMESPACE", "l2sm-system")
+	return getEnv("SWITCHES_NAMESPACE", "")
 }
 
 func GetControllerIP() string {
