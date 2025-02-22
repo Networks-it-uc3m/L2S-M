@@ -100,14 +100,14 @@ spec:
                   spec. Check the provider spec definition for more details
                 properties:
                   dnsPort:
-                    default: 30053
+                    default: "30053"
                     type: string
                   domain:
                     type: string
                   name:
                     type: string
                   sdnPort:
-                    default: 30808
+                    default: "30808"
                     type: string
                 required:
                 - domain

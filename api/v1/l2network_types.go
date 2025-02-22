@@ -46,9 +46,9 @@ type ProviderSpec struct {
 	Name   string `json:"name"`
 	Domain string `json:"domain"`
 
-	//+kubebuilder:default:value=30808
+	//+kubebuilder:default:value="30808"
 	SDNPort string `json:"sdnPort,omitempty"`
-	//+kubebuilder:default:value=30053
+	//+kubebuilder:default:value="30053"
 	DNSPort string `json:"dnsPort,omitempty"`
 }
 
