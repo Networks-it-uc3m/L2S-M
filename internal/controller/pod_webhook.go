@@ -80,13 +80,14 @@ func (a *PodAnnotator) Handle(ctx context.Context, req admission.Request) admiss
 		netAttachDefLabel := NET_ATTACH_LABEL_PREFIX + pod.Spec.NodeName
 		// We extract which networks the user intends to attach the pod to. If there is any error, or the
 		// Networks aren't created, the pod will be set as errored, until a network is created.
-		netAnnotations, err := extractNetworks(annot, a.SwitchesNamespace)
+		l2NetAnnotations, err := extractNetworks(annot, a.SwitchesNamespace)
 		if err != nil {
 			log.Error(err, "L2S-M Network annotations could not be extracted")
 			return admission.Errored(http.StatusInternalServerError, err)
 		}
 
-		networkResources, err := GetL2NetworksMap(ctx, a.Client, netAnnotations)
+		// Map of the l2networks for quick lookup
+		networkResources, err := GetL2NetworksMap(ctx, a.Client, l2NetAnnotations)
 		if err != nil {
 			log.Info("Pod's network annotation incorrect. L2Network not attached.")
 			// return admission.Allowed("Pod's network annotation incorrect. L2Network not attached.")
@@ -100,28 +101,41 @@ func (a *PodAnnotator) Handle(ctx context.Context, req admission.Request) admiss
 
 		// If there are no available network attachment definitions, we can't attach the pod to the desired networks
 		// So, we launch an error.
-		if len(netAttachDefs.Items) < len(netAnnotations) {
+		if len(netAttachDefs.Items) < len(l2NetAnnotations) {
 			msg := fmt.Sprintf("No interfaces available for node %s", pod.Spec.NodeName)
 			return patchErrorPod(req, pod, &log, msg)
 		}
 		// Now we create the multus annotations, by using the network attachment definition name
 		// And the desired IP address.
-		for index, netAnnot := range netAnnotations {
+		for index, l2NetAnnot := range l2NetAnnotations {
 
-			network, ok := networkResources[netAnnot.Name]
+			// We get the l2network from the l2network map, based on the annotation
+			network, ok := networkResources[l2NetAnnot.Name]
 			if !ok {
 				log.Error(err, "Could not retrieve l2network")
 			}
+
+			// Array of the ip addresses we'll try to assign the pod
 			var assignIPAddr []string
+
+			// We get the network attachment definition as an annotation for the pod. If switches namespace is not set,
+			//it will be the same as the pod's namespace
 			netAttachDef := &netAttachDefs.Items[index]
-			newAnnotation := NetworkAnnotation{Name: netAttachDef.Name, Namespace: a.SwitchesNamespace}
 
-			if len(netAnnot.IPAdresses) != 0 {
+			// New annotation is the multus that will be attached to the pod
+			multusAnnotation := NetworkAnnotation{Name: netAttachDef.Name, Namespace: a.SwitchesNamespace}
 
-				assignIPAddr = netAnnot.IPAdresses
+			// If the user specified a static ip address, we will use that
+			if len(l2NetAnnot.IPAdresses) != 0 {
+				assignIPAddr = l2NetAnnot.IPAdresses
 			} else {
 
+				// Else, we check if the l2network has a l3 config or not
 				if network.Spec.NetworkCIDR != "" {
+
+					// We take the network address range and the pod address range. The network one specifies the routing option; the pod range is
+					// inside that subnet specifying which available ip address to take. This is because we want compatibility with inter domain networks
+					// where logic is not fully shared
 					addressRange := network.Spec.NetworkCIDR
 					_, ipNet, err := net.ParseCIDR(addressRange)
 					subnet, _ := ipNet.Mask.Size()
@@ -134,28 +148,44 @@ func (a *PodAnnotator) Handle(ctx context.Context, req admission.Request) admiss
 					if network.Spec.PodAddressRange != "" {
 						addressRange = network.Spec.PodAddressRange
 					}
+
+					// We take the next available ip address from the network assigned ips, checking it's not been already assigned.
 					nextIP, _, err := GetNextAvailableIP(addressRange, network.Status.LastAssignedIP, network.Status.AssignedIPs)
 
-					network.Status.LastAssignedIP = nextIP
-					assignIPAddr = append(assignIPAddr, nextIP+subnetMask)
 					if err != nil {
 						log.Error(err, "No available IP addresses for network", "network", network.Name)
 					}
+
+					network.Status.LastAssignedIP = nextIP
+					assignIPAddr = append(assignIPAddr, nextIP+subnetMask)
+				} else {
+
+					// If it hasn't got an ip address, and the network is not set to layer 3, by default it will be layer 2
+
 				}
 
 			}
+
+			// If there is ipv4, we update the multus annotation and network to notify the new ip and pod
 			if len(assignIPAddr) != 0 {
-				newAnnotation.IPAdresses = assignIPAddr
+				multusAnnotation.IPAdresses = assignIPAddr
+				if network.Status.AssignedIPs == nil {
+					network.Status.AssignedIPs = make(map[string]string)
+				}
 
+				// Now safely assign the IP to the pod
+				assignedIPAddress, _, _ := net.ParseCIDR(multusAnnotation.IPAdresses[0])
+				network.Status.AssignedIPs[assignedIPAddress.String()] = pod.Name
+
+			} else {
+
+				// If there is no ipv4, it means its L2, so to bypass the static ipam plugin, we give a localhost ipv6 to the annotation
+				multusAnnotation.GenerateIPv6Address()
 			}
+
+			// We update the net attach definition to specify that for this pod node it's taken, and the network to say it has 1 more pod
 			network.Status.ConnectedPodCount++
-			if network.Status.AssignedIPs == nil {
-				network.Status.AssignedIPs = make(map[string]string)
-			}
 
-			// Now safely assign the IP to the pod
-			assignedIPAddress, _, _ := net.ParseCIDR(newAnnotation.IPAdresses[0])
-			network.Status.AssignedIPs[assignedIPAddress.String()] = pod.Name
 			netAttachDef.Labels[netAttachDefLabel] = "true"
 
 			err = a.Client.Update(ctx, netAttachDef)
@@ -168,7 +198,7 @@ func (a *PodAnnotator) Handle(ctx context.Context, req admission.Request) admiss
 				log.Error(err, "Could not update l2network status")
 
 			}
-			multusAnnotations = append(multusAnnotations, newAnnotation)
+			multusAnnotations = append(multusAnnotations, multusAnnotation)
 		}
 		pod.Annotations[MULTUS_ANNOTATION_KEY] = multusAnnotationToString(multusAnnotations)
 

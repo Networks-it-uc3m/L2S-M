@@ -21,7 +21,6 @@ import (
 	"math/rand"
 	"net"
 	"strings"
-	"time"
 
 	l2smv1 "github.com/Networks-it-uc3m/L2S-M/api/v1"
 	nettypes "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
@@ -63,7 +62,7 @@ func extractNetworks(annotations, namespace string) ([]NetworkAnnotation, error)
 		}
 	}
 
-	// Iterate over the networks to check if any IPAddresses are missing
+	// Iterate over the networks to add the namespace
 	for i := range networks {
 		// if len(networks[i].IPAdresses) == 0 {
 		// 	// Call GenerateIPv6Address if IPAddresses are missing
@@ -149,7 +148,6 @@ func GetFreeNetAttachDefs(ctx context.Context, c client.Client, switchesNamespac
 }
 
 func (network *NetworkAnnotation) GenerateIPv6Address() {
-	rand.Seed(time.Now().UnixNano())
 
 	// Generating the interface ID (64 bits)
 	interfaceID := rand.Uint64()
