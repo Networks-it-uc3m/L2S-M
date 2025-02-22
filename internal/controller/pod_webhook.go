@@ -131,6 +131,7 @@ func (a *PodAnnotator) Handle(ctx context.Context, req admission.Request) admiss
 			} else {
 
 				// Else, we check if the l2network has a l3 config or not
+				// If it hasn't got an ip address, and the network is not set to layer 3, by default it will be layer 2
 				if network.Spec.NetworkCIDR != "" {
 
 					// We take the network address range and the pod address range. The network one specifies the routing option; the pod range is
@@ -158,10 +159,6 @@ func (a *PodAnnotator) Handle(ctx context.Context, req admission.Request) admiss
 
 					network.Status.LastAssignedIP = nextIP
 					assignIPAddr = append(assignIPAddr, nextIP+subnetMask)
-				} else {
-
-					// If it hasn't got an ip address, and the network is not set to layer 3, by default it will be layer 2
-
 				}
 
 			}
