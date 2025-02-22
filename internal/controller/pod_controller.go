@@ -214,7 +214,9 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 				logger.Info("Attaching pod to the external sdn controller")
 
 				// We create a DNS Client for registring this pod in an external DNS
-				dnsClient := dnsinterface.DNSClient{ServerAddress: utils.ChangePortNumber(network.Spec.Provider.Domain, env.GetDNSPortNumber()), Scope: "inter"}
+				providerAddress := fmt.Sprintf("%s:%s", network.Spec.Provider.Domain, utils.DefaultIfEmpty(network.Spec.Provider.DNSPort, "30053"))
+
+				dnsClient := dnsinterface.DNSClient{ServerAddress: providerAddress, Scope: "inter"}
 
 				podName := pod.GetName()
 

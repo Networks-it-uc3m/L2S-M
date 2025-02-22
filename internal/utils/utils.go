@@ -152,3 +152,10 @@ func ChangePortNumber(address, newPort string) string {
 	}
 	return net.JoinHostPort(host, newPort)
 }
+
+func DefaultIfEmpty(val, def string) string {
+	if val == "" {
+		return def
+	}
+	return val
+}

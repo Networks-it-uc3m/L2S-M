@@ -213,7 +213,9 @@ func interDomainReconcile(network *l2smv1.L2Network, log logr.Logger) (l2smv1.Co
 	if network.Spec.Provider == nil {
 		return l2smv1.UnknownStatus, errors.New("ext-vnet doesn't have a provider specified")
 	}
-	clientConfig := sdnclient.ClientConfig{BaseURL: fmt.Sprintf("http://%s/onos", network.Spec.Provider.Domain), Username: "karaf", Password: "karaf"}
+
+	providerAddress := fmt.Sprintf("%s:%s", network.Spec.Provider.Domain, utils.DefaultIfEmpty(network.Spec.Provider.SDNPort, "30808"))
+	clientConfig := sdnclient.ClientConfig{BaseURL: fmt.Sprintf("http://%s/onos", providerAddress), Username: "karaf", Password: "karaf"}
 
 	externalClient, err := sdnclient.NewClient(sdnclient.InternalType, clientConfig)
 
@@ -291,9 +293,9 @@ func (r *L2NetworkReconciler) ConnectInternalSwitchToNED(ctx context.Context, ne
 // CreateNEDConnection is a method that given the name of the network and the
 func (r *L2NetworkReconciler) CreateNewNEDConnection(network *l2smv1.L2Network, nedNetworkAttachDef string, ned l2smv1.NetworkEdgeDevice) error {
 
-	clientConfig := sdnclient.ClientConfig{BaseURL: fmt.Sprintf("http://%s/onos", network.Spec.Provider.Domain), Username: "karaf", Password: "karaf"}
+	providerAddress := fmt.Sprintf("%s:%s", network.Spec.Provider.Domain, utils.DefaultIfEmpty(network.Spec.Provider.SDNPort, "30808"))
+	clientConfig := sdnclient.ClientConfig{BaseURL: fmt.Sprintf("http://%s/onos", providerAddress), Username: "karaf", Password: "karaf"}
 
-	fmt.Println(clientConfig)
 	externalClient, err := sdnclient.NewClient(sdnclient.InternalType, clientConfig)
 
 	if err != nil {
