@@ -92,6 +92,9 @@ spec:
                     type: string
                   name:
                     type: string
+                  ofPort:
+                    default: "6633"
+                    type: string
                   sdnPort:
                     default: "30808"
                     type: string

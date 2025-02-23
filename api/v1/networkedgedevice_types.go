@@ -99,7 +99,7 @@ type NetworkEdgeDeviceSpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	// The SDN Controller that manages the overlay network. Must specify a domain and a name.
-	ProviderSpec *ProviderSpec `json:"providerSpec"`
+	Provider *ProviderSpec `json:"provider"`
 
 	// Node Configuration
 	NodeConfig *NodeConfigSpec `json:"nodeConfig"`

@@ -81,22 +81,6 @@ spec:
                   - node
                   type: object
                 type: array
-              networkController:
-                description: The SDN Controller that manages the overlay network.
-                  Must specify a domain and a name.
-                properties:
-                  domain:
-                    description: Domain where the controller can be reached at. Must
-                      be a valid IP Address or Domain name, reachable from all the
-                      nodes where the switches are deployed at.
-                    type: string
-                  name:
-                    description: Name of the Network controller
-                    type: string
-                required:
-                - domain
-                - name
-                type: object
               nodeConfig:
                 description: Node Configuration
                 properties:
@@ -107,6 +91,27 @@ spec:
                 required:
                 - ipAddress
                 - nodeName
+                type: object
+              provider:
+                description: The SDN Controller that manages the overlay network.
+                  Must specify a domain and a name.
+                properties:
+                  dnsPort:
+                    default: "30053"
+                    type: string
+                  domain:
+                    type: string
+                  name:
+                    type: string
+                  ofPort:
+                    default: "6633"
+                    type: string
+                  sdnPort:
+                    default: "30808"
+                    type: string
+                required:
+                - domain
+                - name
                 type: object
               switchTemplate:
                 description: Template describes the virtual switch pod that will be
@@ -4523,8 +4528,8 @@ spec:
                     type: object
                 type: object
             required:
-            - networkController
             - nodeConfig
+            - provider
             - switchTemplate
             type: object
           status:

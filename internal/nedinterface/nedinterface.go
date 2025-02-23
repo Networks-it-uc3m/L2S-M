@@ -65,7 +65,7 @@ func GetNetworkEdgeDevice(ctx context.Context, c client.Client, providerName str
 	}
 
 	for _, ned := range neds.Items {
-		if ned.Spec.ProviderSpec.Name == providerName {
+		if ned.Spec.Provider.Name == providerName {
 			// Return the first matching device
 			return ned, nil
 		}

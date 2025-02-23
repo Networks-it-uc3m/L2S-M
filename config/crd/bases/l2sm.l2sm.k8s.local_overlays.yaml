@@ -58,7 +58,7 @@ spec:
                 description: Interface number specifies how many interfaces the switch
                   should have predefined (if used with multus)
                 type: integer
-              providerSpec:
+              provider:
                 description: The SDN Controller that manages the overlay network.
                   Must specify a domain and a name.
                 properties:
@@ -4518,7 +4518,7 @@ spec:
                 - nodes
                 type: object
             required:
-            - providerSpec
+            - provider
             - switchTemplate
             type: object
           status:
