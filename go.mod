@@ -6,7 +6,7 @@ toolchain go1.22.5
 
 require (
 	github.com/Networks-it-uc3m/l2sm-dns v1.0.1
-	github.com/Networks-it-uc3m/l2sm-switch v1.0.2
+	github.com/Networks-it-uc3m/l2sm-switch v1.2.8
 	github.com/go-logr/logr v1.4.1
 	github.com/onsi/ginkgo/v2 v2.14.0
 	github.com/onsi/gomega v1.30.0
@@ -23,7 +23,7 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240814211410-ddb44dafa142 // indirect
 )
 
-// replace github.com/Networks-it-uc3m/l2sm-switch => ../switch
+// replace github.com/Networks-it-uc3m/l2sm-switch => ../l2sm-clone
 
 require (
 	github.com/beorn7/perks v1.0.1 // indirect

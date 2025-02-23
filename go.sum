@@ -1,7 +1,7 @@
 github.com/Networks-it-uc3m/l2sm-dns v1.0.1 h1:mlaKpDC509eT4LAG6DlWb67fr272T/wnm0+xcTRatLY=
 github.com/Networks-it-uc3m/l2sm-dns v1.0.1/go.mod h1:8TaeiBDMiEryX9kSLmFvJKPk5w3PnzTouJ+OIoeD09c=
-github.com/Networks-it-uc3m/l2sm-switch v1.0.2 h1:P4gVqfcO6LgKVxWI4aDfQnbYnRi+8+nc5+K1wq9sIEU=
-github.com/Networks-it-uc3m/l2sm-switch v1.0.2/go.mod h1:zcfUyOLAiCEQza5QRTJoQsrOYdu+WQf/6rQNmhGb4WQ=
+github.com/Networks-it-uc3m/l2sm-switch v1.2.8 h1:bWvuYGOKeOzzyWHRMNU3MiB5zcX9BswCBK8sywaKaOA=
+github.com/Networks-it-uc3m/l2sm-switch v1.2.8/go.mod h1:zcfUyOLAiCEQza5QRTJoQsrOYdu+WQf/6rQNmhGb4WQ=
 github.com/beorn7/perks v1.0.1 h1:VlbKKnNfV8bJzeqoa4cOKqO6bYr3WgKZxO8Z16+hsOM=
 github.com/beorn7/perks v1.0.1/go.mod h1:G2ZrVWU2WbWT9wwq4/hrbKbnv/1ERSJQ0ibhJ6rlkpw=
 github.com/cespare/xxhash/v2 v2.3.0 h1:UL815xU9SqsFlibzuggzjXhog7bL6oX9BbNZnL2UFvs=

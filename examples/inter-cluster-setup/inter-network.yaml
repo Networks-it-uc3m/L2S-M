@@ -20,6 +20,7 @@ spec:
   type: vnet
   provider:
     name: idco-controller
-    domain: "192.168.122.60:8181"
+    domain: "192.168.122.60"
+    sdnPort: 30808
   networkCIDR: 10.0.0.0/24
   podAddressRange: "10.1.0.0/16"
