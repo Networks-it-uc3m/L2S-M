@@ -35,7 +35,7 @@ metadata:
   labels:
     app: l2sm
 spec:
-  networkController:
+  provider:
     name: <controller-name>
     domain: <controller-domain>
   nodeConfig:
@@ -101,7 +101,7 @@ metadata:
   labels:
     app: l2sm
 spec:
-  networkController:
+  provider:
     name: idco-controller
     domain: 192.168.122.60  # Network controller IP
   nodeConfig:

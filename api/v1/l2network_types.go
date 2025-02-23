@@ -50,6 +50,8 @@ type ProviderSpec struct {
 	SDNPort string `json:"sdnPort,omitempty"`
 	//+kubebuilder:default:value="30053"
 	DNSPort string `json:"dnsPort,omitempty"`
+	//+kubebuilder:default:value="6633"
+	OFPort string `json:"ofPort,omitempty"`
 }
 
 // L2NetworkSpec defines the desired state of L2Network

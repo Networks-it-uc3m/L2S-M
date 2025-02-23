@@ -19,7 +19,7 @@ metadata:
   labels:
     app: l2sm
 spec:
-  networkController:
+  provider:
     name: idco-controller
     domain: 192.168.122.60
   nodeConfig:

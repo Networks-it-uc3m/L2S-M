@@ -192,7 +192,8 @@ func (r *OverlayReconciler) createExternalResources(ctx context.Context, overlay
 		// Construct the TopologySwitchJson
 		topologySwitch := switchv1.Topology{}
 
-		overlayConfig := switchv1.OverlaySettings{ControllerIp: overlay.Spec.NetworkController.Domain,
+		overlayConfig := switchv1.OverlaySettings{ControllerIp: overlay.Spec.ProviderSpec.Domain,
+			ControllerPort:   overlay.Spec.ProviderSpec.OFPort,
 			InterfacesNumber: overlay.Spec.InterfaceNumber,
 			OverlayName:      overlay.Name}
 

@@ -171,9 +171,13 @@ func (r *NetworkEdgeDeviceReconciler) createExternalResources(ctx context.Contex
 	if err != nil {
 		return err
 	}
-	nedName := utils.GetBridgeName(utils.BridgeParams{NodeName: netEdgeDevice.Spec.NodeConfig.NodeName, ProviderName: netEdgeDevice.Spec.NetworkController.Name})
+	nedName := utils.GetBridgeName(utils.BridgeParams{NodeName: netEdgeDevice.Spec.NodeConfig.NodeName, ProviderName: netEdgeDevice.Spec.ProviderSpec.Name})
 
-	nedConfig, err := json.Marshal(switchv1.NedSettings{ControllerIP: netEdgeDevice.Spec.NetworkController.Domain, NodeName: netEdgeDevice.Spec.NodeConfig.NodeName, NedName: nedName})
+	nedConfig, err := json.Marshal(switchv1.NedSettings{
+		ControllerIP:   netEdgeDevice.Spec.ProviderSpec.Domain,
+		ControllerPort: netEdgeDevice.Spec.ProviderSpec.OFPort,
+		NodeName:       netEdgeDevice.Spec.NodeConfig.NodeName,
+		NedName:        nedName})
 	if err != nil {
 		return err
 	}

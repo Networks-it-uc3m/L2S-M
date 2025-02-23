@@ -58,17 +58,22 @@ spec:
                 description: Interface number specifies how many interfaces the switch
                   should have predefined (if used with multus)
                 type: integer
-              networkController:
+              providerSpec:
                 description: The SDN Controller that manages the overlay network.
                   Must specify a domain and a name.
                 properties:
+                  dnsPort:
+                    default: "30053"
+                    type: string
                   domain:
-                    description: Domain where the controller can be reached at. Must
-                      be a valid IP Address or Domain name, reachable from all the
-                      nodes where the switches are deployed at.
                     type: string
                   name:
-                    description: Name of the Network controller
+                    type: string
+                  ofPort:
+                    default: "6633"
+                    type: string
+                  sdnPort:
+                    default: "30808"
                     type: string
                 required:
                 - domain
@@ -4513,7 +4518,7 @@ spec:
                 - nodes
                 type: object
             required:
-            - networkController
+            - providerSpec
             - switchTemplate
             type: object
           status:

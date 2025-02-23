@@ -17,7 +17,7 @@ kind: Overlay
 metadata:
   name: overlay-sample
 spec:
-  networkController:
+  provider:
     name: l2sm-test-sdn
     domain: "l2sm-controller-service.l2sm-system.svc"
   topology:

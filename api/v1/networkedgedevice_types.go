@@ -22,16 +22,6 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
-// The SDN Controller that manages the overlay network.
-type NetworkControllerSpec struct {
-
-	// Name of the Network controller
-	Name string `json:"name"`
-
-	// Domain where the controller can be reached at. Must be a valid IP Address or Domain name, reachable from all the nodes where the switches are deployed at.
-	Domain string `json:"domain"`
-}
-
 type NeighborSpec struct {
 
 	// Name of the cluster the link is going to be made upon.
@@ -109,7 +99,7 @@ type NetworkEdgeDeviceSpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	// The SDN Controller that manages the overlay network. Must specify a domain and a name.
-	NetworkController *NetworkControllerSpec `json:"networkController"`
+	ProviderSpec *ProviderSpec `json:"providerSpec"`
 
 	// Node Configuration
 	NodeConfig *NodeConfigSpec `json:"nodeConfig"`
