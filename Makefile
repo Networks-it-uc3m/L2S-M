@@ -4,7 +4,10 @@ IMG ?= alexdecb/l2sm-controller-manager:2.8.0
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.29.0
 
-DEV_IP = 192.168.1.41
+include .env
+export DEV_IP
+
+
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
 GOBIN=$(shell go env GOPATH)/bin
