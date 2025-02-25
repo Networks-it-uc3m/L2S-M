@@ -48,8 +48,16 @@ type ProviderSpec struct {
 
 	//+kubebuilder:default:value="30808"
 	SDNPort string `json:"sdnPort,omitempty"`
-	//+kubebuilder:default:value="30053"
+
+	// DNS service configuration
+	//+kubebuilder:default:="30053"
+	// DNS protocol port (used for DNS queries via tools like dig)
 	DNSPort string `json:"dnsPort,omitempty"`
+
+	//+kubebuilder:default:="30818"
+	// gRPC management port for DNS service (used for adding/modifying DNS entries)
+	DNSGRPCPort string `json:"dnsGrpcPort,omitempty"`
+
 	//+kubebuilder:default:value="6633"
 	OFPort string `json:"ofPort,omitempty"`
 }

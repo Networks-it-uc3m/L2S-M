@@ -110,56 +110,55 @@ func (r *L2NetworkReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		if err := r.Update(ctx, network); err != nil {
 			return ctrl.Result{}, err
 		}
-	}
+		// If network is inter domain
+		if network.Spec.Provider != nil {
+			provStatus, err := interDomainReconcile(network, logger)
+			if err != nil {
+				logger.Error(err, "failed to connect to provider")
+			}
+			network.Status.ProviderConnectivity = &provStatus
 
-	// If network is inter domain
-	if network.Spec.Provider != nil {
-		provStatus, err := interDomainReconcile(network, logger)
-		if err != nil {
-			logger.Error(err, "failed to connect to provider")
+			// Update the status in the Kubernetes API
+			if statusUpdateErr := r.Status().Update(ctx, network); statusUpdateErr != nil {
+				logger.Error(statusUpdateErr, "unable to update L2Network provider status")
+				return ctrl.Result{}, statusUpdateErr
+			}
+
+			logger.Info("Attaching NED to internal Overlay for new network")
+
+			// First we get information from the NED, required to perform the next operations.
+			// The info we need is the node name it is residing in.
+			ned, err := nedinterface.GetNetworkEdgeDevice(ctx, r.Client, network.Spec.Provider.Name)
+
+			if err != nil {
+				logger.Error(err, "error getting NED")
+				return ctrl.Result{}, nil
+
+			}
+			// Then, we create the connection between the NED and the l2sm-switch, in the internal SDN Controller
+			nedNetworkAttachDef, err := r.ConnectInternalSwitchToNED(ctx, network.Name, ned.Spec.NodeConfig.NodeName)
+			if err != nil {
+				logger.Error(err, "error connecting NED")
+				return ctrl.Result{}, nil
+			}
+			// We attach the ned to this new network, connecting with the IDCO SDN Controller. We need
+			// The Network name so we can know which network to attach the port to.
+			// The multus network attachment definition that will be used as a bridge between the internal switch and the NED.
+			bridgeName, err := utils.GetPortNumberFromNetAttachDef(nedNetworkAttachDef.Name)
+			if err != nil {
+				// If there is an error, it must be that the name is not compliant, so we can't be certain of which
+				// port we are trying to attach.
+				return ctrl.Result{}, fmt.Errorf("could not get port number from the multus network annotation: %v. Can't attach pod to network", err)
+			}
+			err = r.CreateNewNEDConnection(network, fmt.Sprintf("br%s", bridgeName), ned)
+			if err != nil {
+				logger.Error(err, "error attaching NED to the l2network")
+
+				return ctrl.Result{}, nil
+			}
+			logger.Info("Connected pod to inter-domain network")
+
 		}
-		network.Status.ProviderConnectivity = &provStatus
-
-		// Update the status in the Kubernetes API
-		if statusUpdateErr := r.Status().Update(ctx, network); statusUpdateErr != nil {
-			logger.Error(statusUpdateErr, "unable to update L2Network provider status")
-			return ctrl.Result{}, statusUpdateErr
-		}
-
-		logger.Info("Attaching NED to internal Overlay for new network")
-
-		// First we get information from the NED, required to perform the next operations.
-		// The info we need is the node name it is residing in.
-		ned, err := nedinterface.GetNetworkEdgeDevice(ctx, r.Client, network.Spec.Provider.Name)
-
-		if err != nil {
-			logger.Error(err, "error getting NED")
-			return ctrl.Result{}, nil
-
-		}
-		// Then, we create the connection between the NED and the l2sm-switch, in the internal SDN Controller
-		nedNetworkAttachDef, err := r.ConnectInternalSwitchToNED(ctx, network.Name, ned.Spec.NodeConfig.NodeName)
-		if err != nil {
-			logger.Error(err, "error connecting NED")
-			return ctrl.Result{}, nil
-		}
-		// We attach the ned to this new network, connecting with the IDCO SDN Controller. We need
-		// The Network name so we can know which network to attach the port to.
-		// The multus network attachment definition that will be used as a bridge between the internal switch and the NED.
-		bridgeName, err := utils.GetPortNumberFromNetAttachDef(nedNetworkAttachDef.Name)
-		if err != nil {
-			// If there is an error, it must be that the name is not compliant, so we can't be certain of which
-			// port we are trying to attach.
-			return ctrl.Result{}, fmt.Errorf("could not get port number from the multus network annotation: %v. Can't attach pod to network", err)
-		}
-		err = r.CreateNewNEDConnection(network, fmt.Sprintf("br%s", bridgeName), ned)
-		if err != nil {
-			logger.Error(err, "error attaching NED to the l2network")
-
-			return ctrl.Result{}, nil
-		}
-		logger.Info("Connected pod to inter-domain network")
-
 	}
 
 	// exists, err := r.InternalClient.CheckNetworkExists(network.Spec.Type, network.Name)

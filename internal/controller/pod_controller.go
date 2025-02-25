@@ -17,7 +17,9 @@ package controller
 import (
 	"context"
 	"fmt"
+	"net"
 
+	l2smv1 "github.com/Networks-it-uc3m/L2S-M/api/v1"
 	"github.com/Networks-it-uc3m/L2S-M/internal/dnsinterface"
 	"github.com/Networks-it-uc3m/L2S-M/internal/env"
 	"github.com/Networks-it-uc3m/L2S-M/internal/sdnclient"
@@ -213,23 +215,13 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 			if network.Spec.Provider != nil {
 				logger.Info("Attaching pod to the external sdn controller")
 
-				// We create a DNS Client for registring this pod in an external DNS
-				providerAddress := fmt.Sprintf("%s:%s", network.Spec.Provider.Domain, utils.DefaultIfEmpty(network.Spec.Provider.DNSPort, "30053"))
-
-				dnsClient := dnsinterface.DNSClient{ServerAddress: providerAddress, Scope: "inter"}
-
 				podName := pod.GetName()
-
 				if appName, ok := pod.GetLabels()[L2SM_PODNAME_LABEL]; ok {
 					podName = appName
 				}
-
-				err = dnsClient.AddDNSEntry(podName, network.Name, multusNetAttachDefinitions[index].IPAdresses[0])
-
-				if err != nil {
-					logger.Error(err, "error adding dns entry")
+				if err = CreateDNSEntry(&network, podName, multusNetAttachDefinitions[index].IPAdresses[0]); err != nil {
+					logger.Error(err, "could not add dns entry")
 				}
-
 				logger.Info("Connected pod to inter-domain network")
 
 			}
@@ -255,4 +247,24 @@ func (r *PodReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&corev1.Pod{}).
 		Complete(r)
+}
+
+func CreateDNSEntry(network *l2smv1.L2Network, podName, podCIDR string) error {
+	// We create a DNS Client for registring this pod in an external DNS
+	providerAddress := fmt.Sprintf("%s:%s", network.Spec.Provider.Domain, utils.DefaultIfEmpty(network.Spec.Provider.DNSGRPCPort, "30818"))
+
+	dnsClient := dnsinterface.DNSClient{ServerAddress: providerAddress, Scope: "inter"}
+
+	ip, _, err := net.ParseCIDR(podCIDR)
+	if err != nil {
+		return fmt.Errorf("could not parse pod cidr: %v", err)
+
+	}
+	err = dnsClient.AddDNSEntry(podName, network.Name, ip.To4().String())
+
+	if err != nil {
+		return fmt.Errorf("could not add dns entry in remote server: %v", err)
+	}
+
+	return nil
 }

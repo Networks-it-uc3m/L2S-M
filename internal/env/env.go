@@ -29,6 +29,10 @@ func GetDNSPortNumber() string {
 	return getEnv("DNS_PORT_NUMBER", "30053")
 }
 
+func GetDNSGRPCPortNumber() string {
+	return getEnv("GRPC_DNS_PORT_NUMBER", "30818")
+}
+
 func GetSwitchesNamespace() string {
 	return getEnv("SWITCHES_NAMESPACE", "")
 }
