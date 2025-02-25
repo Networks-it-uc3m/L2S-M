@@ -151,9 +151,27 @@ func (r *NetworkEdgeDeviceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	}); err != nil {
 		return err
 	}
+	if err := mgr.GetFieldIndexer().IndexField(context.Background(), &corev1.ConfigMap{}, replicaSetOwnerKey, func(rawObj client.Object) []string {
+		// grab the replica set object, extract the owner...
+		configMap := rawObj.(*corev1.ConfigMap)
+		owner := metav1.GetControllerOf(configMap)
+		if owner == nil {
+			return nil
+		}
+		// ...make sure it's a ReplicaSet...
+		if owner.APIVersion != apiGVStr || owner.Kind != "NetworkEdgeDevice" {
+			return nil
+		}
+
+		// ...and if so, return it
+		return []string{owner.Name}
+	}); err != nil {
+		return err
+	}
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&l2smv1.NetworkEdgeDevice{}).
 		Owns(&appsv1.ReplicaSet{}).
+		Owns(&corev1.ConfigMap{}).
 		Complete(r)
 }
 

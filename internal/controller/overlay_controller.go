@@ -41,7 +41,7 @@ type OverlayReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-var replicaSetOwnerKeyOverlay = ".metadata.controller.overlay"
+var setOwnerKeyOverlay = ".metadata.controller.overlay"
 
 // +kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core,resources=services,verbs=get;list;watch;create;update;patch;delete
@@ -114,7 +114,7 @@ func (r *OverlayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	}
 
 	var switchReplicaSets appsv1.ReplicaSetList
-	if err := r.List(ctx, &switchReplicaSets, client.InNamespace(req.Namespace), client.MatchingFields{replicaSetOwnerKeyOverlay: req.Name}); err != nil {
+	if err := r.List(ctx, &switchReplicaSets, client.InNamespace(req.Namespace), client.MatchingFields{setOwnerKeyOverlay: req.Name}); err != nil {
 		log.Error(err, "unable to list child ReplicaSets")
 		return ctrl.Result{}, err
 	}
@@ -138,7 +138,7 @@ func (r *OverlayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *OverlayReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	if err := mgr.GetFieldIndexer().IndexField(context.Background(), &appsv1.ReplicaSet{}, replicaSetOwnerKeyOverlay, func(rawObj client.Object) []string {
+	if err := mgr.GetFieldIndexer().IndexField(context.Background(), &appsv1.ReplicaSet{}, setOwnerKeyOverlay, func(rawObj client.Object) []string {
 		// grab the replica set object, extract the owner...
 		replicaSet := rawObj.(*appsv1.ReplicaSet)
 		owner := metav1.GetControllerOf(replicaSet)
@@ -155,9 +155,63 @@ func (r *OverlayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	}); err != nil {
 		return err
 	}
+	if err := mgr.GetFieldIndexer().IndexField(context.Background(), &corev1.ConfigMap{}, setOwnerKeyOverlay, func(rawObj client.Object) []string {
+		// grab the replica set object, extract the owner...
+		configMap := rawObj.(*corev1.ConfigMap)
+		owner := metav1.GetControllerOf(configMap)
+		if owner == nil {
+			return nil
+		}
+		// ...make sure it's a ReplicaSet...
+		if owner.APIVersion != apiGVStr || owner.Kind != "Overlay" {
+			return nil
+		}
+
+		// ...and if so, return it
+		return []string{owner.Name}
+	}); err != nil {
+		return err
+	}
+	if err := mgr.GetFieldIndexer().IndexField(context.Background(), &corev1.Service{}, setOwnerKeyOverlay, func(rawObj client.Object) []string {
+		// grab the replica set object, extract the owner...
+		service := rawObj.(*corev1.Service)
+		owner := metav1.GetControllerOf(service)
+		if owner == nil {
+			return nil
+		}
+		// ...make sure it's a ReplicaSet...
+		if owner.APIVersion != apiGVStr || owner.Kind != "Overlay" {
+			return nil
+		}
+
+		// ...and if so, return it
+		return []string{owner.Name}
+	}); err != nil {
+		return err
+	}
+	if err := mgr.GetFieldIndexer().IndexField(context.Background(), &nettypes.NetworkAttachmentDefinition{}, setOwnerKeyOverlay, func(rawObj client.Object) []string {
+		// grab the replica set object, extract the owner...
+		netAttachDef := rawObj.(*nettypes.NetworkAttachmentDefinition)
+		owner := metav1.GetControllerOf(netAttachDef)
+		if owner == nil {
+			return nil
+		}
+		// ...make sure it's a ReplicaSet...
+		if owner.APIVersion != apiGVStr || owner.Kind != "Overlay" {
+			return nil
+		}
+
+		// ...and if so, return it
+		return []string{owner.Name}
+	}); err != nil {
+		return err
+	}
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&l2smv1.Overlay{}).
 		Owns(&appsv1.ReplicaSet{}).
+		Owns(&corev1.ConfigMap{}).
+		Owns(&corev1.Service{}).
+		Owns(&nettypes.NetworkAttachmentDefinition{}).
 		Complete(r)
 }
 
@@ -316,6 +370,9 @@ func (r *OverlayReconciler) createExternalResources(ctx context.Context, overlay
 						  }
 					  }`, "", i, overlay.Name, i),
 				},
+			}
+			if err := controllerutil.SetControllerReference(overlay, auxNetAttachDef, r.Scheme); err != nil {
+				return nil, nil, nil, err
 			}
 			networkAttachmentDefinitions = append(networkAttachmentDefinitions, auxNetAttachDef)
 		}
