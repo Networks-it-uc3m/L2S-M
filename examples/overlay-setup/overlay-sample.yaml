@@ -19,7 +19,7 @@ metadata:
 spec:
   provider:
     name: l2sm-test-sdn
-    domain: "l2sm-controller-service.l2sm-system.svc"
+    domain: "controller-service.default.svc"
   topology:
     nodes:
       - l2sm-test-control-plane
@@ -36,7 +36,7 @@ spec:
     spec:
       containers:
         - name: l2sm-switch
-          image: alexdecb/l2sm-switch:1.2.8
+          image: alexdecb/l2sm-switch:1.2.9
           imagePullPolicy: Always
           resources: {}
           env:

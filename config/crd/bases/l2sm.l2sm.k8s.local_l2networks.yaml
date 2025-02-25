@@ -85,8 +85,16 @@ spec:
                 description: Provider is an optional field representing a provider
                   spec. Check the provider spec definition for more details
                 properties:
+                  dnsGrpcPort:
+                    default: "30818"
+                    description: gRPC management port for DNS service (used for adding/modifying
+                      DNS entries)
+                    type: string
                   dnsPort:
                     default: "30053"
+                    description: |-
+                      DNS service configuration
+                      DNS protocol port (used for DNS queries via tools like dig)
                     type: string
                   domain:
                     type: string

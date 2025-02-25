@@ -21,20 +21,18 @@ metadata:
 spec:
   provider:
     name: idco-controller
-    domain: 192.168.122.60
-    ofPort: 30663
+    domain: 163.117.139.220
+    ofPort: "6633"
+    sdnPort: "8181"
   nodeConfig:
-    nodeName: ant-machine
-    ipAddress: 192.168.122.60
-  neighbors:
-    - node: tucci
-      domain: 192.168.122.244
+    nodeName: l2sm-test-worker
+    ipAddress: 172.20.0.3
   switchTemplate:
     spec:
       hostNetwork: true
       containers:
         - name: l2sm-ned
-          image: alexdecb/l2sm-ned:2.7.1
+          image: alexdecb/l2sm-switch:1.2.9
           resources: {}
           command: ["./setup_ned.sh"]
           ports:
