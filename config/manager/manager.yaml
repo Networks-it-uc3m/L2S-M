@@ -91,6 +91,8 @@ spec:
           value: "8181"
         # - name: SWITCHES_NAMESPACE
         #   value: "l2sm-system"
+        - name: DNS_PORT_NUMBER
+          value: "30808"
         image: controller:latest
         name: manager
         securityContext:

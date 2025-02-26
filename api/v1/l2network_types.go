@@ -23,6 +23,7 @@ import (
 
 // NetworkType represents the type of network being configured.
 // +kubebuilder:validation:Enum=ext-vnet;vnet;vlink
+// +kubebuilder:pruning:PreserveUnknownFields
 type NetworkType string
 
 const (
@@ -44,6 +45,21 @@ const (
 type ProviderSpec struct {
 	Name   string `json:"name"`
 	Domain string `json:"domain"`
+
+	//+kubebuilder:default:value="30808"
+	SDNPort string `json:"sdnPort,omitempty"`
+
+	// DNS service configuration
+	//+kubebuilder:default:="30053"
+	// DNS protocol port (used for DNS queries via tools like dig)
+	DNSPort string `json:"dnsPort,omitempty"`
+
+	//+kubebuilder:default:="30818"
+	// gRPC management port for DNS service (used for adding/modifying DNS entries)
+	DNSGRPCPort string `json:"dnsGrpcPort,omitempty"`
+
+	//+kubebuilder:default:value="6633"
+	OFPort string `json:"ofPort,omitempty"`
 }
 
 // L2NetworkSpec defines the desired state of L2Network
@@ -59,6 +75,15 @@ type L2NetworkSpec struct {
 
 	// Provider is an optional field representing a provider spec. Check the provider spec definition for more details
 	Provider *ProviderSpec `json:"provider,omitempty"`
+
+	// NetworkCIDR defines the overall network CIDR used for routing pod interfaces.
+	// This value represents the broader network segment that encompasses all pod IPs,
+	// e.g. 10.101.0.0/16.
+	NetworkCIDR string `json:"networkCIDR,omitempty"`
+
+	// PodAddressRange specifies the specific pool of IP addresses that can be assigned to pods.
+	// This range should be a subset of the overall network CIDR, e.g. 10.101.2.0/24.
+	PodAddressRange string `json:"podAddressRange,omitempty"`
 }
 
 // L2NetworkStatus defines the observed state of L2Network
@@ -66,8 +91,14 @@ type L2NetworkStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Existing Pods in the cluster, connected to the specific network
-	ConnectedPods []string `json:"connectedPods,omitempty"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default=0
+	ConnectedPodCount int `json:"connectedPodCount,omitempty"`
+	// Last assigned IP, used for sequential allocation
+	LastAssignedIP string `json:"lastAssignedIP,omitempty"`
+
+	// Existing Pods in the network
+	AssignedIPs map[string]string `json:"assignedIPs,omitempty"`
 
 	// Status of the connectivity to the internal SDN Controller. If there is no connection, internal l2sm-switches won't forward traffic
 	// +kubebuilder:default=Unavailable
@@ -80,7 +111,7 @@ type L2NetworkStatus struct {
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="AVAILABILITY",type="string",JSONPath=".status.internalConnectivity",description="Internal SDN Controller Connectivity"
-// +kubebuilder:printcolumn:name="CONNECTED_PODS",type=integer,JSONPath=".status.connectedPods",description="Internal SDN Controller Connectivity"
+// +kubebuilder:printcolumn:name="CONNECTED_PODS",type="integer",JSONPath=".status.connectedPodCount",description="Number of pods in the network"
 // +kubebuilder:printcolumn:name="AGE",type="date",JSONPath=".metadata.creationTimestamp"
 // L2Network is the Schema for the l2networks API
 type L2Network struct {

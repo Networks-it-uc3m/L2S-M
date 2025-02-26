@@ -17,17 +17,12 @@ kind: Pod
 metadata:
   name: pong
   labels:
-    app: ping-pong
+    l2sm/app: pong
     l2sm: "true"
   annotations:
-    l2sm/networks: '[{"name": "ping-network","ips": ["10.0.0.1224"]}]'
+    l2sm/networks: ping-network
 spec:
   containers:
-  - name: router
+  - name: alpine
     command: ["/bin/ash", "-c", "trap : TERM INT; sleep infinity & wait"]
     image: alpine:latest
-    securityContext:
-      capabilities:
-        add: ["NET_ADMIN"]
-  # Use this parameter if you want to place the pod in a specific node
-  nodeName: tucci

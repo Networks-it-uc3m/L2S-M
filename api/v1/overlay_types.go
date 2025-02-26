@@ -39,7 +39,7 @@ type OverlaySpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	// The SDN Controller that manages the overlay network. Must specify a domain and a name.
-	NetworkController *NetworkControllerSpec `json:"networkController"`
+	Provider *ProviderSpec `json:"provider"`
 
 	// Topology represents the desired topology, it's represented by the 'Nodes' field, a list of nodes where the switches are going to be deployed and a list of bidirectional links,
 	// selecting the nodes that are going to be linked.

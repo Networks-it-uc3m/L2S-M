@@ -15,6 +15,6 @@
 apiVersion: l2sm.l2sm.k8s.local/v1
 kind: L2Network
 metadata:
-  name: ping-network
+  name: ping-network-intra
 spec:
   type: vnet

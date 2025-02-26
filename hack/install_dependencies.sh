@@ -1,8 +1,9 @@
 #!/bin/bash
 
-git clone https://github.com/containernetworking/plugins.git 
-sed -i "s/go 1.23/go 1.23.0/g" ./plugins/go.mod # to avoid error after recent update
-./plugins/build_linux.sh
+wget -q https://github.com/containernetworking/plugins/releases/download/v1.6.0/cni-plugins-linux-amd64-v1.6.0.tgz
+mkdir -p plugins/bin
+tar -xf cni-plugins-linux-amd64-v1.6.0.tgz -C plugins/bin
+rm cni-plugins-linux-amd64-v1.6.0.tgz
 
 # copy necessary plugins into all nodes
 docker cp ./plugins/bin/. l2sm-test-control-plane:/opt/cni/bin

@@ -5,11 +5,11 @@ go 1.21.7
 toolchain go1.22.5
 
 require (
-	github.com/Networks-it-uc3m/l2sm-switch v1.0.2
+	github.com/Networks-it-uc3m/l2sm-dns v1.1.1
+	github.com/Networks-it-uc3m/l2sm-switch v1.2.8
 	github.com/go-logr/logr v1.4.1
 	github.com/onsi/ginkgo/v2 v2.14.0
 	github.com/onsi/gomega v1.30.0
-	github.com/stretchr/testify v1.9.0
 	google.golang.org/grpc v1.67.0
 	k8s.io/api v0.29.0
 	k8s.io/apimachinery v0.29.0
@@ -19,21 +19,12 @@ require (
 )
 
 require (
-	github.com/BurntSushi/toml v1.2.1 // indirect
-	github.com/pmezard/go-difflib v1.0.0 // indirect
-	golang.org/x/exp/typeparams v0.0.0-20221212164502-fae10dda9338 // indirect
-	golang.org/x/mod v0.20.0 // indirect
-	golang.org/x/sync v0.8.0 // indirect
-	golang.org/x/telemetry v0.0.0-20240829154258-f29ab539cc98 // indirect
-	golang.org/x/tools/gopls v0.16.2 // indirect
-	golang.org/x/vuln v1.0.4 // indirect
+	github.com/coredns/caddy v1.1.1 // indirect
+	github.com/rogpeppe/go-internal v1.12.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240814211410-ddb44dafa142 // indirect
-	honnef.co/go/tools v0.4.7 // indirect
-	mvdan.cc/gofumpt v0.6.0 // indirect
-	mvdan.cc/xurls/v2 v2.5.0 // indirect
 )
 
-// replace github.com/Networks-it-uc3m/l2sm-switch => ../switch
+// replace github.com/Networks-it-uc3m/l2sm-switch => ../l2sm-clone
 
 require (
 	github.com/beorn7/perks v1.0.1 // indirect

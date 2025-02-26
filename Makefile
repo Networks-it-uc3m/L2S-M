@@ -1,10 +1,13 @@
 
 # Image URL to use all building/pushing image targets
-IMG ?= alexdecb/l2sm-controller-manager:2.7.2
+IMG ?= alexdecb/l2sm-controller-manager:2.8.0
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.29.0
 
-DEV_IP = 163.117.139.220
+include .env
+export DEV_IP
+
+
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
 GOBIN=$(shell go env GOPATH)/bin
@@ -216,8 +219,8 @@ ENVTEST ?= $(LOCALBIN)/setup-envtest-$(ENVTEST_VERSION)
 GOLANGCI_LINT = $(LOCALBIN)/golangci-lint-$(GOLANGCI_LINT_VERSION)
 
 ## Tool Versions
-KUSTOMIZE_VERSION ?= v5.5.0
-CONTROLLER_TOOLS_VERSION ?= v0.14.0
+KUSTOMIZE_VERSION ?= v5.6.0
+CONTROLLER_TOOLS_VERSION ?= v0.17.2
 ENVTEST_VERSION ?= latest
 GOLANGCI_LINT_VERSION ?= v1.54.2
 
