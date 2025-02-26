@@ -44,3 +44,12 @@ func GetControllerIP() string {
 func GetControllerPort() string {
 	return getEnv("CONTROLLER_PORT", "8181")
 }
+func GetIntraConfigmapNamespace() string {
+	return getEnv("INTRA_CONFIGMAP_NAMESPACE", "kube-system")
+
+}
+
+func GetIntraConfigmapName() string {
+	return getEnv("INTRA_CONFIGMAP_NAME", "coredns")
+
+}

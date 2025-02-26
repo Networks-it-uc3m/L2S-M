@@ -26,6 +26,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	l2smv1 "github.com/Networks-it-uc3m/L2S-M/api/v1"
+	"github.com/Networks-it-uc3m/L2S-M/internal/dnsinterface"
 	"github.com/Networks-it-uc3m/L2S-M/internal/env"
 	"github.com/Networks-it-uc3m/L2S-M/internal/nedinterface"
 	"github.com/Networks-it-uc3m/L2S-M/internal/sdnclient"
@@ -156,7 +157,9 @@ func (r *L2NetworkReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 				return ctrl.Result{}, nil
 			}
-			logger.Info("Connected pod to inter-domain network")
+			logger.Info("Connected overlay to inter-domain network")
+
+			dnsinterface.AddServerToLocalCoreDNS(r.Client, network.Name, network.Spec.Provider.Domain, network.Spec.Provider.DNSPort)
 
 		}
 	}

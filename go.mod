@@ -5,7 +5,7 @@ go 1.21.7
 toolchain go1.22.5
 
 require (
-	github.com/Networks-it-uc3m/l2sm-dns v1.0.1
+	github.com/Networks-it-uc3m/l2sm-dns v1.1.1
 	github.com/Networks-it-uc3m/l2sm-switch v1.2.8
 	github.com/go-logr/logr v1.4.1
 	github.com/onsi/ginkgo/v2 v2.14.0
@@ -19,6 +19,7 @@ require (
 )
 
 require (
+	github.com/coredns/caddy v1.1.1 // indirect
 	github.com/rogpeppe/go-internal v1.12.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240814211410-ddb44dafa142 // indirect
 )
