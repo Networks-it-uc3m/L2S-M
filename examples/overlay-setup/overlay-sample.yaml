@@ -19,7 +19,7 @@ metadata:
 spec:
   provider:
     name: l2sm-test-sdn
-    domain: "controller-service.default.svc"
+    domain: "l2sm-controller-service.l2sm-system.svc"
   topology:
     nodes:
       - l2sm-test-control-plane
@@ -47,5 +47,3 @@ spec:
           securityContext:
             capabilities:
               add: ["NET_ADMIN"]
-          ports:
-            - containerPort: 80
