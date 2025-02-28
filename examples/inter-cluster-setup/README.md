@@ -38,6 +38,8 @@ spec:
   provider:
     name: <controller-name>
     domain: <controller-domain>
+    sdnPort: "8181"
+    ofPort: "6633"
   nodeConfig:
     nodeName: <node-name>
     ipAddress: <node-ip-address>
@@ -59,6 +61,7 @@ spec:
               add: ["NET_ADMIN"]
 ```
 
+- 8181 and 6633 are the ports previously configured in the docker launch of the controller.
 ### Important Fields in NED Configuration:
 
 1. **networkController**: This defines the network controller to which the NED will connect.
@@ -104,6 +107,8 @@ spec:
   provider:
     name: idco-controller
     domain: 192.168.122.60  # Network controller IP
+    sdnPort: "8181" # Port where you have the sdn http port (specified in the docker container)
+    ofPort: "6633" # Port where the openflow 
   nodeConfig:
     nodeName: ant-machine
     ipAddress: 192.168.122.60
@@ -130,6 +135,7 @@ spec:
   provider:
     name: idco-controller
     domain: "192.168.122.60:8181"
+    sdnPort: "8181"
 ```
 > Notice that the provider name is the same one as the one specified in [the NED](#example-ned-configuration-for-multiple-clusters).
 

@@ -14,6 +14,8 @@ This guide details the necessary steps to install the L2S-M Kubernetes operator 
 
 5. Make sure that packages are forwarded by default: `sudo  iptables -P FORWARD ACCEPT`
 
+6. You need at least one amd64 node in your cluster for the sdn controller to launch. 
+
 ## Install L2S-M
 
 Installing L2S-M can be done by using a single command:
