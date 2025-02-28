@@ -29,5 +29,3 @@ spec:
     securityContext:
       capabilities:
         add: ["NET_ADMIN"]
-  # Use this parameter if you want to place the pod in a specific node
-  # nodeName: l2sm-test-worker
