@@ -20,11 +20,11 @@ spec:
   selector:
     matchLabels:
       app: test4
-      l2sm: "true"
   replicas: 1
   template:
     metadata:
       labels:
+        l2sm: "true"
         app: test4
       annotations:
         l2sm/networks: '[{"name": "v-network-2","ips": ["10.0.2.2/24"]}]'

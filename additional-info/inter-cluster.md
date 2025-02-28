@@ -52,7 +52,7 @@ Ensure that the controller’s IP (e.g., `192.168.122.60`) and API port (e.g., `
 ### Optional: deploy the DNS service
 If you're not planning to use DNS, you can skip this part.
 
-The DNS Service can be found at (https://github.com/Networks-it-uc3m/l2sm-dns). You can launch it with docker or kubernetes, just make sure to use the same IP Address as the IDCO Controller, and set available ports from the managed clusters.
+The DNS Service can be found at (https://github.com/Networks-it-uc3m/l2sm-dns). You can launch it with kubernetes, just make sure to use the same IP Address as the IDCO Controller, and set available ports from the managed clusters.
 
 
 ---
@@ -89,7 +89,9 @@ metadata:
 spec:
   provider:
     name: idco-controller
-    domain: 192.168.122.60  # Controller IP address
+    domain: "192.168.122.60"  # Controller IP address
+    sdnPort: "8181" # The SDN Port used when deploying the docker container
+    ofPort: "6633" # The OF Port used when deploying the docker container
   nodeConfig:
     nodeName: <node-name>
     ipAddress: <node-ip-address>
@@ -136,6 +138,8 @@ spec:
   provider: # Must be the same as the NED
     name: idco-controller 
     domain: "192.168.122.60" 
+    sdnPort: "8181"
+    ofPort: "6633"
   # Optional: Specify additional parameters like networkCIDR or podAddressRange if required
 ```
 
@@ -158,9 +162,9 @@ Pods are dynamically attached to an inter-cluster network by using annotations. 
 ```yaml
 apiVersion: v1
 kind: Pod
-labels:
-  l2sm: true
 metadata:
+  labels:
+    l2sm: "true"
   name: mypod
   annotations:
     l2sm/networks: ping-network
@@ -168,6 +172,7 @@ spec:
   containers:
     - name: ping
       image: busybox
+      command: ["sleep", "infinity"]
 ```
 
 Once deployed, the pod will have an additional network interface corresponding to the `ping-network` and will participate in inter-cluster communication.
