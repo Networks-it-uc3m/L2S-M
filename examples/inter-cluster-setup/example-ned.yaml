@@ -31,12 +31,16 @@ spec:
     spec:
       hostNetwork: true
       containers:
-        - name: l2sm-ned
+        - name: l2sm-switch
           image: alexdecb/l2sm-switch:1.2.9
+          imagePullPolicy: Always
           resources: {}
           command: ["./setup_ned.sh"]
-          ports:
-            - containerPort: 80
+          env:
+          - name: NODENAME
+            valueFrom:
+              fieldRef:
+                fieldPath: spec.nodeName
           securityContext:
             capabilities:
               add: ["NET_ADMIN"]
