@@ -167,7 +167,7 @@ metadata:
     l2sm: "true"
   name: mypod
   annotations:
-    l2sm/networks: ping-network
+    l2sm/networks: '[{"name": "ping-network","ips": ["10.0.0.1/24"]}]'
 spec:
   containers:
     - name: ping
