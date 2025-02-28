@@ -11,13 +11,13 @@ In order to get this example moving, it's required to have L2S-M installed along
 
 ### Creating our first virtual network
 
-First of all, let's see the details of an L2S-M virtual network. This is the descriptor corresponding to the virtual network that will be used in this example: ping-network
+First of all, let's see the details of an L2S-M virtual network. This is the descriptor corresponding to the virtual network that will be used in this example: ping-network-intra
 
 ```yaml
 apiVersion: l2sm.l2sm.k8s.local/v1
 kind: L2Network
 metadata:
-  name: ping-network
+  name: ping-network-intra
 spec:
   type: vnet
 ```

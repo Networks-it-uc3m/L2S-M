@@ -12,20 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-apiVersion: v1
-kind: Pod
+apiVersion: l2sm.l2sm.k8s.local/v1
+kind: L2Network
 metadata:
-  name: ping-intra
-  labels:
-    app: ping-pong
-    l2sm: "true"
-  annotations:
-    l2sm/networks: '[{"name": "ping-network-intra","ips": ["10.0.0.1/24"]}]'
+  name: ping-network-intra-l3
 spec:
-  containers:
-  - name: router
-    command: ["/bin/ash", "-c", "trap : TERM INT; sleep infinity & wait"]
-    image: alpine:latest
-    securityContext:
-      capabilities:
-        add: ["NET_ADMIN"]
+  type: vnet

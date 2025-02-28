@@ -56,6 +56,9 @@ Follow the steps below to demonstrate the isolation of traffic between pods usin
   </a>
 </p>
 
+```
+Note: This video is made with an old version of L2S-M, so some api shown in there is different to the current version
+```
 ### 1. Create Virtual Networks
 
    - Create two virtual L2S-M networks: [v-network-1](./v-network-1.yaml) and [v-network-2](./v-network-2.yaml).
@@ -70,17 +73,12 @@ kubectl create -f ./examples/cdn/v-network-2.yaml
 ### 2. Verify Network Creation
 
 Note: This step is optional, but it will help you understand how L2S-M internally work, if you already know a bit about SDN and network overlays. 
-   - Check the logs in the `l2sm-controller` and `l2sm-controller-manager` to ensure that the virtual networks have been successfully created.
 
 ```bash
 kubectl get l2networks
+kubectl describe l2network v-network-1
 ```
-```bash
-kubectl logs l2sm-controller-manager-55d7b6ccdd-8tbqr
-```
-```bash
-kubectl logs l2sm-controller-d647b7fb5-kb2f7
-```
+
 
 ### 3. Deploy Pods
 
@@ -100,13 +98,12 @@ kubectl create -f ./examples/cdn/router.yaml
 ```
 ### 4. Verify Intent Creation
 
-   - Examine the logs in the `l2sm-controller` to confirm that the intents for connecting the pods to their respective networks have been successfully created.
+Check if the pods are correctly inside the l2networks
+```bash
+kubectl get l2networks
+kubectl describe l2network v-network-1
+kubectl describe l2network v-network-2
 
-```bash
-kubectl logs l2sm-controller-d647b7fb5-kb2f7
-```
-```bash
-kubectl get pods
 ```
 
 ### 5. Inspect Content Server

@@ -2,7 +2,7 @@
 
 To connect multiple clusters across different nodes, we need to extend the basic overlay configuration to inter-cluster communication. This guide explains how to deploy a network controller and network edge devices (NEDs) to create an inter-cluster network. 
 
-There is a work in progress solution that can be useful to manage multiple clusters together, it [can be found here](https://github.com/Networks-it-uc3m/l2sm-md). There you can specify which clusters to connect, and the component will use the L2S-M API to reach this desired state. 
+There is a solution that can be useful to manage multiple clusters together, it [can be found here](https://github.com/Networks-it-uc3m/l2sm-md). There you can specify which clusters to connect, and the component will use the L2S-M API to reach this desired state. But below is a more in depth explanation on how to do this, for more complex scenarios.
 
 ## Step 1: Deploying the Network Controller
 

@@ -47,5 +47,3 @@ spec:
           securityContext:
             capabilities:
               add: ["NET_ADMIN"]
-          ports:
-            - containerPort: 80

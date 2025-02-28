@@ -29,4 +29,3 @@ spec:
     securityContext:
       capabilities:
         add: ["NET_ADMIN"]
-  nodeName: test-l2sm-uc3m-polito-1

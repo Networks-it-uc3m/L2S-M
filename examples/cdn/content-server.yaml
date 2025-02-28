@@ -20,6 +20,7 @@ spec:
   selector:
     matchLabels:
       app: test4
+      l2sm: "true"
   replicas: 1
   template:
     metadata:
@@ -36,4 +37,3 @@ spec:
           securityContext:
             capabilities:
               add: ["NET_ADMIN"]
-    nodeName: test-l2sm-uc3m-polito-3
