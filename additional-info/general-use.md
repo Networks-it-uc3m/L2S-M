@@ -14,7 +14,7 @@ L2S-M introduces three core CRDs that allow users to configure networks, overlay
      - **Provider**: Note: this field is [inter domain only](./inter-cluster.md). Below there's more info on how to set up this field. 
      - **NetworkCIDR**: Overall NetworkCIDR is used for routing and addressing pods. If this configuration is set, pods will automatically have an IP address assigned in this pool.
      - **PodAddressRange**: Complementary to Network CIDR, this field is meant to be used alongside the prior only in specific scenarios where you want to assign a specific address range but with the routing mask from NetworkCIDR (For instance, NetworkCIDR can be 10.34.0.0/16 and PodAddressRange 10.34.20.0/24. Pods will have set in their network devices ips from 10.34.20.1/16 to 10.34.20.255/16).
-     - **Config**: Field meant to be used for additional configuration parameters, such as [vlinks paths](./vlinks.md).
+     - **Config**: Field meant to be used for additional configuration parameters, such as [vlinks paths](../examples/vlink/README.md).
   - **Status Fields**: This field reports the current state of the network, giving this information:
       - **Connected Pod Count**: Number of pods connected to this network.
       - **LastAssignedIP**: When using NetworkCIDR this field is for keeping track of the assigned IP addresses. Please be careful when modifying it as it can lead to errors in ip assignment.
