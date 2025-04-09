@@ -198,7 +198,7 @@ add-cni:
 	fi; \
 	for node in $$nodes; do \
 		echo "Copying plugins to node: $$node"; \
-		$(CONTAINER_TOOL) cp ./plugins/bin/ $$node:/opt/cni/bin; \
+		$(CONTAINER_TOOL) cp ./plugins/bin/. $$node:/opt/cni/bin; \
 		if [ $$? -ne 0 ]; then \
 			echo "Failed to copy plugins to $$node"; \
 			exit 1; \
