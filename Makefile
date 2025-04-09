@@ -20,6 +20,7 @@ endif
 # scaffolded by default. However, you might want to replace it to use other
 # tools. (i.e. podman)
 CONTAINER_TOOL ?= docker
+KIND ?= kind
 
 # Setting SHELL to bash allows bash commands to be executed by recipes.
 # Options are set to exit when a recipe line exits non-zero or a piped command fails.
@@ -88,6 +89,14 @@ lint-fix: golangci-lint ## Run golangci-lint linter and perform fixes
 .PHONY: build
 build: manifests generate fmt vet ## Build manager binary.
 	go build -o bin/manager cmd/main.go
+
+.PHONY: install-requisites
+install-requisites: add-cni
+	$(KUBECTL) apply  -f https://github.com/cert-manager/cert-manager/releases/download/v1.16.1/cert-manager.yaml; \
+	$(KUBECTL) apply  -f https://raw.githubusercontent.com/k8snetworkplumbingwg/multus-cni/master/deployments/multus-daemonset-thick.yml; \
+	$(KUBECTL) wait --for=condition=Ready pods --all -A --timeout=300s; \
+
+
 
 .PHONY: run
 include .env
@@ -169,7 +178,48 @@ webhook-certs: ## generate self-signed cert and key for local webhook developmen
 .PHONY: create-cluster
 create-cluster:
 	kind create cluster --config ./examples/quickstart/kind-cluster.yaml
-	./hack/install_dependencies.sh
+
+.PHONY: clean
+clean:
+	$(KIND) delete clusters --all
+
+.PHONY: add-cni
+add-cni:
+	@if [ ! -d "plugins/bin" ] || [ -z "$$(ls -A plugins/bin)" ]; then \
+		mkdir -p plugins/bin; \
+		wget -q https://github.com/containernetworking/plugins/releases/download/v1.6.0/cni-plugins-linux-amd64-v1.6.0.tgz; \
+		tar -xf cni-plugins-linux-amd64-v1.6.0.tgz -C plugins/bin; \
+		rm cni-plugins-linux-amd64-v1.6.0.tgz; \
+	fi
+	@nodes="$$( $(KIND) get nodes -A)"; \
+	if [ -z "$$nodes" ]; then \
+		echo "No nodes found. Is Kind running?"; \
+		exit 1; \
+	fi; \
+	for node in $$nodes; do \
+		echo "Copying plugins to node: $$node"; \
+		$(CONTAINER_TOOL) cp ./plugins/bin/ $$node:/opt/cni/bin; \
+		if [ $$? -ne 0 ]; then \
+			echo "Failed to copy plugins to $$node"; \
+			exit 1; \
+		fi; \
+		$(CONTAINER_TOOL) exec $$node modprobe br_netfilter; \
+		$(CONTAINER_TOOL) exec $$node sysctl -p /etc/sysctl.conf; \
+	done; \
+	$(KUBECTL) apply -f https://raw.githubusercontent.com/flannel-io/flannel/master/Documentation/kube-flannel.yml; \
+	if [ $$? -ne 0 ]; then \
+		echo "Failed to install flannel in cluster"; \
+		exit 1; \
+	fi; \
+
+
+.PHONY: copy-to-container
+copy-to-container:
+	@if [ -z "$(container)" ]; then \
+		echo "Error: Please specify a container name using 'make copy-to-container container=<container_name>'"; \
+		exit 1; \
+	fi
+	docker cp ./plugins/bin/. $(container):/opt/cni/bin
 
 .PHONY: delete-cluster
 delete-cluster:
