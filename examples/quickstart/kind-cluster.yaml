@@ -20,13 +20,13 @@ networking:
     podSubnet: "10.244.0.0/16"  # Flannel requires this CIDR
 nodes:
 - role: control-plane
-  image: kindest/node:v1.26.6
+  image: kindest/node:v1.32.0
   extraPortMappings:
     - containerPort: 30000  
       hostPort: 30000       
       protocol: TCP
 - role: worker
-  image: kindest/node:v1.26.6
+  image: kindest/node:v1.32.0
 - role: worker
-  image: kindest/node:v1.26.6
+  image: kindest/node:v1.32.0
 
