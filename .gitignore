@@ -3,3 +3,4 @@ configs/networkTopology.json
 src/kubernetes-api/dist/install.yaml
 src/kubernetes-api/bin
 examples2/
+plugins/

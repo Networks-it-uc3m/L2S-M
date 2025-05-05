@@ -1,4 +1,0 @@
-apiVersion: v2
-name: collector
-description: A subchart for data collection
-version: 0.1.0
