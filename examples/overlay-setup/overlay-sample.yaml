@@ -36,7 +36,7 @@ spec:
     spec:
       containers:
         - name: l2sm-switch
-          image: alexdecb/l2sm-switch:1.2.9
+          image: alexdecb/talpa:1.3.1
           imagePullPolicy: Always
           resources: {}
           env:

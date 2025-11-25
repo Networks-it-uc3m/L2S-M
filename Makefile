@@ -189,6 +189,7 @@ add-cni:
 		mkdir -p plugins/bin; \
 		wget -q https://github.com/containernetworking/plugins/releases/download/v1.6.0/cni-plugins-linux-amd64-v1.6.0.tgz; \
 		tar -xf cni-plugins-linux-amd64-v1.6.0.tgz -C plugins/bin; \
+		chmod +x plugins/bin/*; \
 		rm cni-plugins-linux-amd64-v1.6.0.tgz; \
 	fi
 	@nodes="$$( $(KIND) get nodes -A)"; \
