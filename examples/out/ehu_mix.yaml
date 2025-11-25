@@ -1,0 +1,83 @@
+# Copyright 2024 Universidad Carlos III de Madrid
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ehu-mix
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ehu-mix
+  template:
+    metadata:
+      labels:
+        l2sm: "true"
+        app: ehu-mix
+      annotations:
+        # Multus (or your CNI) network attachment with static IP
+        l2sm/networks: '[{"name": "video-ue","ips": ["10.0.0.4/24"]}]'
+    spec:
+      containers:
+        - name: ehu-mix
+          image: linuxserver/ffmpeg:version-8.0-cli
+          # Use args list so we don't rely on /bin/sh -c quoting
+          # command: ["ffmpeg"]
+          args:
+            - -thread_queue_size
+            - "1024"
+            - -fflags
+            - +genpts
+            - -i
+            - udp://10.0.0.4:1234?overrun_nonfatal=1&fifo_size=50000000
+            - -thread_queue_size
+            - "1024"
+            - -fflags
+            - +genpts
+            - -i
+            - udp://10.0.0.4:1235?overrun_nonfatal=1&fifo_size=50000000
+            - -filter_complex
+            - >-
+              [0:v]setpts=PTS-STARTPTS,scale=960:540,setsar=1[v0];
+              [1:v]setpts=PTS-STARTPTS,scale=960:540,setsar=1[v1];
+              [v0][v1]xstack=inputs=2:layout=0_0|960_0[vout];
+              [0:a]aresample=async=1:first_pts=0[a0];
+              [1:a]aresample=async=1:first_pts=0[a1];
+              [a0][a1]amix=inputs=2:duration=shortest:dropout_transition=3[aout]
+            - -map
+            - "[vout]"
+            - -map
+            - "[aout]"
+            - -c:v
+            - libx264
+            - -preset
+            - veryfast
+            - -crf
+            - "23"
+            - -g
+            - "48"
+            - -pix_fmt
+            - yuv420p
+            - -c:a
+            - aac
+            - -b:a
+            - 128k
+            - -ar
+            - "48000"
+            - -ac
+            - "2"
+            - -f
+            - mpegts
+            - udp://10.0.1.2:1236?pkt_size=1316&localport=0
