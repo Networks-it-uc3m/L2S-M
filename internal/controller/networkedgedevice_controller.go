@@ -20,9 +20,11 @@ import (
 	"fmt"
 	"time"
 
+	dp "github.com/Networks-it-uc3m/l2sm-switch/pkg/datapath"
+
 	l2smv1 "github.com/Networks-it-uc3m/L2S-M/api/v1"
 	"github.com/Networks-it-uc3m/L2S-M/internal/utils"
-	switchv1 "github.com/Networks-it-uc3m/l2sm-switch/api/v1"
+	talpav1 "github.com/Networks-it-uc3m/l2sm-switch/api/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -185,17 +187,17 @@ func (r *NetworkEdgeDeviceReconciler) createExternalResources(ctx context.Contex
 	for i, neighbor := range netEdgeDevice.Spec.Neighbors {
 		neighbors[i] = neighbor.Domain
 	}
-	nedNeighbors, err := json.Marshal(switchv1.Node{Name: netEdgeDevice.Spec.NodeConfig.NodeName, NodeIP: netEdgeDevice.Spec.NodeConfig.IPAddress, NeighborNodes: neighbors})
+	nedNeighbors, err := json.Marshal(talpav1.Node{Name: netEdgeDevice.Spec.NodeConfig.NodeName, NodeIP: netEdgeDevice.Spec.NodeConfig.IPAddress, NeighborNodes: neighbors})
 	if err != nil {
 		return err
 	}
-	nedName := utils.GetBridgeName(utils.BridgeParams{NodeName: netEdgeDevice.Spec.NodeConfig.NodeName, ProviderName: netEdgeDevice.Spec.Provider.Name})
+	nedName := dp.GetSwitchName(dp.DatapathParams{NodeName: netEdgeDevice.Spec.NodeConfig.NodeName, ProviderName: netEdgeDevice.Spec.Provider.Name})
 
-	nedConfig, err := json.Marshal(switchv1.NedSettings{
+	nedConfig, err := json.Marshal(talpav1.Settings{
 		ControllerIP:   netEdgeDevice.Spec.Provider.Domain,
 		ControllerPort: netEdgeDevice.Spec.Provider.OFPort,
 		NodeName:       netEdgeDevice.Spec.NodeConfig.NodeName,
-		NedName:        nedName})
+		SwitchName:     nedName})
 	if err != nil {
 		return err
 	}

@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 
+	dp "github.com/Networks-it-uc3m/l2sm-switch/pkg/datapath"
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -137,7 +138,7 @@ func (r *L2NetworkReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 			}
 			// Then, we create the connection between the NED and the l2sm-switch, in the internal SDN Controller
-			nedNetworkAttachDef, err := r.ConnectInternalSwitchToNED(ctx, network.Name, ned.Spec.NodeConfig.NodeName)
+			nedNetworkAttachDef, err := r.ConnectInternalSwitchToNED(ctx, network.Name, ned.Spec.NodeConfig.NodeName, ned.Spec.Provider.Name)
 			if err != nil {
 				logger.Error(err, "error connecting NED")
 				return ctrl.Result{}, nil
@@ -254,7 +255,7 @@ func (r *L2NetworkReconciler) updateControllerStatus(ctx context.Context, networ
 
 }
 
-func (r *L2NetworkReconciler) ConnectInternalSwitchToNED(ctx context.Context, networkName, nedNodeName string) (nettypes.NetworkAttachmentDefinition, error) {
+func (r *L2NetworkReconciler) ConnectInternalSwitchToNED(ctx context.Context, networkName, nedNodeName, providerName string) (nettypes.NetworkAttachmentDefinition, error) {
 
 	// We get a free interface in the node name of the NED, this way we can interconnect the NED with the l2sm switch
 	var err error
@@ -271,7 +272,7 @@ func (r *L2NetworkReconciler) ConnectInternalSwitchToNED(ctx context.Context, ne
 
 	portNumber, _ := utils.GetPortNumberFromNetAttachDef(netAttachDef.Name)
 
-	internalSwitchOFID := fmt.Sprintf("of:%s", utils.GenerateDatapathID(nedNodeName))
+	internalSwitchOFID := fmt.Sprintf("of:%s", dp.GenerateID(dp.GetSwitchName(dp.DatapathParams{})))
 
 	internalSwitchOFPort := fmt.Sprintf("%s/%s", internalSwitchOFID, portNumber)
 
@@ -312,7 +313,7 @@ func (r *L2NetworkReconciler) CreateNewNEDConnection(network *l2smv1.L2Network, 
 		return fmt.Errorf("no connection could be made with ned: %v", err)
 	}
 
-	nedOFID := fmt.Sprintf("of:%s", utils.GenerateDatapathID(utils.GetBridgeName(utils.BridgeParams{NodeName: ned.Spec.NodeConfig.NodeName, ProviderName: network.Spec.Provider.Name})))
+	nedOFID := fmt.Sprintf("of:%s", dp.GenerateID(dp.GetSwitchName(dp.DatapathParams{NodeName: ned.Spec.NodeConfig.NodeName, ProviderName: network.Spec.Provider.Name})))
 	nedOFPort := fmt.Sprintf("%s/%s", nedOFID, nedPortNumber)
 
 	err = externalClient.AttachPodToNetwork(network.Spec.Type, sdnclient.VnetPortPayload{NetworkId: network.Name, Port: []string{nedOFPort}})

@@ -24,6 +24,7 @@ import (
 	"github.com/Networks-it-uc3m/L2S-M/internal/env"
 	"github.com/Networks-it-uc3m/L2S-M/internal/sdnclient"
 	"github.com/Networks-it-uc3m/L2S-M/internal/utils"
+	dp "github.com/Networks-it-uc3m/l2sm-switch/pkg/datapath"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -191,9 +192,11 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 
 		// Now, for every network, we make a call to the sdn controller, asking for the attachment to the switch
 		// We get the openflow ID of the switch that this pod is connected to.
-		ofID := fmt.Sprintf("of:%s", utils.GenerateDatapathID(pod.Spec.NodeName))
+		//.GenerateDatapathID(pod.Spec.NodeName))
 
 		for index, network := range networks {
+			ofID := fmt.Sprintf("of:%s", dp.GenerateID(dp.GetSwitchName(dp.DatapathParams{NodeName: pod.Spec.NodeName, ProviderName: network.Spec.Provider.Name})))
+
 			// We get the port number based on the name of the multus annotation. veth1 -> port num 1.
 			portNumber, err := utils.GetPortNumberFromNetAttachDef(multusNetAttachDefinitions[index].Name)
 
