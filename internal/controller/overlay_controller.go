@@ -32,7 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	switchv1 "github.com/Networks-it-uc3m/l2sm-switch/api/v1"
+	talpav1 "github.com/Networks-it-uc3m/l2sm-switch/api/v1"
 )
 
 // OverlayReconciler reconciles a Overlay object
@@ -244,18 +244,17 @@ func (r *OverlayReconciler) createExternalResources(ctx context.Context, overlay
 	constructConfigMapForOverlay := func(overlay *l2smv1.Overlay) (*corev1.ConfigMap, error) {
 
 		// Construct the TopologySwitchJson
-		topologySwitch := switchv1.Topology{}
+		topologySwitch := talpav1.Topology{}
 
-		overlayConfig := switchv1.OverlaySettings{ControllerIp: overlay.Spec.Provider.Domain,
+		overlayConfig := talpav1.Settings{ControllerIP: overlay.Spec.Provider.Domain,
 			ControllerPort:   overlay.Spec.Provider.OFPort,
-			InterfacesNumber: overlay.Spec.InterfaceNumber,
-			OverlayName:      overlay.Name}
+			InterfacesNumber: overlay.Spec.InterfaceNumber}
 
 		overlayName := overlay.ObjectMeta.Name
 
 		// Populate Nodes
 		for _, nodeName := range overlay.Spec.Topology.Nodes {
-			node := switchv1.Node{
+			node := talpav1.Node{
 				Name:   nodeName,
 				NodeIP: utils.GenerateServiceName(overlayName, nodeName),
 			}
@@ -264,7 +263,7 @@ func (r *OverlayReconciler) createExternalResources(ctx context.Context, overlay
 
 		// Populate Links
 		for _, overlayLink := range overlay.Spec.Topology.Links {
-			link := switchv1.Link{
+			link := talpav1.Link{
 				EndpointNodeA: overlayLink.EndpointA,
 				EndpointNodeB: overlayLink.EndpointB,
 			}
