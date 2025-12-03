@@ -74,7 +74,9 @@ spec:
                       DNS protocol port (used for DNS queries via tools like dig)
                     type: string
                   domain:
-                    type: string
+                    items:
+                      type: string
+                    type: array
                   name:
                     type: string
                   ofPort:

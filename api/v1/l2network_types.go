@@ -43,8 +43,8 @@ const (
 
 // ProviderSpec defines the provider's name and domain. This is used in the inter-cluster scenario, to allow managing of the network in the external environment by this certified SDN provider.
 type ProviderSpec struct {
-	Name   string `json:"name"`
-	Domain string `json:"domain"`
+	Name   string   `json:"name"`
+	Domain []string `json:"domain"`
 
 	//+kubebuilder:default:value="30808"
 	SDNPort string `json:"sdnPort,omitempty"`

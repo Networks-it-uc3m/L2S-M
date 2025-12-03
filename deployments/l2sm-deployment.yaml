@@ -111,7 +111,9 @@ spec:
                       DNS protocol port (used for DNS queries via tools like dig)
                     type: string
                   domain:
-                    type: string
+                    items:
+                      type: string
+                    type: array
                   name:
                     type: string
                   ofPort:
@@ -272,7 +274,9 @@ spec:
                       DNS protocol port (used for DNS queries via tools like dig)
                     type: string
                   domain:
-                    type: string
+                    items:
+                      type: string
+                    type: array
                   name:
                     type: string
                   ofPort:
@@ -4805,7 +4809,9 @@ spec:
                       DNS protocol port (used for DNS queries via tools like dig)
                     type: string
                   domain:
-                    type: string
+                    items:
+                      type: string
+                    type: array
                   name:
                     type: string
                   ofPort:
@@ -9683,7 +9689,7 @@ spec:
           value: "8181"
         - name: DNS_PORT_NUMBER
           value: "30808"
-        image: alexdecb/l2sm-controller-manager:2.8.0
+        image: alexdecb/l2sm-controller-manager:2.8.1
         livenessProbe:
           httpGet:
             path: /healthz

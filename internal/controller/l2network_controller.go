@@ -159,7 +159,7 @@ func (r *L2NetworkReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 			}
 			logger.Info("Connected overlay to inter-domain network")
 
-			dnsinterface.AddServerToLocalCoreDNS(r.Client, network.Name, network.Spec.Provider.Domain, network.Spec.Provider.DNSPort)
+			dnsinterface.AddServerToLocalCoreDNS(r.Client, network.Name, network.Spec.Provider.Domain[0], network.Spec.Provider.DNSPort)
 
 		}
 	}
