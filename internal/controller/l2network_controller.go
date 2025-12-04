@@ -272,7 +272,7 @@ func (r *L2NetworkReconciler) ConnectInternalSwitchToNED(ctx context.Context, ne
 
 	portNumber, _ := utils.GetPortNumberFromNetAttachDef(netAttachDef.Name)
 
-	internalSwitchOFID := fmt.Sprintf("of:%s", dp.GenerateID(dp.GetSwitchName(dp.DatapathParams{})))
+	internalSwitchOFID := fmt.Sprintf("of:%s", dp.GenerateID(dp.GetSwitchName(dp.DatapathParams{NodeName: nedNodeName, ProviderName: OVERLAY_PROVIDER})))
 
 	internalSwitchOFPort := fmt.Sprintf("%s/%s", internalSwitchOFID, portNumber)
 

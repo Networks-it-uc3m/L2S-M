@@ -42,6 +42,7 @@ type OverlayReconciler struct {
 }
 
 var setOwnerKeyOverlay = ".metadata.controller.overlay"
+var OVERLAY_PROVIDER = "l2sm-controller"
 
 // +kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core,resources=services,verbs=get;list;watch;create;update;patch;delete
@@ -248,7 +249,8 @@ func (r *OverlayReconciler) createExternalResources(ctx context.Context, overlay
 
 		overlayConfig := talpav1.Settings{ControllerIP: overlay.Spec.Provider.Domain,
 			ControllerPort:   overlay.Spec.Provider.OFPort,
-			InterfacesNumber: overlay.Spec.InterfaceNumber}
+			InterfacesNumber: overlay.Spec.InterfaceNumber,
+			ProviderName:     OVERLAY_PROVIDER}
 
 		overlayName := overlay.ObjectMeta.Name
 
