@@ -20,11 +20,10 @@ import (
 	"fmt"
 	"time"
 
-	dp "github.com/Networks-it-uc3m/l2sm-switch/pkg/datapath"
-
 	l2smv1 "github.com/Networks-it-uc3m/L2S-M/api/v1"
 	"github.com/Networks-it-uc3m/L2S-M/internal/utils"
 	talpav1 "github.com/Networks-it-uc3m/l2sm-switch/api/v1"
+	dp "github.com/Networks-it-uc3m/l2sm-switch/pkg/datapath"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -124,8 +123,12 @@ func (r *NetworkEdgeDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		}
 		log.Info("NED Launched")
 		return ctrl.Result{RequeueAfter: time.Second * 20}, nil
+	} else {
+		if err := r.reconcileConfigMap(ctx, netEdgeDevice); err != nil {
+			log.Error(err, "unable to reconcile configmap")
+			return ctrl.Result{}, err
+		}
 	}
-	// } else {
 
 	// 	//b, _ := json.Marshal(netEdgeDevice.Spec.Neighbors)
 
@@ -182,46 +185,9 @@ func (r *NetworkEdgeDeviceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 //		return nil
 //	}
 func (r *NetworkEdgeDeviceReconciler) createExternalResources(ctx context.Context, netEdgeDevice *l2smv1.NetworkEdgeDevice) error {
-
-	neighbors := make([]string, len(netEdgeDevice.Spec.Neighbors))
-	for i, neighbor := range netEdgeDevice.Spec.Neighbors {
-		neighbors[i] = neighbor.Domain
-	}
-	nedNeighbors, err := json.Marshal(talpav1.Node{Name: netEdgeDevice.Spec.NodeConfig.NodeName, NodeIP: netEdgeDevice.Spec.NodeConfig.IPAddress, NeighborNodes: neighbors})
-	if err != nil {
-		return err
-	}
-	nedName := dp.GetSwitchName(dp.DatapathParams{NodeName: netEdgeDevice.Spec.NodeConfig.NodeName, ProviderName: netEdgeDevice.Spec.Provider.Name})
-
-	nedConfig, err := json.Marshal(talpav1.Settings{
-		ControllerIP:   netEdgeDevice.Spec.Provider.Domain,
-		ControllerPort: netEdgeDevice.Spec.Provider.OFPort,
-		NodeName:       netEdgeDevice.Spec.NodeConfig.NodeName,
-		SwitchName:     nedName})
-	if err != nil {
-		return err
-	}
 	// Create a ConfigMap to store the neighbors JSON
 
-	constructConfigMapForNED := func(netEdgeDevice *l2smv1.NetworkEdgeDevice) (*corev1.ConfigMap, error) {
-
-		configMap := &corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      fmt.Sprintf("%s-config", netEdgeDevice.Name),
-				Namespace: netEdgeDevice.Namespace,
-			},
-			Data: map[string]string{
-				"neighbors.json": string(nedNeighbors),
-				"config.json":    string(nedConfig),
-			},
-		}
-		if err := controllerutil.SetControllerReference(netEdgeDevice, configMap, r.Scheme); err != nil {
-			return nil, err
-		}
-		return configMap, nil
-	}
-
-	configMap, err := constructConfigMapForNED(netEdgeDevice)
+	configMap, err := constructConfigMapForNED(netEdgeDevice, r.Scheme)
 
 	if err != nil {
 		return fmt.Errorf("could not construct the config map for the network edge device: %v", err)
@@ -327,4 +293,57 @@ func (r *NetworkEdgeDeviceReconciler) createExternalResources(ctx context.Contex
 	}
 
 	return nil
+}
+
+func (r *NetworkEdgeDeviceReconciler) reconcileConfigMap(ctx context.Context, netEdgeDevice *l2smv1.NetworkEdgeDevice) error {
+
+	configMap, err := constructConfigMapForNED(netEdgeDevice, r.Scheme)
+	if err != nil {
+		return fmt.Errorf("could not construct the config map for the network edge device: %v", err)
+	}
+
+	if err := r.Client.Patch(ctx, configMap, client.Apply, client.FieldOwner("yo"), client.ForceOwnership); err != nil {
+		return fmt.Errorf("failed to apply config map: %w", err)
+	}
+
+	return nil
+}
+
+func constructConfigMapForNED(netEdgeDevice *l2smv1.NetworkEdgeDevice, scheme *runtime.Scheme) (*corev1.ConfigMap, error) {
+	neighbors := make([]string, len(netEdgeDevice.Spec.Neighbors))
+	for i, neighbor := range netEdgeDevice.Spec.Neighbors {
+		neighbors[i] = neighbor.Domain
+	}
+	nedName := dp.GetSwitchName(dp.DatapathParams{NodeName: netEdgeDevice.Spec.NodeConfig.NodeName, ProviderName: netEdgeDevice.Spec.Provider.Name})
+
+	nedConfig, err := json.Marshal(talpav1.Settings{
+		ControllerIP:   netEdgeDevice.Spec.Provider.Domain,
+		ControllerPort: netEdgeDevice.Spec.Provider.OFPort,
+		NodeName:       netEdgeDevice.Spec.NodeConfig.NodeName,
+		SwitchName:     nedName})
+	if err != nil {
+		return nil, err
+	}
+	nedNeighbors, err := json.Marshal(talpav1.Node{Name: netEdgeDevice.Spec.NodeConfig.NodeName, NodeIP: netEdgeDevice.Spec.NodeConfig.IPAddress, NeighborNodes: neighbors})
+	if err != nil {
+		return nil, err
+	}
+	configMap := &corev1.ConfigMap{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ConfigMap",
+			APIVersion: "v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      fmt.Sprintf("%s-config", netEdgeDevice.Name),
+			Namespace: netEdgeDevice.Namespace,
+		},
+		Data: map[string]string{
+			"neighbors.json": string(nedNeighbors),
+			"config.json":    string(nedConfig),
+		},
+	}
+	if err := controllerutil.SetControllerReference(netEdgeDevice, configMap, scheme); err != nil {
+		return nil, err
+	}
+	return configMap, nil
 }
