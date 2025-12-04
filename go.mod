@@ -1,8 +1,6 @@
 module github.com/Networks-it-uc3m/L2S-M
 
-go 1.21.7
-
-toolchain go1.22.5
+go 1.23.0
 
 require (
 	github.com/Networks-it-uc3m/l2sm-dns v1.1.1
@@ -64,7 +62,7 @@ require (
 	go.uber.org/zap v1.26.0 // indirect
 	golang.org/x/exp v0.0.0-20220722155223-a9213eeb770e // indirect
 	golang.org/x/net v0.28.0 // indirect
-	golang.org/x/oauth2 v0.22.0 // indirect
+	golang.org/x/oauth2 v0.27.0 // indirect
 	golang.org/x/sys v0.24.0 // indirect
 	golang.org/x/term v0.23.0 // indirect
 	golang.org/x/text v0.17.0 // indirect
