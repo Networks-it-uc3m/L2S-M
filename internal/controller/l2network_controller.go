@@ -24,11 +24,13 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	l2smv1 "github.com/Networks-it-uc3m/L2S-M/api/v1"
 	"github.com/Networks-it-uc3m/L2S-M/internal/dnsinterface"
 	"github.com/Networks-it-uc3m/L2S-M/internal/env"
+	"github.com/Networks-it-uc3m/L2S-M/internal/ids"
 	"github.com/Networks-it-uc3m/L2S-M/internal/nedinterface"
 	"github.com/Networks-it-uc3m/L2S-M/internal/sdnclient"
 	"github.com/Networks-it-uc3m/L2S-M/internal/utils"
@@ -118,6 +120,7 @@ func (r *L2NetworkReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 			if err != nil {
 				logger.Error(err, "failed to connect to provider")
 			}
+
 			network.Status.ProviderConnectivity = &provStatus
 
 			// Update the status in the Kubernetes API
@@ -162,6 +165,23 @@ func (r *L2NetworkReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 			dnsinterface.AddServerToLocalCoreDNS(r.Client, network.Name, network.Spec.Provider.Domain[0], network.Spec.Provider.DNSPort)
 
+		}
+
+		if network.Spec.Ids != nil {
+			resArray, err := ids.GenerateExternalResources(network.Spec.Ids)
+
+			if err != nil {
+				logger.Error(err, "error creating intrusion detecion system resources")
+				return ctrl.Result{}, nil
+			}
+			for _, res := range resArray {
+
+				if err := controllerutil.SetControllerReference(network, res, r.Scheme); err != nil {
+					return ctrl.Result{}, nil
+				}
+
+				r.Client.Create(ctx, res)
+			}
 		}
 	}
 

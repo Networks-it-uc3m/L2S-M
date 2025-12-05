@@ -15,6 +15,7 @@
 package v1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -62,6 +63,53 @@ type ProviderSpec struct {
 	OFPort string `json:"ofPort,omitempty"`
 }
 
+// IDSRuleSource defines where the IDS should fetch signatures from.
+type IDSRuleSource struct {
+	// Name is a friendly identifier for this rule set
+	Name string `json:"name"`
+
+	// URL allows fetching a remote ruleset (e.g., specific version of ET Open).
+	// The controller will need logic to download and cache this.
+	// +optional
+	URL string `json:"url,omitempty"`
+
+	// Inline allows the user to paste a raw Suricata rule directly in the YAML.
+	// Example: "alert tcp any any -> any 80 (msg:\"test rule\"; sid:100001; rev:1;)"
+	// +optional
+	Inline string `json:"inline,omitempty"`
+
+	// ConfigMapRef allows loading rules from a Kubernetes ConfigMap.
+	// Useful for large, organization-specific rule sets managed separately.
+	// +optional
+	ConfigMapRef *corev1.LocalObjectReference `json:"configMapRef,omitempty"`
+}
+
+// IdsRules defines the configuration for the Intrusion Detection System
+type IdsRules struct {
+	// Enabled allows toggling the IDS on/off without deleting the config.
+	// +kubebuilder:default:=true
+	Enabled bool `json:"enabled"`
+
+	// HomeNetCIDR overrides the SURICATA $HOME_NET variable.
+	// If empty, the controller should default this to the L2Network's NetworkCIDR.
+	// +optional
+	HomeNetCIDR []string `json:"homeNetCidr,omitempty"`
+
+	// UseEmergingThreatsOpen is a high-level boolean to automatically enable
+	// the standard "ET Open" ruleset without needing to manually configure URLs.
+	// +kubebuilder:default:=true
+	UseEmergingThreatsOpen bool `json:"useEmergingThreatsOpen"`
+
+	// CustomRuleSources allows adding specific rule files or inline rules.
+	// +optional
+	CustomRuleSources []IDSRuleSource `json:"customRuleSources,omitempty"`
+
+	// IgnorePorts allows whitelisting specific traffic flow from inspection
+	// to improve performance or reduce false positives (BPF Filter generation).
+	// +optional
+	IgnorePorts []int32 `json:"ignorePorts,omitempty"`
+}
+
 // L2NetworkSpec defines the desired state of L2Network
 type L2NetworkSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
@@ -84,6 +132,10 @@ type L2NetworkSpec struct {
 	// PodAddressRange specifies the specific pool of IP addresses that can be assigned to pods.
 	// This range should be a subset of the overall network CIDR, e.g. 10.101.2.0/24.
 	PodAddressRange string `json:"podAddressRange,omitempty"`
+
+	// Ids configures the intrusion detection system.
+	// +optional
+	Ids *IdsRules `json:"ids,omitempty"`
 }
 
 // L2NetworkStatus defines the observed state of L2Network
