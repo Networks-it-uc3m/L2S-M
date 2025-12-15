@@ -27,10 +27,10 @@ spec:
     sdnPort: "8181"
   nodeConfig:
     nodeName: l2sm-test-worker
-    ipAddress: 172.18.0.4
+    ipAddress: 172.18.0.2
   neighbors:
       - node: cluster-b
-        domain: 172.18.0.5
+        domain: 172.17.1.5
   switchTemplate:
     spec:
       hostNetwork: true

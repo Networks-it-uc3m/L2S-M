@@ -140,7 +140,12 @@ build-installer: manifests generate kustomize ## Generate a consolidated YAML wi
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 	$(KUSTOMIZE) build config/default >> deployments/l2sm-deployment.yaml
 
-
+.PHONY: build-codeco
+build-codeco: manifests generate kustomize ## Generate a consolidated YAML with CRDs and deployment.
+	echo "" > deployments/codeco-deployment.yaml
+	echo "---" >> deployments/codeco-deployment.yaml  # Add a document separator before appending
+	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
+	$(KUSTOMIZE) build config/codeco >> deployments/codeco-deployment.yaml
 ##@ Deployment
 
 ifndef ignore-not-found
@@ -233,7 +238,7 @@ deploy-dev: webhook-certs install manifests kustomize ## Deploy validating and m
 	sed -i'' -e 's/caBundle: .*/caBundle: $(shell cat /tmp/k8s-webhook-server/tls.b64)/' ./config/dev/webhookcainjection_patch.yaml
 	sed -i'' -e 's|url: .*|url: https://$(DEV_IP):9443/mutate-v1-pod|' ./config/dev/webhookcainjection_patch.yaml
 	$(KUSTOMIZE) build config/dev | $(KUBECTL) apply -f -
-	echo -e "CONTROLLER_IP=$(DEV_IP)\nCONTROLLER_PORT=30000" >> .env
+# 	echo -e "CONTROLLER_IP=$(DEV_IP)\nCONTROLLER_PORT=30000" >> .env
 	
 .PHONY: undeploy-dev
 undeploy-dev: kustomize ## Undeploy validating and mutating webhooks from the K8s cluster specified in ~/.kube/config.
