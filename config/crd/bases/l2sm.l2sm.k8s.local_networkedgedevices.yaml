@@ -61,6 +61,60 @@ spec:
           spec:
             description: NetworkEdgeDeviceSpec defines the desired state of NetworkEdgeDevice
             properties:
+              monitor:
+                description: |-
+                  Monitor enables the performance measurement probing mechanism.
+                  If omitted, no metrics are collected.
+                properties:
+                  metrics:
+                    description: |-
+                      Metrics is the list of measurements to perform on the overlay network.
+                      Supports built-in metrics (rtt, jitter, throughput) and custom script-based metrics.
+                    items:
+                      description: Metric defines a specific network measurement task.
+                      properties:
+                        interval:
+                          description: |-
+                            Interval specifies the time in minutes between measurements.
+                            If not set (nil), the metric runs in "continuous mode", consuming the live stream of the measurement tool.
+                          type: integer
+                        name:
+                          description: |-
+                            Name identifies the metric.
+                            Reserved names: "rtt", "jitter", "throughput".
+                            If a reserved name is used, the internal Go implementation is used by default.
+                            If a custom name is used, 'scriptSource' is required.
+                          type: string
+                        scriptSource:
+                          description: |-
+                            ScriptSource points to a ConfigMap containing a shell script to execute for this metric.
+                            If provided, this script overrides the internal implementation (even for reserved names).
+                            The script must print the measurement value to stdout.
+                          properties:
+                            key:
+                              description: Key within the ConfigMap that contains
+                                the script (e.g., "measure.sh").
+                              type: string
+                            name:
+                              description: Name of the ConfigMap.
+                              type: string
+                          required:
+                          - key
+                          - name
+                          type: object
+                      required:
+                      - name
+                      type: object
+                    type: array
+                  spreadFactor:
+                    default: "0.2"
+                    description: |-
+                      SpreadFactor determines how metric execution is distributed over time to avoid congestion.
+                      A higher value spreads execution more widely.
+                    type: string
+                required:
+                - metrics
+                type: object
               neighbors:
                 description: Field exclusive to the multi-domain overlay type. If
                   specified in other  types of overlays, the reosurce will launch
@@ -4569,6 +4623,51 @@ spec:
                   required:
                   - domain
                   - node
+                  type: object
+                type: array
+              linkMetrics:
+                description: LinkMetrics holds the performance data for every monitored
+                  link.
+                items:
+                  description: LinkStatus defines the observed state of a specific
+                    link between two nodes.
+                  properties:
+                    metrics:
+                      description: Metrics contains the list of latest measurements
+                        for this link.
+                      items:
+                        description: MetricValue holds the latest measurement for
+                          a specific metric.
+                        properties:
+                          name:
+                            description: Name of the metric (e.g., "rtt", "jitter",
+                              "custom-loss").
+                            type: string
+                          value:
+                            description: Value is the latest measurement as a float
+                              (e.g., 12.5).
+                            type: string
+                        required:
+                        - name
+                        - value
+                        type: object
+                      type: array
+                    sourceNode:
+                      description: SourceNode is the name of the node where the measurement
+                        originated.
+                      type: string
+                    status:
+                      description: Status indicates if the link is "Up", "Down", or
+                        "Degraded".
+                      type: string
+                    targetNode:
+                      description: TargetNode is the name of the neighbor node being
+                        measured.
+                      type: string
+                  required:
+                  - sourceNode
+                  - status
+                  - targetNode
                   type: object
                 type: array
               openflowId:
