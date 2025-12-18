@@ -42,27 +42,6 @@ const (
 	UnknownStatus ConnectivityStatus = "Unknown"
 )
 
-// ProviderSpec defines the provider's name and domain. This is used in the inter-cluster scenario, to allow managing of the network in the external environment by this certified SDN provider.
-type ProviderSpec struct {
-	Name   string   `json:"name"`
-	Domain []string `json:"domain"`
-
-	//+kubebuilder:default:value="30808"
-	SDNPort string `json:"sdnPort,omitempty"`
-
-	// DNS service configuration
-	//+kubebuilder:default:="30053"
-	// DNS protocol port (used for DNS queries via tools like dig)
-	DNSPort string `json:"dnsPort,omitempty"`
-
-	//+kubebuilder:default:="30818"
-	// gRPC management port for DNS service (used for adding/modifying DNS entries)
-	DNSGRPCPort string `json:"dnsGrpcPort,omitempty"`
-
-	//+kubebuilder:default:value="6633"
-	OFPort string `json:"ofPort,omitempty"`
-}
-
 // IDSRuleSource defines where the IDS should fetch signatures from.
 type IDSRuleSource struct {
 	// Name is a friendly identifier for this rule set
