@@ -99,14 +99,18 @@ func GetPortNumberFromNetAttachDef(netAttachName string) (string, error) {
 	return portNumber, nil
 }
 
-func GenerateServiceName(overlayName, nodeName string) string {
+func GenerateSwitchName(overlayName, nodeName string) string {
 	hash := fnv.New32() // Using FNV hash for a compact hash, but still 32 bits
 	hash.Write([]byte(fmt.Sprintf("%s%s", overlayName, nodeName)))
 	sum := hash.Sum32()
 	// Encode the hash as a base32 string and take the first 4 characters
-	return fmt.Sprintf("l2sm-switch-%04x", sum) // H
+	return fmt.Sprintf("sps-%04x", sum) // H
 }
 
+func GenerateServiceName(switchName string) string {
+	// Encode the hash as a base32 string and take the first 4 characters
+	return fmt.Sprintf("%s-svc", switchName) // H
+}
 func ChangePortNumber(address, newPort string) string {
 	host, _, err := net.SplitHostPort(address)
 	if err != nil {
