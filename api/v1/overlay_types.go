@@ -18,13 +18,20 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// Link represents a bidirectional connection between two nodes in the topology.
 type Link struct {
+	// EndpointA is the name of the first node in the link.
 	EndpointA string `json:"endpointA"`
+	// EndpointB is the name of the second node in the link.
 	EndpointB string `json:"endpointB"`
 }
+
+// TopologySpec defines the physical or logical structure of the network.
 type TopologySpec struct {
+	// Nodes is a list of node names where switches will be deployed.
 	Nodes []string `json:"nodes"`
-	Links []Link   `json:"links,omitempty"`
+	// Links is a list of connections between the defined nodes.
+	Links []Link `json:"links,omitempty"`
 }
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
