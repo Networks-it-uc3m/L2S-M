@@ -265,7 +265,12 @@ func (r *NetworkEdgeDeviceReconciler) createExternalResources(ctx context.Contex
 						Containers:     containers,
 						Volumes:        volumes,
 						HostNetwork:    netEdgeDevice.Spec.SwitchTemplate.Spec.HostNetwork,
-						NodeName:       netEdgeDevice.Spec.NodeConfig.NodeName,
+						NodeSelector: map[string]string{
+							corev1.LabelHostname: netEdgeDevice.Spec.NodeConfig.NodeName,
+						},
+						Tolerations: []corev1.Toleration{
+							{Operator: corev1.TolerationOpExists},
+						},
 					},
 				},
 			},

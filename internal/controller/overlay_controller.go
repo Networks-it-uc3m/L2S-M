@@ -412,7 +412,12 @@ func (r *OverlayReconciler) createExternalResources(ctx context.Context, overlay
 							Containers:     containers,
 							Volumes:        volumes,
 							HostNetwork:    overlay.Spec.SwitchTemplate.Spec.HostNetwork,
-							NodeName:       node,
+							NodeSelector: map[string]string{
+								corev1.LabelHostname: node,
+							},
+							Tolerations: []corev1.Toleration{
+								{Operator: corev1.TolerationOpExists},
+							},
 						},
 					},
 				},
