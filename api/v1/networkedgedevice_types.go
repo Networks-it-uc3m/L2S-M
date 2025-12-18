@@ -110,7 +110,10 @@ type NetworkEdgeDeviceSpec struct {
 	// Template describes the virtual switch pod that will be created.
 	SwitchTemplate *SwitchTemplateSpec `json:"switchTemplate"`
 
-	// Available pod range. The pod specified will run a local grpc server and the next one will be used for the VXLAN creation
+	// Monitor enables the performance measurement probing mechanism.
+	// If omitted, no metrics are collected.
+	// +optional
+	Monitor *MonitorSpec `json:"monitor,omitempty"`
 }
 
 // NetworkEdgeDeviceStatus defines the observed state of NetworkEdgeDevice
@@ -125,6 +128,10 @@ type NetworkEdgeDeviceStatus struct {
 	ConnectedNeighbors []NeighborSpec `json:"connectedNeighbors,omitempty"`
 
 	OpenflowId string `json:"openflowId,omitempty"`
+
+	// LinkMetrics holds the performance data for every monitored link.
+	// +optional
+	LinkMetrics *[]LinkStatus `json:"linkMetrics,omitempty"`
 }
 
 //+kubebuilder:object:root=true
