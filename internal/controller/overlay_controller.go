@@ -239,250 +239,257 @@ type NodeJson struct {
 	NodeIP string `json:"nodeIP"`
 }
 
+// createExternalResources is the main orchestrator.
+// It calls helpers to build objects, then creates them in the cluster.
 func (r *OverlayReconciler) createExternalResources(ctx context.Context, overlay *l2smv1.Overlay) error {
 
-	// Create a ConfigMap to store the topology JSON
-	constructConfigMapForOverlay := func(overlay *l2smv1.Overlay) (*corev1.ConfigMap, error) {
-
-		// Construct the TopologySwitchJson
-		topologySwitch := talpav1.Topology{}
-
-		overlayConfig := talpav1.Settings{ControllerIP: overlay.Spec.Provider.Domain,
-			ControllerPort:   overlay.Spec.Provider.OFPort,
-			InterfacesNumber: overlay.Spec.InterfaceNumber,
-			ProviderName:     OVERLAY_PROVIDER}
-
-		overlayName := overlay.ObjectMeta.Name
-
-		// Populate Nodes
-		for _, nodeName := range overlay.Spec.Topology.Nodes {
-			node := talpav1.Node{
-				Name:   nodeName,
-				NodeIP: utils.GenerateServiceName(utils.GenerateSwitchName(overlayName, nodeName)),
-			}
-			topologySwitch.Nodes = append(topologySwitch.Nodes, node)
-		}
-
-		// Populate Links
-		for _, overlayLink := range overlay.Spec.Topology.Links {
-			link := talpav1.Link{
-				EndpointNodeA: overlayLink.EndpointA,
-				EndpointNodeB: overlayLink.EndpointB,
-			}
-			topologySwitch.Links = append(topologySwitch.Links, link)
-		}
-
-		// Convert TopologySwitchJson to JSON
-		topologyJSON, err := json.Marshal(topologySwitch)
-		if err != nil {
-			return nil, err
-		}
-
-		configJSON, err := json.Marshal(overlayConfig)
-		if err != nil {
-			return nil, err
-		}
-		configMap := &corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      fmt.Sprintf("%s-topology", overlay.Name),
-				Namespace: overlay.Namespace,
-			},
-			Data: map[string]string{
-				"topology.json": string(topologyJSON),
-				"config.json":   string(configJSON),
-			},
-		}
-		if err := controllerutil.SetControllerReference(overlay, configMap, r.Scheme); err != nil {
-			return nil, err
-		}
-		return configMap, nil
-	}
-
-	configMap, _ := constructConfigMapForOverlay(overlay)
-
-	// Create the ConfigMap in Kubernetes
-	if err := r.Client.Create(ctx, configMap); err != nil {
-		return err
-	}
-
-	constructNodeResourcesForOverlay := func(overlay *l2smv1.Overlay) ([]*appsv1.ReplicaSet, []*corev1.Service, []*nettypes.NetworkAttachmentDefinition, error) {
-
-		// Define volume mounts to be added to each container
-		volumeMounts := []corev1.VolumeMount{
-			{
-				Name:      "config",
-				MountPath: "/etc/l2sm/",
-				ReadOnly:  true,
-			},
-		}
-
-		// Update containers to include the volume mount
-		containers := make([]corev1.Container, len(overlay.Spec.SwitchTemplate.Spec.Containers))
-		for i, container := range overlay.Spec.SwitchTemplate.Spec.Containers {
-			container.VolumeMounts = append(container.VolumeMounts, volumeMounts...)
-			containers[i] = container
-		}
-
-		// Define the volume using the created ConfigMap
-		volumes := []corev1.Volume{
-			{
-				Name: "config",
-				VolumeSource: corev1.VolumeSource{
-					ConfigMap: &corev1.ConfigMapVolumeSource{
-						LocalObjectReference: corev1.LocalObjectReference{
-							Name: configMap.Name,
-						},
-						Items: []corev1.KeyToPath{
-							{
-								Key:  "topology.json",
-								Path: "topology.json",
-							},
-							{
-								Key:  "config.json",
-								Path: "config.json",
-							},
-						},
-					},
-				},
-			},
-		}
-
-		switchInterfacesAnnotations := GenerateAnnotations(overlay.Name, overlay.Spec.InterfaceNumber)
-
-		var networkAttachmentDefinitions []*nettypes.NetworkAttachmentDefinition
-		var auxNetAttachDef *nettypes.NetworkAttachmentDefinition
-
-		for i := 1; i <= overlay.Spec.InterfaceNumber; i++ {
-			auxNetAttachDef = &nettypes.NetworkAttachmentDefinition{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      fmt.Sprintf("%s-veth%d", overlay.Name, i),
-					Namespace: overlay.Namespace,
-					Labels:    map[string]string{"app": "l2sm", "overlay": overlay.Name},
-				},
-				Spec: nettypes.NetworkAttachmentDefinitionSpec{
-					Config: fmt.Sprintf(`{
-						"cniVersion": "0.3.0",
-						"type": "bridge",
-						"bridge": "%sbr%d",
-						"mtu": 1400,
-						"device": "%s-veth%d",
-						  "ipam": {
-							"type":"static"
-						  }
-					  }`, "", i, overlay.Name, i),
-				},
-			}
-			if err := controllerutil.SetControllerReference(overlay, auxNetAttachDef, r.Scheme); err != nil {
-				return nil, nil, nil, err
-			}
-			networkAttachmentDefinitions = append(networkAttachmentDefinitions, auxNetAttachDef)
-		}
-
-		var replicaSets []*appsv1.ReplicaSet
-		var services []*corev1.Service
-		for _, node := range overlay.Spec.Topology.Nodes {
-
-			name := utils.GenerateSwitchName(overlay.Name, node)
-
-			replicaSet := &appsv1.ReplicaSet{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels:      make(map[string]string),
-					Annotations: make(map[string]string),
-					Name:        name,
-					Namespace:   overlay.Namespace,
-				},
-				Spec: appsv1.ReplicaSetSpec{
-					Replicas: utils.Int32Ptr(1),
-					Selector: &metav1.LabelSelector{
-						MatchLabels: map[string]string{
-							"app": name,
-						},
-					},
-					Template: corev1.PodTemplateSpec{
-						ObjectMeta: metav1.ObjectMeta{
-							Labels: map[string]string{
-								"app": name,
-							},
-							Annotations: map[string]string{
-								MULTUS_ANNOTATION_KEY: switchInterfacesAnnotations,
-							},
-						},
-						Spec: corev1.PodSpec{
-							InitContainers: overlay.Spec.SwitchTemplate.Spec.InitContainers,
-							Containers:     containers,
-							Volumes:        volumes,
-							HostNetwork:    overlay.Spec.SwitchTemplate.Spec.HostNetwork,
-							NodeSelector: map[string]string{
-								corev1.LabelHostname: node,
-							},
-							Tolerations: []corev1.Toleration{
-								{Operator: corev1.TolerationOpExists},
-							},
-						},
-					},
-				},
-			}
-
-			for k, v := range overlay.Spec.SwitchTemplate.Annotations {
-				replicaSet.Annotations[k] = v
-			}
-			for k, v := range overlay.Spec.SwitchTemplate.Labels {
-				replicaSet.Labels[k] = v
-			}
-			if err := controllerutil.SetControllerReference(overlay, replicaSet, r.Scheme); err != nil {
-				return nil, nil, nil, err
-			}
-
-			replicaSets = append(replicaSets, replicaSet)
-
-			// Create a headless service for the ReplicaSet
-			service := &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      utils.GenerateServiceName(utils.GenerateSwitchName(overlay.Name, node)),
-					Namespace: overlay.Namespace,
-					Labels:    map[string]string{"app": name},
-				},
-				Spec: corev1.ServiceSpec{
-					ClusterIP: "None",
-					Selector:  map[string]string{"app": name},
-					Ports: []corev1.ServicePort{
-						{
-							Name: "http",
-							Port: 80,
-						},
-					},
-				},
-			}
-
-			if err := controllerutil.SetControllerReference(overlay, service, r.Scheme); err != nil {
-				return nil, nil, nil, err
-			}
-
-			services = append(services, service)
-		}
-
-		return replicaSets, services, networkAttachmentDefinitions, nil
-	}
-
-	replicaSets, services, netAttachDefs, err := constructNodeResourcesForOverlay(overlay)
+	// 1. Build and Create the ConfigMap
+	configMap, err := r.buildTopologyConfigMap(overlay)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to build config map: %w", err)
 	}
-	for _, netAttachDef := range netAttachDefs {
-		if err = r.Client.Create(ctx, netAttachDef); err != nil {
-			return err
+	if err := r.Client.Create(ctx, configMap); err != nil {
+		return fmt.Errorf("failed to create config map: %w", err)
+	}
+
+	// 2. Build and Create Network Attachment Definitions
+	netAttachDefs, err := r.buildNetworkAttachmentDefinitions(overlay)
+	if err != nil {
+		return fmt.Errorf("failed to build net attach defs: %w", err)
+	}
+	for _, nad := range netAttachDefs {
+		if err := r.Client.Create(ctx, nad); err != nil {
+			return fmt.Errorf("failed to create network attachment definition %s: %w", nad.Name, err)
 		}
 	}
-	for _, replicaSet := range replicaSets {
-		if err = r.Client.Create(ctx, replicaSet); err != nil {
-			return err
+
+	// 3. Build and Create Node Resources (ReplicaSets and Services)
+	replicaSets, services, err := r.buildNodeResources(overlay, configMap.Name)
+	if err != nil {
+		return fmt.Errorf("failed to build node resources: %w", err)
+	}
+
+	for _, rs := range replicaSets {
+		if err := r.Client.Create(ctx, rs); err != nil {
+			return fmt.Errorf("failed to create replicaset %s: %w", rs.Name, err)
 		}
 	}
-	for _, service := range services {
-		if err = r.Client.Create(ctx, service); err != nil {
-			return err
+
+	for _, svc := range services {
+		if err := r.Client.Create(ctx, svc); err != nil {
+			return fmt.Errorf("failed to create service %s: %w", svc.Name, err)
 		}
 	}
 
 	return nil
+}
+
+// -----------------------------------------------------------------------------
+// Helper Methods
+// -----------------------------------------------------------------------------
+
+// buildTopologyConfigMap constructs the ConfigMap containing topology.json and config.json
+func (r *OverlayReconciler) buildTopologyConfigMap(overlay *l2smv1.Overlay) (*corev1.ConfigMap, error) {
+	// Construct Topology Object
+	topologySwitch := talpav1.Topology{}
+
+	// Populate Nodes
+	for _, nodeName := range overlay.Spec.Topology.Nodes {
+		node := talpav1.Node{
+			Name:   nodeName,
+			NodeIP: utils.GenerateServiceName(utils.GenerateSwitchName(overlay.ObjectMeta.Name, nodeName)),
+		}
+		topologySwitch.Nodes = append(topologySwitch.Nodes, node)
+	}
+
+	// Populate Links
+	for _, overlayLink := range overlay.Spec.Topology.Links {
+		link := talpav1.Link{
+			EndpointNodeA: overlayLink.EndpointA,
+			EndpointNodeB: overlayLink.EndpointB,
+		}
+		topologySwitch.Links = append(topologySwitch.Links, link)
+	}
+
+	// Construct Settings Object
+	overlayConfig := talpav1.Settings{
+		ControllerIP:     overlay.Spec.Provider.Domain,
+		ControllerPort:   overlay.Spec.Provider.OFPort,
+		InterfacesNumber: overlay.Spec.InterfaceNumber,
+		ProviderName:     OVERLAY_PROVIDER,
+	}
+
+	// Marshal JSONs
+	topologyJSON, err := json.Marshal(topologySwitch)
+	if err != nil {
+		return nil, err
+	}
+	configJSON, err := json.Marshal(overlayConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	configMap := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      fmt.Sprintf("%s-topology", overlay.Name),
+			Namespace: overlay.Namespace,
+		},
+		Data: map[string]string{
+			"topology.json": string(topologyJSON),
+			"config.json":   string(configJSON),
+		},
+	}
+
+	if err := controllerutil.SetControllerReference(overlay, configMap, r.Scheme); err != nil {
+		return nil, err
+	}
+	return configMap, nil
+}
+
+// buildNetworkAttachmentDefinitions creates the Multus definitions for the interfaces
+func (r *OverlayReconciler) buildNetworkAttachmentDefinitions(overlay *l2smv1.Overlay) ([]*nettypes.NetworkAttachmentDefinition, error) {
+	var defs []*nettypes.NetworkAttachmentDefinition
+
+	for i := 1; i <= overlay.Spec.InterfaceNumber; i++ {
+		configSpec := fmt.Sprintf(`{
+            "cniVersion": "0.3.0",
+            "type": "bridge",
+            "bridge": "%sbr%d",
+            "mtu": 1400,
+            "device": "%s-veth%d",
+            "ipam": { "type":"static" }
+        }`, "", i, overlay.Name, i)
+
+		nad := &nettypes.NetworkAttachmentDefinition{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      fmt.Sprintf("%s-veth%d", overlay.Name, i),
+				Namespace: overlay.Namespace,
+				Labels:    map[string]string{"app": "l2sm", "overlay": overlay.Name},
+			},
+			Spec: nettypes.NetworkAttachmentDefinitionSpec{
+				Config: configSpec,
+			},
+		}
+
+		if err := controllerutil.SetControllerReference(overlay, nad, r.Scheme); err != nil {
+			return nil, err
+		}
+		defs = append(defs, nad)
+	}
+	return defs, nil
+}
+
+// buildNodeResources constructs the ReplicaSets and Headless Services for every node in the topology
+func (r *OverlayReconciler) buildNodeResources(overlay *l2smv1.Overlay, configMapName string) ([]*appsv1.ReplicaSet, []*corev1.Service, error) {
+	var replicaSets []*appsv1.ReplicaSet
+	var services []*corev1.Service
+
+	// Prepare Volume Mounts (shared across all containers)
+	volumeMounts := []corev1.VolumeMount{
+		{
+			Name:      "config",
+			MountPath: "/etc/l2sm/",
+			ReadOnly:  true,
+		},
+	}
+
+	// Update containers to include the volume mount
+	containers := make([]corev1.Container, len(overlay.Spec.SwitchTemplate.Spec.Containers))
+	for i, container := range overlay.Spec.SwitchTemplate.Spec.Containers {
+		// Deep copy or append to new slice to avoid mutating original spec if shared
+		c := container
+		c.VolumeMounts = append(c.VolumeMounts, volumeMounts...)
+		containers[i] = c
+	}
+
+	// Define Volumes
+	volumes := []corev1.Volume{
+		{
+			Name: "config",
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{Name: configMapName},
+					Items: []corev1.KeyToPath{
+						{Key: "topology.json", Path: "topology.json"},
+						{Key: "config.json", Path: "config.json"},
+					},
+				},
+			},
+		},
+	}
+
+	switchInterfacesAnnotations := GenerateAnnotations(overlay.Name, overlay.Spec.InterfaceNumber)
+
+	for _, node := range overlay.Spec.Topology.Nodes {
+		switchName := utils.GenerateSwitchName(overlay.Name, node)
+		serviceName := utils.GenerateServiceName(switchName)
+
+		// 1. Create ReplicaSet
+		replicaSet := &appsv1.ReplicaSet{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        switchName,
+				Namespace:   overlay.Namespace,
+				Labels:      make(map[string]string),
+				Annotations: make(map[string]string),
+			},
+			Spec: appsv1.ReplicaSetSpec{
+				Replicas: utils.Int32Ptr(1),
+				Selector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{"app": switchName},
+				},
+				Template: corev1.PodTemplateSpec{
+					ObjectMeta: metav1.ObjectMeta{
+						Labels: map[string]string{"app": switchName},
+						Annotations: map[string]string{
+							MULTUS_ANNOTATION_KEY: switchInterfacesAnnotations,
+						},
+					},
+					Spec: corev1.PodSpec{
+						InitContainers: overlay.Spec.SwitchTemplate.Spec.InitContainers,
+						Containers:     containers,
+						Volumes:        volumes,
+						HostNetwork:    overlay.Spec.SwitchTemplate.Spec.HostNetwork,
+						NodeSelector:   map[string]string{corev1.LabelHostname: node},
+						Tolerations:    []corev1.Toleration{{Operator: corev1.TolerationOpExists}},
+					},
+				},
+			},
+		}
+
+		// Apply Template Annotations/Labels
+		for k, v := range overlay.Spec.SwitchTemplate.Annotations {
+			replicaSet.Annotations[k] = v
+		}
+		for k, v := range overlay.Spec.SwitchTemplate.Labels {
+			replicaSet.Labels[k] = v
+		}
+
+		if err := controllerutil.SetControllerReference(overlay, replicaSet, r.Scheme); err != nil {
+			return nil, nil, err
+		}
+		replicaSets = append(replicaSets, replicaSet)
+
+		// 2. Create Service
+		service := &corev1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      serviceName,
+				Namespace: overlay.Namespace,
+				Labels:    map[string]string{"app": switchName},
+			},
+			Spec: corev1.ServiceSpec{
+				ClusterIP: "None",
+				Selector:  map[string]string{"app": switchName},
+				Ports: []corev1.ServicePort{
+					{Name: "http", Port: 80},
+				},
+			},
+		}
+
+		if err := controllerutil.SetControllerReference(overlay, service, r.Scheme); err != nil {
+			return nil, nil, err
+		}
+		services = append(services, service)
+	}
+
+	return replicaSets, services, nil
 }
