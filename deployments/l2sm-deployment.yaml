@@ -84,6 +84,76 @@ spec:
                   as additional configuration depending on the type of network. Check
                   each type of network for specific configuration definitions.
                 type: string
+              ids:
+                description: Ids configures the intrusion detection system.
+                properties:
+                  customRuleSources:
+                    description: CustomRuleSources allows adding specific rule files
+                      or inline rules.
+                    items:
+                      description: IDSRuleSource defines where the IDS should fetch
+                        signatures from.
+                      properties:
+                        configMapRef:
+                          description: |-
+                            ConfigMapRef allows loading rules from a Kubernetes ConfigMap.
+                            Useful for large, organization-specific rule sets managed separately.
+                          properties:
+                            name:
+                              description: |-
+                                Name of the referent.
+                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              type: string
+                          type: object
+                          x-kubernetes-map-type: atomic
+                        inline:
+                          description: |-
+                            Inline allows the user to paste a raw Suricata rule directly in the YAML.
+                            Example: "alert tcp any any -> any 80 (msg:\"test rule\"; sid:100001; rev:1;)"
+                          type: string
+                        name:
+                          description: Name is a friendly identifier for this rule
+                            set
+                          type: string
+                        url:
+                          description: |-
+                            URL allows fetching a remote ruleset (e.g., specific version of ET Open).
+                            The controller will need logic to download and cache this.
+                          type: string
+                      required:
+                      - name
+                      type: object
+                    type: array
+                  enabled:
+                    default: true
+                    description: Enabled allows toggling the IDS on/off without deleting
+                      the config.
+                    type: boolean
+                  homeNetCidr:
+                    description: |-
+                      HomeNetCIDR overrides the SURICATA $HOME_NET variable.
+                      If empty, the controller should default this to the L2Network's NetworkCIDR.
+                    items:
+                      type: string
+                    type: array
+                  ignorePorts:
+                    description: |-
+                      IgnorePorts allows whitelisting specific traffic flow from inspection
+                      to improve performance or reduce false positives (BPF Filter generation).
+                    items:
+                      format: int32
+                      type: integer
+                    type: array
+                  useEmergingThreatsOpen:
+                    default: true
+                    description: |-
+                      UseEmergingThreatsOpen is a high-level boolean to automatically enable
+                      the standard "ET Open" ruleset without needing to manually configure URLs.
+                    type: boolean
+                required:
+                - enabled
+                - useEmergingThreatsOpen
+                type: object
               networkCIDR:
                 description: |-
                   NetworkCIDR defines the overall network CIDR used for routing pod interfaces.
