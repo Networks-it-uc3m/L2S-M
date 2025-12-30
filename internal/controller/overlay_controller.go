@@ -269,6 +269,9 @@ func (r *OverlayReconciler) createExternalResources(ctx context.Context, overlay
 		return fmt.Errorf("failed to build node resources: %w", err)
 	}
 
+	if overlay.Spec.Monitor != nil {
+		exporterDeployment, exporterConfig, err := r.buildMonitoringExporter()
+	}
 	for _, rs := range replicaSets {
 		if err := r.Client.Create(ctx, rs); err != nil {
 			return fmt.Errorf("failed to create replicaset %s: %w", rs.Name, err)
@@ -421,6 +424,11 @@ func (r *OverlayReconciler) buildNodeResources(overlay *l2smv1.Overlay, configMa
 	switchInterfacesAnnotations := GenerateAnnotations(overlay.Name, overlay.Spec.InterfaceNumber)
 
 	for _, node := range overlay.Spec.Topology.Nodes {
+
+		if overlay.Spec.Monitor != nil {
+			monCont, monConfMap := r.buildMonitoringResources(overlay)
+			containers = append(containers, monCont)
+		}
 		switchName := utils.GenerateSwitchName(overlay.Name, node)
 		serviceName := utils.GenerateServiceName(switchName)
 
@@ -492,4 +500,14 @@ func (r *OverlayReconciler) buildNodeResources(overlay *l2smv1.Overlay, configMa
 	}
 
 	return replicaSets, services, nil
+}
+
+func (r *OverlayReconciler) buildMonitoringResources(overlay *l2smv1.Overlay) (*corev1.Container, *corev1.ConfigMap) {
+
+	c := corev1.Container{}
+	return c
+}
+
+func (r *OverlayReconciler) buildMonitoringExporter() (*appsv1.Deployment, *corev1.ConfigMap, error) {
+
 }
