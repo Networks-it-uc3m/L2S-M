@@ -21,6 +21,7 @@ import (
 	"time"
 
 	l2smv1 "github.com/Networks-it-uc3m/L2S-M/api/v1"
+	"github.com/Networks-it-uc3m/L2S-M/internal/lpminterface"
 	"github.com/Networks-it-uc3m/L2S-M/internal/utils"
 	nettypes "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -243,24 +244,21 @@ type NodeJson struct {
 // It calls helpers to build objects, then creates them in the cluster.
 func (r *OverlayReconciler) createExternalResources(ctx context.Context, overlay *l2smv1.Overlay) error {
 
+	var extResources []client.Object
+
 	// 1. Build and Create the ConfigMap
 	configMap, err := r.buildTopologyConfigMap(overlay)
 	if err != nil {
 		return fmt.Errorf("failed to build config map: %w", err)
 	}
-	if err := r.Client.Create(ctx, configMap); err != nil {
-		return fmt.Errorf("failed to create config map: %w", err)
-	}
-
+	extResources = append(extResources, configMap)
 	// 2. Build and Create Network Attachment Definitions
 	netAttachDefs, err := r.buildNetworkAttachmentDefinitions(overlay)
 	if err != nil {
 		return fmt.Errorf("failed to build net attach defs: %w", err)
 	}
 	for _, nad := range netAttachDefs {
-		if err := r.Client.Create(ctx, nad); err != nil {
-			return fmt.Errorf("failed to create network attachment definition %s: %w", nad.Name, err)
-		}
+		extResources = append(extResources, nad)
 	}
 
 	// 3. Build and Create Node Resources (ReplicaSets and Services)
@@ -268,19 +266,48 @@ func (r *OverlayReconciler) createExternalResources(ctx context.Context, overlay
 	if err != nil {
 		return fmt.Errorf("failed to build node resources: %w", err)
 	}
-
-	if overlay.Spec.Monitor != nil {
-		exporterDeployment, exporterConfig, err := r.buildMonitoringExporter()
-	}
 	for _, rs := range replicaSets {
-		if err := r.Client.Create(ctx, rs); err != nil {
-			return fmt.Errorf("failed to create replicaset %s: %w", rs.Name, err)
-		}
+		extResources = append(extResources, rs)
 	}
 
 	for _, svc := range services {
-		if err := r.Client.Create(ctx, svc); err != nil {
-			return fmt.Errorf("failed to create service %s: %w", svc.Name, err)
+		extResources = append(extResources, svc)
+
+	}
+
+	if overlay.Spec.Monitor != nil {
+		var targets []string
+		for _, node := range overlay.Spec.Topology.Nodes {
+			// Target the service created in buildNodeResources (port 8090 for lpm-collector)
+			switchName := utils.GenerateSwitchName(overlay.Name, node)
+			serviceName := utils.GenerateServiceName(switchName)
+			// Format: "service-name:8090"
+			targets = append(targets, fmt.Sprintf("'%s:8090'", serviceName))
+		}
+
+		var lpmStrategy lpminterface.ExporterStrategy
+
+		// Decide strategy
+		if overlay.Spec.Monitor.ExportMetrics.Method == l2smv1.SWM_METHOD {
+			lpmStrategy = &lpminterface.SWMStrategy{
+
+				Namespace: overlay.Spec.Monitor.ExportMetrics.Config[l2smv1.SWM_NAMESPACE_OPTION],
+			}
+		} else {
+			lpmStrategy = &lpminterface.RegularStrategy{}
+		}
+
+		// Execute strategy
+		exporterDeployment, exporterConfig, exporterService, err := lpmStrategy.BuildResources(overlay.Spec.Monitor.ExportMetrics.ServiceAccount, targets)
+		if err != nil {
+			return fmt.Errorf("failed to build monitoring resources: %w", err)
+		}
+		extResources = append(extResources, exporterDeployment, exporterConfig, exporterService)
+	}
+
+	for _, obj := range extResources {
+		if err := r.Client.Create(ctx, obj); err != nil {
+			return fmt.Errorf("failed to create %s %s: %w", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName(), err)
 		}
 	}
 
