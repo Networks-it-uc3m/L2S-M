@@ -501,13 +501,3 @@ func (r *OverlayReconciler) buildNodeResources(overlay *l2smv1.Overlay, configMa
 
 	return replicaSets, services, nil
 }
-
-func (r *OverlayReconciler) buildMonitoringResources(overlay *l2smv1.Overlay) (*corev1.Container, *corev1.ConfigMap) {
-
-	c := corev1.Container{}
-	return c
-}
-
-func (r *OverlayReconciler) buildMonitoringExporter() (*appsv1.Deployment, *corev1.ConfigMap, error) {
-
-}
