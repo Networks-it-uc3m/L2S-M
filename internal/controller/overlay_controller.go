@@ -285,27 +285,31 @@ func (r *OverlayReconciler) createExternalResources(ctx context.Context, overlay
 			targets = append(targets, fmt.Sprintf("'%s:8090'", serviceName))
 		}
 
-		var lpmStrategy lpminterface.ExporterStrategy
+		var lpmExporter lpminterface.ExporterStrategy
 
-		// Decide strategy
+		// Decide strategy, swm if the exporter will use the network topology CRD in Codeco project. Else, the default autonomic solution will be used
 		if overlay.Spec.Monitor.ExportMetrics.Method == l2smv1.SWM_METHOD {
-			lpmStrategy = &lpminterface.SWMStrategy{
+			lpmExporter = &lpminterface.SWMStrategy{
 
 				Namespace: overlay.Spec.Monitor.ExportMetrics.Config[l2smv1.SWM_NAMESPACE_OPTION],
 			}
 		} else {
-			lpmStrategy = &lpminterface.RegularStrategy{}
+			lpmExporter = &lpminterface.RegularStrategy{}
 		}
-
-		// Execute strategy
-		exporterDeployment, exporterConfig, exporterService, err := lpmStrategy.BuildResources(overlay.Spec.Monitor.ExportMetrics.ServiceAccount, targets)
+		lpmExporter = lpminterface.NewExporter(overlay.Spec.Monitor.ExportMetrics.Method, exporterOptions...)
+		// Build exporter resources. Disclaimer: exporter is the prometheus exporter that retrieves metric from the collector instances.
+		exporterDeployment, exporterConfig, exporterService, err := lpmExporter.BuildResources(overlay.Spec.Monitor.ExportMetrics.ServiceAccount, targets)
 		if err != nil {
 			return fmt.Errorf("failed to build monitoring resources: %w", err)
 		}
+		lpmCollector
+		monCont, monConfMap, err := lpminterface.BuildMonitoringCollectorResources()
+		containers = append(containers, monCont)
 		extResources = append(extResources, exporterDeployment, exporterConfig, exporterService)
 	}
 
 	for _, obj := range extResources {
+		// Todo: garbage collection
 		if err := r.Client.Create(ctx, obj); err != nil {
 			return fmt.Errorf("failed to create %s %s: %w", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName(), err)
 		}
@@ -452,10 +456,6 @@ func (r *OverlayReconciler) buildNodeResources(overlay *l2smv1.Overlay, configMa
 
 	for _, node := range overlay.Spec.Topology.Nodes {
 
-		if overlay.Spec.Monitor != nil {
-			monCont, monConfMap := r.buildMonitoringResources(overlay)
-			containers = append(containers, monCont)
-		}
 		switchName := utils.GenerateSwitchName(overlay.Name, node)
 		serviceName := utils.GenerateServiceName(switchName)
 
@@ -498,10 +498,6 @@ func (r *OverlayReconciler) buildNodeResources(overlay *l2smv1.Overlay, configMa
 		for k, v := range overlay.Spec.SwitchTemplate.Labels {
 			replicaSet.Labels[k] = v
 		}
-
-		if err := controllerutil.SetControllerReference(overlay, replicaSet, r.Scheme); err != nil {
-			return nil, nil, err
-		}
 		replicaSets = append(replicaSets, replicaSet)
 
 		// 2. Create Service
@@ -518,10 +514,6 @@ func (r *OverlayReconciler) buildNodeResources(overlay *l2smv1.Overlay, configMa
 					{Name: "http", Port: 80},
 				},
 			},
-		}
-
-		if err := controllerutil.SetControllerReference(overlay, service, r.Scheme); err != nil {
-			return nil, nil, err
 		}
 		services = append(services, service)
 	}

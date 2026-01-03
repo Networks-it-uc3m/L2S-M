@@ -20,21 +20,28 @@ type ExporterStrategy interface {
 	BuildResources(saName string, targets []string) (*appsv1.Deployment, *corev1.ConfigMap, *corev1.Service, error)
 }
 
+func NewExporter(m string, o map[string]string) ExporterStrategy {
+	if m == l2smv1.SWM_METHOD {
+		return &swmStrategy{Namespace: o[l2smv1.SWM_NAMESPACE_OPTION]}
+	}
+	return &regularStrategy{}
+}
+
 // SWMStrategy implements the SWM logic
-type SWMStrategy struct {
+type swmStrategy struct {
 	Namespace string
 }
 
-func (s *SWMStrategy) BuildResources(saName string, targets []string) (*appsv1.Deployment, *corev1.ConfigMap, *corev1.Service, error) {
+func (s *swmStrategy) BuildResources(saName string, targets []string) (*appsv1.Deployment, *corev1.ConfigMap, *corev1.Service, error) {
 	// Call internal logic for SWM
 	return buildSWMExporterInternal(saName, s.Namespace, "swm-lpm", targets)
 }
 
 // RegularStrategy implements the default logic
-type RegularStrategy struct {
+type regularStrategy struct {
 }
 
-func (s *RegularStrategy) BuildResources(saName string, targets []string) (*appsv1.Deployment, *corev1.ConfigMap, *corev1.Service, error) {
+func (s *regularStrategy) BuildResources(saName string, targets []string) (*appsv1.Deployment, *corev1.ConfigMap, *corev1.Service, error) {
 	// Call internal logic for Regular
 	return buildRegularExporterInternal(saName, "lpm", targets)
 }
@@ -46,6 +53,12 @@ func BuildMonitoringResources(overlay *l2smv1.Overlay) (*corev1.Container, *core
 	return c, cm
 }
 
+func BuildMonitoringCollectorResources() (*corev1.Container, *corev1.ConfigMap, error) {
+
+	c := &corev1.Container{}
+	cm := &corev1.ConfigMap{}
+	return c, cm, nil
+}
 func buildSWMExporterInternal(serviceAccount, networkTopologyNamespace, exporterName string, targets []string) (*appsv1.Deployment, *corev1.ConfigMap, *corev1.Service, error) {
 
 	appName := fmt.Sprintf("prometheus-%s", exporterName)
