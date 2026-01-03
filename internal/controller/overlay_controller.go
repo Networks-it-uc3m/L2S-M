@@ -285,24 +285,14 @@ func (r *OverlayReconciler) createExternalResources(ctx context.Context, overlay
 			targets = append(targets, fmt.Sprintf("'%s:8090'", serviceName))
 		}
 
-		var lpmExporter lpminterface.ExporterStrategy
-
 		// Decide strategy, swm if the exporter will use the network topology CRD in Codeco project. Else, the default autonomic solution will be used
-		if overlay.Spec.Monitor.ExportMetrics.Method == l2smv1.SWM_METHOD {
-			lpmExporter = &lpminterface.SWMStrategy{
+		lpmExporter := lpminterface.NewExporter(overlay.Spec.Monitor.ExportMetrics.Method, overlay.Spec.Monitor.ExportMetrics.Config)
 
-				Namespace: overlay.Spec.Monitor.ExportMetrics.Config[l2smv1.SWM_NAMESPACE_OPTION],
-			}
-		} else {
-			lpmExporter = &lpminterface.RegularStrategy{}
-		}
-		lpmExporter = lpminterface.NewExporter(overlay.Spec.Monitor.ExportMetrics.Method, exporterOptions...)
 		// Build exporter resources. Disclaimer: exporter is the prometheus exporter that retrieves metric from the collector instances.
 		exporterDeployment, exporterConfig, exporterService, err := lpmExporter.BuildResources(overlay.Spec.Monitor.ExportMetrics.ServiceAccount, targets)
 		if err != nil {
 			return fmt.Errorf("failed to build monitoring resources: %w", err)
 		}
-		lpmCollector
 		monCont, monConfMap, err := lpminterface.BuildMonitoringCollectorResources()
 		containers = append(containers, monCont)
 		extResources = append(extResources, exporterDeployment, exporterConfig, exporterService)
