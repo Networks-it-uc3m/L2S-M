@@ -296,7 +296,8 @@ func (r *OverlayReconciler) createExternalResources(ctx context.Context, overlay
 		monCont, monCMs, _, err := lpminterface.BuildMonitoringCollectorResources(
 			overlay,
 			lpminterface.CollectorBuildOptions{
-				IPPrefix: "10.0.0.",
+				IPPrefix:     "10.0.0.",
+				SpreadFactor: &overlay.Spec.Monitor.SpreadFactor,
 			})
 		for _, rs := range replicaSets {
 			rs.Spec.Template.Spec.Containers = append(rs.Spec.Template.Spec.Containers, *monCont)

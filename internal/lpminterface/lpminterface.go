@@ -74,12 +74,13 @@ type CollectorBuildOptions struct {
 	IPPrefix string
 	IPStart  int
 
-	RTTIntervalSeconds       int
-	ThroughputIntervalSecs   int
-	JitterIntervalSeconds    int
-	CollectorImage           string
-	CollectorImagePullPolicy corev1.PullPolicy
-	CollectorName            string
+	SpreadFactor             *string
+	RTTIntervalSeconds       *int
+	ThroughputIntervalSecs   *int
+	JitterIntervalSeconds    *int
+	CollectorImage           *string
+	CollectorImagePullPolicy *corev1.PullPolicy
+	CollectorName            *string
 }
 
 // BuildMonitoringCollectorResources builds:
@@ -98,32 +99,33 @@ func BuildMonitoringCollectorResources(
 		return nil, nil, nil, fmt.Errorf("overlay topology has no nodes")
 	}
 
-	// Apply defaults
-	if opts.IPPrefix == "" {
-		opts.IPPrefix = "10.0.0."
+	if opts.RTTIntervalSeconds == nil {
+		v := defaultRTTIntervalSeconds
+		opts.RTTIntervalSeconds = &v
 	}
-	if opts.IPStart == 0 {
-		opts.IPStart = 2
+	if opts.ThroughputIntervalSecs == nil {
+		v := defaultThroughputIntervalSecs
+		opts.ThroughputIntervalSecs = &v
 	}
-	if opts.RTTIntervalSeconds == 0 {
-		opts.RTTIntervalSeconds = defaultRTTIntervalSeconds
+	if opts.JitterIntervalSeconds == nil {
+		v := defaultJitterIntervalSeconds
+		opts.JitterIntervalSeconds = &v
 	}
-	if opts.ThroughputIntervalSecs == 0 {
-		opts.ThroughputIntervalSecs = defaultThroughputIntervalSecs
+
+	if opts.CollectorName == nil || *opts.CollectorName == "" {
+		v := "lpm-collector"
+		opts.CollectorName = &v
 	}
-	if opts.JitterIntervalSeconds == 0 {
-		opts.JitterIntervalSeconds = defaultJitterIntervalSeconds
+
+	if opts.CollectorImagePullPolicy == nil {
+		v := corev1.PullIfNotPresent
+		opts.CollectorImagePullPolicy = &v
 	}
-	if opts.CollectorName == "" {
-		opts.CollectorName = "lpm-collector"
-	}
-	if opts.CollectorImagePullPolicy == "" {
-		opts.CollectorImagePullPolicy = corev1.PullAlways
-	}
-	if opts.CollectorImage == "" {
-		// You should set this to the actual collector image you use.
-		// Left as a sane placeholder to avoid hard failing.
-		opts.CollectorImage = "alexdecb/lpm-collector:latest"
+
+	if opts.CollectorImage == nil || *opts.CollectorImage == "" {
+		v := fmt.Sprintf("%s:%s", lpmCollectorImage, lpmVersion)
+
+		opts.CollectorImage = &v
 	}
 
 	nodes := overlay.Spec.Topology.Nodes
@@ -147,9 +149,9 @@ func BuildMonitoringCollectorResources(
 			neigh = append(neigh, lpmv1.MetricConfiguration{
 				Name:       utils.GenerateSwitchName(overlay.Name, other),
 				IP:         nodeIP[other],
-				RTT:        opts.RTTIntervalSeconds,
-				Throughput: opts.ThroughputIntervalSecs,
-				Jitter:     opts.JitterIntervalSeconds,
+				RTT:        *opts.RTTIntervalSeconds,
+				Throughput: *opts.ThroughputIntervalSecs,
+				Jitter:     *opts.JitterIntervalSeconds,
 			})
 		}
 
@@ -190,9 +192,9 @@ func BuildMonitoringCollectorResources(
 	// Collector sidecar container: mounts /etc/l2sm/lpm-conf.json (SubPath) from a CM volume.
 	// The volume itself must be attached per-ReplicaSet (because CM differs per node).
 	collectorContainer := &corev1.Container{
-		Name:            opts.CollectorName,
-		Image:           lpmCollectorImage,
-		ImagePullPolicy: opts.CollectorImagePullPolicy,
+		Name:            *opts.CollectorName,
+		Image:           *opts.CollectorImage,
+		ImagePullPolicy: *opts.CollectorImagePullPolicy,
 		Ports: []corev1.ContainerPort{
 			{ContainerPort: defaultCollectorPort, Name: "lpm"},
 		},
