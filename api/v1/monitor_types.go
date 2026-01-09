@@ -78,6 +78,8 @@ type MonitorSpec struct {
 	SpreadFactor string `json:"spreadFactor,omitempty"`
 
 	ExportMetrics *ExportMetricSpec `json:"exportMetricSpec,omitempty"`
+
+	NetworkCIDR *string `json:"networkCIDR,omitempty"`
 }
 
 const SWM_METHOD = "codeco-swm"
