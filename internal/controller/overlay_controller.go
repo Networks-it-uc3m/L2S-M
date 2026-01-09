@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"time"
 
 	l2smv1 "github.com/Networks-it-uc3m/L2S-M/api/v1"
@@ -492,12 +493,8 @@ func (r *OverlayReconciler) buildNodeResources(overlay *l2smv1.Overlay, configMa
 		}
 
 		// Apply Template Annotations/Labels
-		for k, v := range overlay.Spec.SwitchTemplate.Annotations {
-			replicaSet.Annotations[k] = v
-		}
-		for k, v := range overlay.Spec.SwitchTemplate.Labels {
-			replicaSet.Labels[k] = v
-		}
+		maps.Copy(replicaSet.Annotations, overlay.Spec.SwitchTemplate.Annotations)
+		maps.Copy(replicaSet.Labels, overlay.Spec.SwitchTemplate.Labels)
 		replicaSets = append(replicaSets, replicaSet)
 
 		// 2. Create Service
