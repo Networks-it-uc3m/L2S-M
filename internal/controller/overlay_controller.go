@@ -283,7 +283,7 @@ func (r *OverlayReconciler) createExternalResources(ctx context.Context, overlay
 			switchName := utils.GenerateSwitchName(overlay.Name, node)
 			serviceName := utils.GenerateServiceName(switchName)
 			// Format: "service-name:8090"
-			targets = append(targets, fmt.Sprintf("'%s:8090'", serviceName))
+			targets = append(targets, fmt.Sprintf("%s:8090", serviceName))
 		}
 
 		// Decide strategy, swm if the exporter will use the network topology CRD in Codeco project. Else, the default autonomic solution will be used
