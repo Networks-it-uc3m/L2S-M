@@ -311,7 +311,9 @@ func (r *OverlayReconciler) createExternalResources(ctx context.Context, overlay
 	}
 
 	for _, obj := range extResources {
-		// Todo: garbage collection
+		if err := controllerutil.SetControllerReference(overlay, obj, r.Scheme); err != nil {
+			return fmt.Errorf("failed to set controller reference to obj %s: %w", obj.GetName(), err)
+		}
 		if err := r.Client.Create(ctx, obj); err != nil {
 			return fmt.Errorf("failed to create %s %s: %w", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName(), err)
 		}
@@ -376,9 +378,6 @@ func (r *OverlayReconciler) buildTopologyConfigMap(overlay *l2smv1.Overlay) (*co
 		},
 	}
 
-	if err := controllerutil.SetControllerReference(overlay, configMap, r.Scheme); err != nil {
-		return nil, err
-	}
 	return configMap, nil
 }
 
@@ -407,9 +406,6 @@ func (r *OverlayReconciler) buildNetworkAttachmentDefinitions(overlay *l2smv1.Ov
 			},
 		}
 
-		if err := controllerutil.SetControllerReference(overlay, nad, r.Scheme); err != nil {
-			return nil, err
-		}
 		defs = append(defs, nad)
 	}
 	return defs, nil
@@ -464,7 +460,7 @@ func (r *OverlayReconciler) buildNodeResources(overlay *l2smv1.Overlay, configMa
 		// 1. Create ReplicaSet
 		replicaSet := &appsv1.ReplicaSet{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:        switchName,
+				Name:        utils.GenerateReplicaSetName(switchName),
 				Namespace:   overlay.Namespace,
 				Labels:      make(map[string]string),
 				Annotations: make(map[string]string),
