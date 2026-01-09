@@ -294,12 +294,16 @@ func (r *OverlayReconciler) createExternalResources(ctx context.Context, overlay
 		if err != nil {
 			return fmt.Errorf("failed to build monitoring resources: %w", err)
 		}
+		collectorBuildOptions := lpminterface.CollectorBuildOptions{}
+		if overlay.Spec.Monitor.NetworkCIDR != nil {
+			collectorBuildOptions.NetworkCIDR = overlay.Spec.Monitor.NetworkCIDR
+		}
 		monCont, monCMs, err := lpminterface.BuildMonitoringCollectorResources(
 			overlay,
-			lpminterface.CollectorBuildOptions{
-				IPPrefix:     "10.0.0.",
-				SpreadFactor: &overlay.Spec.Monitor.SpreadFactor,
-			})
+			collectorBuildOptions)
+		if err != nil {
+			return fmt.Errorf("failed to build collector monitoring resources; continuing without monitoring %w", err)
+		}
 		for _, rs := range replicaSets {
 			rs.Spec.Template.Spec.Containers = append(rs.Spec.Template.Spec.Containers, *monCont)
 			lpminterface.AttachCollectorConfigToReplicaSet(&rs.Spec.Template.Spec, rs.Name)
