@@ -99,6 +99,15 @@ func BuildMonitoringCollectorResources(
 		return nil, nil, fmt.Errorf("overlay topology has no nodes")
 	}
 
+	if opts.NetworkCIDR == nil || *opts.NetworkCIDR == "" {
+		v := defaultNetworkCIDR
+		opts.NetworkCIDR = &v
+	}
+	if opts.IPStart == nil {
+		v := defaultIPStart
+		opts.IPStart = &v
+	}
+
 	if opts.RTTIntervalSeconds == nil {
 		v := defaultRTTIntervalSeconds
 		opts.RTTIntervalSeconds = &v
@@ -130,10 +139,15 @@ func BuildMonitoringCollectorResources(
 
 	nodes := overlay.Spec.Topology.Nodes
 
-	// Precompute node IPs by index
+	allocated, err := utils.AllocateIPv4s(*opts.NetworkCIDR, *opts.IPStart, len(nodes))
+	if err != nil {
+		return nil, nil, fmt.Errorf("monitoring CIDR allocation failed: %w", err)
+	}
+
+	// Map node -> IP by index (stable ordering depends on overlay.Spec.Topology.Nodes order)
 	nodeIP := make(map[string]string, len(nodes))
 	for i, n := range nodes {
-		nodeIP[n] = fmt.Sprintf("%s%d", opts.IPPrefix, opts.IPStart+i)
+		nodeIP[n] = allocated[i]
 	}
 
 	var configMaps []*corev1.ConfigMap
