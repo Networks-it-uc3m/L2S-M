@@ -13,9 +13,21 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const lpmExporterImage = "alexdecb/lpm-exporter"
-const lpmCollectorImage = "alexdecb/lpm-collector"
-const lpmVersion = "1.2"
+const (
+	defaultCollectorPort          = 8090
+	defaultRTTIntervalSeconds     = 10
+	defaultThroughputIntervalSecs = 20
+	defaultJitterIntervalSeconds  = 5
+	defaultIPStart                = 2
+	defaultNetworkCIDR            = "10.0.0.0/24"
+	collectorConfigKey            = "config.json"
+	collectorVolumeName           = "lpm-collector-config"
+	lpmExporterImage              = "alexdecb/lpm-exporter"
+	lpmCollectorImage             = "alexdecb/lpm-collector"
+	lpmVersion                    = "1.2"
+	collectorMountedCfgName       = "lpm-conf.json"
+	collectorMountPath            = "/etc/l2sm/lpm-conf.json"
+)
 
 // ExporterStrategy defines how to build the resources
 type ExporterStrategy interface {
@@ -48,31 +60,12 @@ func (s *regularStrategy) BuildResources(saName string, targets []string) (*apps
 	return buildRegularExporterInternal(saName, "lpm", targets)
 }
 
-func BuildMonitoringResources(overlay *l2smv1.Overlay) (*corev1.Container, *corev1.ConfigMap) {
-
-	c := &corev1.Container{}
-	cm := &corev1.ConfigMap{}
-	return c, cm
-}
-
-const (
-	defaultCollectorPort          = 8090
-	defaultRTTIntervalSeconds     = 10
-	defaultThroughputIntervalSecs = 20
-	defaultJitterIntervalSeconds  = 5
-
-	collectorConfigKey      = "config.json"
-	collectorVolumeName     = "lpm-collector-config"
-	collectorMountedCfgName = "lpm-conf.json"
-	collectorMountPath      = "/etc/l2sm/lpm-conf.json"
-)
-
 // CollectorBuildOptions controls address/interval defaults and image settings.
 type CollectorBuildOptions struct {
 	// IPs are computed as: fmt.Sprintf("%s%d", IPPrefix, IPStart+index)
 	// Example: prefix "10.0.0.", start 2 => index0=10.0.0.2, index1=10.0.0.3 ...
-	IPPrefix string
-	IPStart  int
+	NetworkCIDR *string
+	IPStart     *int
 
 	SpreadFactor             *string
 	RTTIntervalSeconds       *int
