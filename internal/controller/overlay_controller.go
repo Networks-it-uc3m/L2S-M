@@ -293,8 +293,17 @@ func (r *OverlayReconciler) createExternalResources(ctx context.Context, overlay
 		if err != nil {
 			return fmt.Errorf("failed to build monitoring resources: %w", err)
 		}
-		monCont, monConfMap, err := lpminterface.BuildMonitoringCollectorResources()
-		containers = append(containers, monCont)
+		monCont, monCMs, _, err := lpminterface.BuildMonitoringCollectorResources(
+			overlay,
+			lpminterface.CollectorBuildOptions{
+				IPPrefix: "10.0.0.",
+			})
+		for _, rs := range replicaSets {
+			rs.Spec.Template.Spec.Containers = append(rs.Spec.Template.Spec.Containers, *monCont)
+		}
+		for _, cm := range monCMs {
+			extResources = append(extResources, cm)
+		}
 		extResources = append(extResources, exporterDeployment, exporterConfig, exporterService)
 	}
 

@@ -7,12 +7,14 @@ import (
 
 	l2smv1 "github.com/Networks-it-uc3m/L2S-M/api/v1"
 	"github.com/Networks-it-uc3m/L2S-M/internal/utils"
+	lpmv1 "github.com/Networks-it-uc3m/LPM/api/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const lpmImage = "alexdecb/lpm-exporter"
+const lpmExporterImage = "alexdecb/lpm-exporter"
+const lpmCollectorImage = "alexdecb/lpm-collector"
 const lpmVersion = "1.2"
 
 // ExporterStrategy defines how to build the resources
@@ -53,12 +55,194 @@ func BuildMonitoringResources(overlay *l2smv1.Overlay) (*corev1.Container, *core
 	return c, cm
 }
 
-func BuildMonitoringCollectorResources() (*corev1.Container, *corev1.ConfigMap, error) {
+const (
+	defaultCollectorPort          = 8090
+	defaultRTTIntervalSeconds     = 10
+	defaultThroughputIntervalSecs = 20
+	defaultJitterIntervalSeconds  = 5
 
-	c := &corev1.Container{}
-	cm := &corev1.ConfigMap{}
-	return c, cm, nil
+	collectorConfigKey      = "config.json"
+	collectorVolumeName     = "lpm-collector-config"
+	collectorMountedCfgName = "lpm-conf.json"
+	collectorMountPath      = "/etc/l2sm/lpm-conf.json"
+)
+
+// CollectorBuildOptions controls address/interval defaults and image settings.
+type CollectorBuildOptions struct {
+	// IPs are computed as: fmt.Sprintf("%s%d", IPPrefix, IPStart+index)
+	// Example: prefix "10.0.0.", start 2 => index0=10.0.0.2, index1=10.0.0.3 ...
+	IPPrefix string
+	IPStart  int
+
+	RTTIntervalSeconds       int
+	ThroughputIntervalSecs   int
+	JitterIntervalSeconds    int
+	CollectorImage           string
+	CollectorImagePullPolicy corev1.PullPolicy
+	CollectorName            string
 }
+
+// BuildMonitoringCollectorResources builds:
+//  1. the collector sidecar container spec (volume mount included)
+//  2. a list of ConfigMaps (one per node) with LPM NodeConfig encoded in config.json
+//  3. a lookup map nodeName -> configMapName to make RS loop integration trivial
+func BuildMonitoringCollectorResources(
+	overlay *l2smv1.Overlay,
+	opts CollectorBuildOptions,
+) (*corev1.Container, []*corev1.ConfigMap, map[string]string, error) {
+
+	if overlay == nil {
+		return nil, nil, nil, fmt.Errorf("overlay is nil")
+	}
+	if len(overlay.Spec.Topology.Nodes) == 0 {
+		return nil, nil, nil, fmt.Errorf("overlay topology has no nodes")
+	}
+
+	// Apply defaults
+	if opts.IPPrefix == "" {
+		opts.IPPrefix = "10.0.0."
+	}
+	if opts.IPStart == 0 {
+		opts.IPStart = 2
+	}
+	if opts.RTTIntervalSeconds == 0 {
+		opts.RTTIntervalSeconds = defaultRTTIntervalSeconds
+	}
+	if opts.ThroughputIntervalSecs == 0 {
+		opts.ThroughputIntervalSecs = defaultThroughputIntervalSecs
+	}
+	if opts.JitterIntervalSeconds == 0 {
+		opts.JitterIntervalSeconds = defaultJitterIntervalSeconds
+	}
+	if opts.CollectorName == "" {
+		opts.CollectorName = "lpm-collector"
+	}
+	if opts.CollectorImagePullPolicy == "" {
+		opts.CollectorImagePullPolicy = corev1.PullAlways
+	}
+	if opts.CollectorImage == "" {
+		// You should set this to the actual collector image you use.
+		// Left as a sane placeholder to avoid hard failing.
+		opts.CollectorImage = "alexdecb/lpm-collector:latest"
+	}
+
+	nodes := overlay.Spec.Topology.Nodes
+
+	// Precompute node IPs by index
+	nodeIP := make(map[string]string, len(nodes))
+	for i, n := range nodes {
+		nodeIP[n] = fmt.Sprintf("%s%d", opts.IPPrefix, opts.IPStart+i)
+	}
+
+	var configMaps []*corev1.ConfigMap
+	cmNameByNode := make(map[string]string, len(nodes))
+
+	for _, node := range nodes {
+		// Build neighbour metrics list: all nodes except self
+		neigh := make([]lpmv1.MetricConfiguration, 0, len(nodes)-1)
+		for _, other := range nodes {
+			if other == node {
+				continue
+			}
+			neigh = append(neigh, lpmv1.MetricConfiguration{
+				Name:       utils.GenerateSwitchName(overlay.Name, other),
+				IP:         nodeIP[other],
+				RTT:        opts.RTTIntervalSeconds,
+				Throughput: opts.ThroughputIntervalSecs,
+				Jitter:     opts.JitterIntervalSeconds,
+			})
+		}
+
+		// Use LPM API types as requested
+		cfg := lpmv1.NodeConfig{
+			NodeName:              utils.GenerateSwitchName(overlay.Name, node),
+			MetricsNeighbourNodes: neigh,
+			// SpreadFactor is float64 with json tag "spreadFactor,omitempty".
+			// Leave default (0) to omit unless you explicitly need it.
+		}
+
+		b, err := json.MarshalIndent(cfg, "", "  ")
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf("marshal node config for %q: %w", node, err)
+		}
+
+		switchName := utils.GenerateSwitchName(overlay.Name, node)
+		cmName := fmt.Sprintf("%s-config", switchName)
+
+		cm := &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      cmName,
+				Namespace: overlay.Namespace,
+				Labels: map[string]string{
+					"app":     "l2sm",
+					"overlay": overlay.Name,
+				},
+			},
+			Data: map[string]string{
+				collectorConfigKey: string(b),
+			},
+		}
+
+		configMaps = append(configMaps, cm)
+		cmNameByNode[node] = cmName
+	}
+
+	// Collector sidecar container: mounts /etc/l2sm/lpm-conf.json (SubPath) from a CM volume.
+	// The volume itself must be attached per-ReplicaSet (because CM differs per node).
+	collectorContainer := &corev1.Container{
+		Name:            opts.CollectorName,
+		Image:           lpmCollectorImage,
+		ImagePullPolicy: opts.CollectorImagePullPolicy,
+		Ports: []corev1.ContainerPort{
+			{ContainerPort: defaultCollectorPort, Name: "lpm"},
+		},
+		VolumeMounts: []corev1.VolumeMount{
+			{
+				Name:      collectorVolumeName,
+				MountPath: collectorMountPath,
+				SubPath:   collectorMountedCfgName,
+				ReadOnly:  true,
+			},
+		},
+	}
+
+	return collectorContainer, configMaps, cmNameByNode, nil
+}
+
+// AttachCollectorConfigToReplicaSet patches the Pod template with the right per-node CM.
+// Call this inside your ReplicaSet loop (once you know the node and its cmName).
+func AttachCollectorConfigToReplicaSet(rs *corev1.PodSpec, cmName string) {
+	if rs == nil || cmName == "" {
+		return
+	}
+
+	// Ensure volume exists / updated
+	vol := corev1.Volume{
+		Name: collectorVolumeName,
+		VolumeSource: corev1.VolumeSource{
+			ConfigMap: &corev1.ConfigMapVolumeSource{
+				LocalObjectReference: corev1.LocalObjectReference{Name: cmName},
+				Items: []corev1.KeyToPath{
+					{Key: collectorConfigKey, Path: collectorMountedCfgName},
+				},
+			},
+		},
+	}
+
+	// Upsert volume by name
+	found := false
+	for i := range rs.Volumes {
+		if rs.Volumes[i].Name == collectorVolumeName {
+			rs.Volumes[i] = vol
+			found = true
+			break
+		}
+	}
+	if !found {
+		rs.Volumes = append(rs.Volumes, vol)
+	}
+}
+
 func buildSWMExporterInternal(serviceAccount, networkTopologyNamespace, exporterName string, targets []string) (*appsv1.Deployment, *corev1.ConfigMap, *corev1.Service, error) {
 
 	appName := fmt.Sprintf("prometheus-%s", exporterName)
@@ -123,7 +307,7 @@ scrape_configs:
 						},
 						{
 							Name:            "exporter",
-							Image:           fmt.Sprintf("%s:%s", lpmImage, lpmVersion),
+							Image:           fmt.Sprintf("%s:%s", lpmExporterImage, lpmVersion),
 							ImagePullPolicy: corev1.PullAlways,
 							Env: []corev1.EnvVar{
 								{
@@ -238,7 +422,7 @@ scrape_configs:
 						},
 						{
 							Name:            "exporter",
-							Image:           fmt.Sprintf("%s:%s", lpmImage, lpmVersion),
+							Image:           fmt.Sprintf("%s:%s", lpmExporterImage, lpmVersion),
 							ImagePullPolicy: corev1.PullAlways,
 						},
 					},
