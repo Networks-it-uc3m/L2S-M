@@ -106,7 +106,9 @@ func GenerateSwitchName(overlayName, nodeName string) string {
 	// Encode the hash as a base32 string and take the first 4 characters
 	return fmt.Sprintf("sps-%04x", sum) // H
 }
-
+func GenerateReplicaSetName(switchName string) string {
+	return switchName
+}
 func GenerateServiceName(switchName string) string {
 	// Encode the hash as a base32 string and take the first 4 characters
 	return fmt.Sprintf("%s-svc", switchName) // H
