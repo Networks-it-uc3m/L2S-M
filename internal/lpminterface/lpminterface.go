@@ -90,13 +90,13 @@ type CollectorBuildOptions struct {
 func BuildMonitoringCollectorResources(
 	overlay *l2smv1.Overlay,
 	opts CollectorBuildOptions,
-) (*corev1.Container, []*corev1.ConfigMap, map[string]string, error) {
+) (*corev1.Container, []*corev1.ConfigMap, error) {
 
 	if overlay == nil {
-		return nil, nil, nil, fmt.Errorf("overlay is nil")
+		return nil, nil, fmt.Errorf("overlay is nil")
 	}
 	if len(overlay.Spec.Topology.Nodes) == 0 {
-		return nil, nil, nil, fmt.Errorf("overlay topology has no nodes")
+		return nil, nil, fmt.Errorf("overlay topology has no nodes")
 	}
 
 	if opts.RTTIntervalSeconds == nil {
@@ -137,7 +137,6 @@ func BuildMonitoringCollectorResources(
 	}
 
 	var configMaps []*corev1.ConfigMap
-	cmNameByNode := make(map[string]string, len(nodes))
 
 	for _, node := range nodes {
 		// Build neighbour metrics list: all nodes except self
@@ -155,21 +154,19 @@ func BuildMonitoringCollectorResources(
 			})
 		}
 
+		switchName := utils.GenerateSwitchName(overlay.Name, node)
 		// Use LPM API types as requested
 		cfg := lpmv1.NodeConfig{
-			NodeName:              utils.GenerateSwitchName(overlay.Name, node),
+			NodeName:              switchName,
 			MetricsNeighbourNodes: neigh,
-			// SpreadFactor is float64 with json tag "spreadFactor,omitempty".
-			// Leave default (0) to omit unless you explicitly need it.
 		}
 
 		b, err := json.MarshalIndent(cfg, "", "  ")
 		if err != nil {
-			return nil, nil, nil, fmt.Errorf("marshal node config for %q: %w", node, err)
+			return nil, nil, fmt.Errorf("marshal node config for %q: %w", node, err)
 		}
 
-		switchName := utils.GenerateSwitchName(overlay.Name, node)
-		cmName := fmt.Sprintf("%s-config", switchName)
+		cmName := GenerateConfigmapName(utils.GenerateReplicaSetName(switchName))
 
 		cm := &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
@@ -186,7 +183,6 @@ func BuildMonitoringCollectorResources(
 		}
 
 		configMaps = append(configMaps, cm)
-		cmNameByNode[node] = cmName
 	}
 
 	// Collector sidecar container: mounts /etc/l2sm/lpm-conf.json (SubPath) from a CM volume.
@@ -208,16 +204,19 @@ func BuildMonitoringCollectorResources(
 		},
 	}
 
-	return collectorContainer, configMaps, cmNameByNode, nil
+	return collectorContainer, configMaps, nil
+}
+func GenerateConfigmapName(rsName string) string {
+	return fmt.Sprintf("%s-config", rsName)
 }
 
 // AttachCollectorConfigToReplicaSet patches the Pod template with the right per-node CM.
 // Call this inside your ReplicaSet loop (once you know the node and its cmName).
-func AttachCollectorConfigToReplicaSet(rs *corev1.PodSpec, cmName string) {
-	if rs == nil || cmName == "" {
-		return
+func AttachCollectorConfigToReplicaSet(ps *corev1.PodSpec, rsName string) error {
+	if ps == nil || rsName == "" {
+		return fmt.Errorf("replicaset fields are empty, could not attach resource")
 	}
-
+	cmName := GenerateConfigmapName(rsName)
 	// Ensure volume exists / updated
 	vol := corev1.Volume{
 		Name: collectorVolumeName,
@@ -233,16 +232,17 @@ func AttachCollectorConfigToReplicaSet(rs *corev1.PodSpec, cmName string) {
 
 	// Upsert volume by name
 	found := false
-	for i := range rs.Volumes {
-		if rs.Volumes[i].Name == collectorVolumeName {
-			rs.Volumes[i] = vol
+	for i := range ps.Volumes {
+		if ps.Volumes[i].Name == collectorVolumeName {
+			ps.Volumes[i] = vol
 			found = true
 			break
 		}
 	}
 	if !found {
-		rs.Volumes = append(rs.Volumes, vol)
+		ps.Volumes = append(ps.Volumes, vol)
 	}
+	return nil
 }
 
 func buildSWMExporterInternal(serviceAccount, networkTopologyNamespace, exporterName string, targets []string) (*appsv1.Deployment, *corev1.ConfigMap, *corev1.Service, error) {
