@@ -63,6 +63,26 @@ spec:
                   Monitor enables the performance measurement probing mechanism.
                   If omitted, no metrics are collected.
                 properties:
+                  exportMetric:
+                    properties:
+                      config:
+                        additionalProperties:
+                          type: string
+                        description: |-
+                          Additional configuration parameters that may be set by developer to implement different kinds
+                          of flexible key-value pairs. In the case of the codeco-swm, "namespace" is included.
+                        type: object
+                      method:
+                        default: default
+                        description: |-
+                          Method to export the metrics. Reserved names include: "codeco-swm", which includes an interface for the
+                          codeco swm crd. Interface must be implemented
+                          for the method, so this must be designed beforehand.
+                        type: string
+                      serviceAccount:
+                        default: default
+                        type: string
+                    type: object
                   metrics:
                     description: |-
                       Metrics is the list of measurements to perform on the overlay network.
@@ -103,6 +123,8 @@ spec:
                       - name
                       type: object
                     type: array
+                  networkCIDR:
+                    type: string
                   spreadFactor:
                     default: "0.2"
                     description: |-
@@ -110,6 +132,7 @@ spec:
                       A higher value spreads execution more widely.
                     type: string
                 required:
+                - exportMetric
                 - metrics
                 type: object
               provider:

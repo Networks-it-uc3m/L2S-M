@@ -285,9 +285,14 @@ func (r *OverlayReconciler) createExternalResources(ctx context.Context, overlay
 			// Format: "service-name:8090"
 			targets = append(targets, fmt.Sprintf("%s:8090", serviceName))
 		}
+		var method string
+		var config map[string]string
 
-		// Decide strategy, swm if the exporter will use the network topology CRD in Codeco project. Else, the default autonomic solution will be used
-		lpmExporter := lpminterface.NewExporter(overlay.Spec.Monitor.ExportMetrics.Method, overlay.Spec.Monitor.ExportMetrics.Config)
+		if overlay.Spec.Monitor != nil && overlay.Spec.Monitor.ExportMetrics != nil {
+			method = overlay.Spec.Monitor.ExportMetrics.Method
+			config = overlay.Spec.Monitor.ExportMetrics.Config
+		}
+
 
 		// Build exporter resources. Disclaimer: exporter is the prometheus exporter that retrieves metric from the collector instances.
 		exporterDeployment, exporterConfig, exporterService, err := lpmExporter.BuildResources(overlay.Spec.Monitor.ExportMetrics.ServiceAccount, targets)

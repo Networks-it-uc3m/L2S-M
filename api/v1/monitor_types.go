@@ -77,7 +77,7 @@ type MonitorSpec struct {
 	// +kubebuilder:default:="0.2"
 	SpreadFactor string `json:"spreadFactor,omitempty"`
 
-	ExportMetrics *ExportMetricSpec `json:"exportMetricSpec,omitempty"`
+	ExportMetrics *ExportMetricSpec `json:"exportMetric"`
 
 	NetworkCIDR *string `json:"networkCIDR,omitempty"`
 }
@@ -89,9 +89,11 @@ type ExportMetricSpec struct {
 	// Method to export the metrics. Reserved names include: "codeco-swm", which includes an interface for the
 	// codeco swm crd. Interface must be implemented
 	// for the method, so this must be designed beforehand.
-	Method string `json:"method"`
+	//+kubebuilder:default="default"
+	Method string `json:"method,omitempty"`
 
-	ServiceAccount string `json:"serviceAccount"`
+	//+kubebuilder:default:="default"
+	ServiceAccount string `json:"serviceAccount,omitempty"`
 
 	// Additional configuration parameters that may be set by developer to implement different kinds
 	// of flexible key-value pairs. In the case of the codeco-swm, "namespace" is included.
