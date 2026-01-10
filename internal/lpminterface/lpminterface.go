@@ -1,3 +1,17 @@
+// Copyright 2024 Universidad Carlos III de Madrid
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package lpminterface
 
 import (
@@ -22,8 +36,7 @@ const (
 	defaultNetworkCIDR            = "10.0.0.0/24"
 	collectorConfigKey            = "config.json"
 	collectorVolumeName           = "lpm-collector-config"
-	lpmExporterImage              = "alexdecb/lpm-exporter"
-	lpmCollectorImage             = "alexdecb/lpm-collector"
+	lpmImage                      = "alexdecb/lpm"
 	lpmVersion                    = "1.2.1"
 	collectorMountedCfgName       = "lpm-config.json"
 	collectorMountPath            = "/etc/l2sm/lpm-config.json"
@@ -34,30 +47,32 @@ type ExporterStrategy interface {
 	BuildResources(saName string, targets []string) (*appsv1.Deployment, *corev1.ConfigMap, *corev1.Service, error)
 }
 
-func NewExporter(m string, o map[string]string) ExporterStrategy {
+func NewExporter(m, ns string, o map[string]string) ExporterStrategy {
 	if m == l2smv1.SWM_METHOD {
-		return &swmStrategy{Namespace: o[l2smv1.SWM_NAMESPACE_OPTION]}
+		return &swmStrategy{Namespace: ns, NetworkTopologyNamespace: o[l2smv1.SWM_NT_NAMESPACE_OPTION]}
 	}
-	return &regularStrategy{}
+	return &regularStrategy{Namespace: ns}
 }
 
 // SWMStrategy implements the SWM logic
 type swmStrategy struct {
-	Namespace string
+	Namespace                string
+	NetworkTopologyNamespace string
 }
 
 func (s *swmStrategy) BuildResources(saName string, targets []string) (*appsv1.Deployment, *corev1.ConfigMap, *corev1.Service, error) {
 	// Call internal logic for SWM
-	return buildSWMExporterInternal(saName, s.Namespace, "swm-lpm", targets)
+	return s.buildSWMExporterInternal(saName, s.Namespace, "swm-lpm", targets)
 }
 
 // RegularStrategy implements the default logic
 type regularStrategy struct {
+	Namespace string
 }
 
 func (s *regularStrategy) BuildResources(saName string, targets []string) (*appsv1.Deployment, *corev1.ConfigMap, *corev1.Service, error) {
 	// Call internal logic for Regular
-	return buildRegularExporterInternal(saName, "lpm", targets)
+	return s.buildRegularExporterInternal(saName, "lpm", targets)
 }
 
 // CollectorBuildOptions controls address/interval defaults and image settings.
@@ -125,7 +140,7 @@ func BuildMonitoringCollectorResources(
 	}
 
 	if opts.CollectorImage == nil || *opts.CollectorImage == "" {
-		v := fmt.Sprintf("%s:%s", lpmCollectorImage, lpmVersion)
+		v := fmt.Sprintf("%s:%s", lpmImage, lpmVersion)
 
 		opts.CollectorImage = &v
 	}
@@ -255,7 +270,7 @@ func AttachCollectorConfigToReplicaSet(ps *corev1.PodSpec, rsName string) error 
 	return nil
 }
 
-func buildSWMExporterInternal(serviceAccount, networkTopologyNamespace, exporterName string, targets []string) (*appsv1.Deployment, *corev1.ConfigMap, *corev1.Service, error) {
+func (exp *swmStrategy) buildSWMExporterInternal(serviceAccount, networkTopologyNamespace, exporterName string, targets []string) (*appsv1.Deployment, *corev1.ConfigMap, *corev1.Service, error) {
 
 	appName := fmt.Sprintf("prometheus-%s", exporterName)
 
@@ -276,8 +291,9 @@ scrape_configs:
 	cmName := fmt.Sprintf("prometheus-config-%s", exporterName)
 	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   cmName,
-			Labels: map[string]string{"app": appName},
+			Name:      cmName,
+			Namespace: exp.Namespace,
+			Labels:    map[string]string{"app": appName},
 		},
 		Data: map[string]string{
 			"prometheus.yml": promConfigContent,
@@ -287,8 +303,9 @@ scrape_configs:
 	// 3. Create Deployment
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   appName,
-			Labels: map[string]string{"app": appName},
+			Name:      appName,
+			Namespace: exp.Namespace,
+			Labels:    map[string]string{"app": appName},
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: utils.Int32Ptr(1),
@@ -319,7 +336,7 @@ scrape_configs:
 						},
 						{
 							Name:            "exporter",
-							Image:           fmt.Sprintf("%s:%s", lpmExporterImage, lpmVersion),
+							Image:           fmt.Sprintf("%s:%s", lpmImage, lpmVersion),
 							ImagePullPolicy: corev1.PullAlways,
 							Args: []string{
 								"exporter",
@@ -358,8 +375,9 @@ scrape_configs:
 	// 4. Create Service
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   appName,
-			Labels: map[string]string{"app": appName},
+			Name:      appName,
+			Namespace: exp.Namespace,
+			Labels:    map[string]string{"app": appName},
 		},
 		Spec: corev1.ServiceSpec{
 			Selector: map[string]string{"app": appName},
@@ -375,7 +393,7 @@ scrape_configs:
 	return deployment, configMap, service, nil
 }
 
-func buildRegularExporterInternal(serviceAccount, exporterName string, targets []string) (*appsv1.Deployment, *corev1.ConfigMap, *corev1.Service, error) {
+func (exp *regularStrategy) buildRegularExporterInternal(serviceAccount, exporterName string, targets []string) (*appsv1.Deployment, *corev1.ConfigMap, *corev1.Service, error) {
 
 	appName := fmt.Sprintf("prometheus-%s", exporterName)
 
@@ -396,8 +414,9 @@ scrape_configs:
 	cmName := fmt.Sprintf("prometheus-config-%s", exporterName)
 	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   cmName,
-			Labels: map[string]string{"app": appName},
+			Name:      cmName,
+			Namespace: exp.Namespace,
+			Labels:    map[string]string{"app": appName},
 		},
 		Data: map[string]string{
 			"prometheus.yml": promConfigContent,
@@ -407,8 +426,9 @@ scrape_configs:
 	// 3. Create Deployment
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   appName,
-			Labels: map[string]string{"app": appName},
+			Name:      appName,
+			Labels:    map[string]string{"app": appName},
+			Namespace: exp.Namespace,
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: utils.Int32Ptr(1),
@@ -439,8 +459,9 @@ scrape_configs:
 						},
 						{
 							Name:            "exporter",
-							Image:           fmt.Sprintf("%s:%s", lpmExporterImage, lpmVersion),
+							Image:           fmt.Sprintf("%s:%s", lpmImage, lpmVersion),
 							ImagePullPolicy: corev1.PullAlways,
+							Args:            []string{"exporter"},
 						},
 					},
 					Volumes: []corev1.Volume{
@@ -467,8 +488,9 @@ scrape_configs:
 	// 4. Create Service
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   appName,
-			Labels: map[string]string{"app": appName},
+			Name:      appName,
+			Labels:    map[string]string{"app": appName},
+			Namespace: exp.Namespace,
 		},
 		Spec: corev1.ServiceSpec{
 			Selector: map[string]string{"app": appName},

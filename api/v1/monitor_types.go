@@ -83,7 +83,7 @@ type MonitorSpec struct {
 }
 
 const SWM_METHOD = "codeco-swm"
-const SWM_NAMESPACE_OPTION = "namespace"
+const SWM_NT_NAMESPACE_OPTION = "nt_namespace"
 
 type ExportMetricSpec struct {
 	// Method to export the metrics. Reserved names include: "codeco-swm", which includes an interface for the

@@ -293,8 +293,11 @@ func (r *OverlayReconciler) createExternalResources(ctx context.Context, overlay
 			config = overlay.Spec.Monitor.ExportMetrics.Config
 		}
 
+		lpmExporter := lpminterface.NewExporter(method, overlay.Namespace, config)
 
 		// Build exporter resources. Disclaimer: exporter is the prometheus exporter that retrieves metric from the collector instances.
+		// TODO: add service account in the iunstallation of the component for manipulating the cr
+		fmt.Println(overlay.Spec.Monitor)
 		exporterDeployment, exporterConfig, exporterService, err := lpmExporter.BuildResources(overlay.Spec.Monitor.ExportMetrics.ServiceAccount, targets)
 		if err != nil {
 			return fmt.Errorf("failed to build monitoring resources: %w", err)
