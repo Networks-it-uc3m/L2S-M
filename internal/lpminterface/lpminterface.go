@@ -321,6 +321,11 @@ scrape_configs:
 							Name:            "exporter",
 							Image:           fmt.Sprintf("%s:%s", lpmExporterImage, lpmVersion),
 							ImagePullPolicy: corev1.PullAlways,
+							Args: []string{
+								"exporter",
+								"--type",
+								"swm",
+							},
 							Env: []corev1.EnvVar{
 								{
 									Name:  "TOPOLOGY_NAMESPACE",
