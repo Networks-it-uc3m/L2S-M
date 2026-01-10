@@ -24,9 +24,9 @@ const (
 	collectorVolumeName           = "lpm-collector-config"
 	lpmExporterImage              = "alexdecb/lpm-exporter"
 	lpmCollectorImage             = "alexdecb/lpm-collector"
-	lpmVersion                    = "1.2"
-	collectorMountedCfgName       = "lpm-conf.json"
-	collectorMountPath            = "/etc/l2sm/lpm-conf.json"
+	lpmVersion                    = "1.2.1"
+	collectorMountedCfgName       = "lpm-config.json"
+	collectorMountPath            = "/etc/l2sm/lpm-config.json"
 )
 
 // ExporterStrategy defines how to build the resources
@@ -198,10 +198,13 @@ func BuildMonitoringCollectorResources(
 		Name:            *opts.CollectorName,
 		Image:           *opts.CollectorImage,
 		ImagePullPolicy: *opts.CollectorImagePullPolicy,
+		Args: []string{
+			"collector",
+			"config_file=" + collectorMountPath,
+		},
 		Ports: []corev1.ContainerPort{
 			{ContainerPort: defaultCollectorPort, Name: "lpm"},
-		},
-		VolumeMounts: []corev1.VolumeMount{
+		}, VolumeMounts: []corev1.VolumeMount{
 			{
 				Name:      collectorVolumeName,
 				MountPath: collectorMountPath,
