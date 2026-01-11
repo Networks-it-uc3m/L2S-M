@@ -128,3 +128,7 @@ func DefaultIfEmpty(val, def string) string {
 	}
 	return val
 }
+
+func GenerateLPMNetworkName(overlayName string) string {
+	return fmt.Sprintf("lpm-%s", overlayName)
+}

@@ -22,7 +22,9 @@ import (
 	"time"
 
 	l2smv1 "github.com/Networks-it-uc3m/L2S-M/api/v1"
+	"github.com/Networks-it-uc3m/L2S-M/internal/env"
 	"github.com/Networks-it-uc3m/L2S-M/internal/lpminterface"
+	"github.com/Networks-it-uc3m/L2S-M/internal/sdnclient"
 	"github.com/Networks-it-uc3m/L2S-M/internal/utils"
 	nettypes "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -128,6 +130,14 @@ func (r *OverlayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 			return ctrl.Result{}, err
 		}
 		log.Info("Overlay Launched")
+		if overlay.Spec.Monitor != nil {
+			err := createMonitoringNetwork(overlay)
+
+			if err != nil {
+				log.Error(err, "could not create a new client with the sdn controller")
+				return ctrl.Result{}, err
+			}
+		}
 		return ctrl.Result{RequeueAfter: time.Second * 20}, nil
 	}
 	// else {
@@ -137,6 +147,23 @@ func (r *OverlayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	// }
 
 	return ctrl.Result{}, nil
+}
+
+func createMonitoringNetwork(overlay *l2smv1.Overlay) error {
+
+	clientConfig := sdnclient.ClientConfig{BaseURL: fmt.Sprintf("http://%s:%s/onos", env.GetControllerIP(), env.GetControllerPort()), Username: "karaf", Password: "karaf"}
+	internalClient, err := sdnclient.NewClient(sdnclient.InternalType, clientConfig)
+	if err != nil {
+		return fmt.Errorf("could not create a new client with the sdn controller. Error: %w", err)
+	}
+	lpmNetName := utils.GenerateLPMNetworkName(overlay.Name)
+	internalClient.CreateNetwork(l2smv1.NetworkTypeVnet, sdnclient.VnetPayload{NetworkId: lpmNetName})
+	lpmPorts := lpminterface.GenerateLPMPorts(overlay.Spec.Topology.Nodes, OVERLAY_PROVIDER)
+	err = internalClient.AttachPodToNetwork(l2smv1.NetworkTypeVnet, sdnclient.VnetPortPayload{NetworkId: lpmNetName, Port: lpmPorts})
+	if err != nil {
+		return fmt.Errorf("could not attach lpm pods to lpm network. Error: %w", err)
+	}
+	return nil
 }
 
 // SetupWithManager sets up the controller with the Manager.

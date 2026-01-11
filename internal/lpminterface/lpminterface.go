@@ -22,6 +22,8 @@ import (
 	l2smv1 "github.com/Networks-it-uc3m/L2S-M/api/v1"
 	"github.com/Networks-it-uc3m/L2S-M/internal/utils"
 	lpmv1 "github.com/Networks-it-uc3m/LPM/api/v1"
+	talpav1 "github.com/Networks-it-uc3m/l2sm-switch/api/v1"
+	dp "github.com/Networks-it-uc3m/l2sm-switch/pkg/datapath"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -89,6 +91,20 @@ type CollectorBuildOptions struct {
 	CollectorImage           *string
 	CollectorImagePullPolicy *corev1.PullPolicy
 	CollectorName            *string
+}
+
+func GenerateLPMPorts(nodes []string, overlayProvider string) []string {
+
+	fmt.Println(len(nodes))
+	fmt.Println(nodes)
+	lpmPorts := make([]string, 0, len(nodes)) // len=0, cap=len(nodes)
+	for _, n := range nodes {
+		p := fmt.Sprintf("of:%s/%d", dp.GenerateID(dp.GetSwitchName(dp.DatapathParams{NodeName: n, ProviderName: overlayProvider})), talpav1.RESERVED_PROBE_ID)
+		lpmPorts = append(lpmPorts, p)
+	}
+	fmt.Println(len(lpmPorts))
+	fmt.Println(lpmPorts)
+	return lpmPorts
 }
 
 // BuildMonitoringCollectorResources builds:
