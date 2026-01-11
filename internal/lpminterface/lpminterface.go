@@ -39,9 +39,9 @@ const (
 	collectorConfigKey            = "config.json"
 	collectorVolumeName           = "lpm-collector-config"
 	lpmImage                      = "alexdecb/lpm"
-	lpmVersion                    = "1.2.1"
+	lpmVersion                    = "1.2.2"
 	collectorMountedCfgName       = "lpm-config.json"
-	collectorMountPath            = "/etc/l2sm/lpm-config.json"
+	collectorMountPath            = "/etc/lpm/lpm-config.json"
 )
 
 // ExporterStrategy defines how to build the resources
@@ -184,7 +184,7 @@ func BuildMonitoringCollectorResources(
 				continue
 			}
 			neigh = append(neigh, lpmv1.MetricConfiguration{
-				Name:       utils.GenerateSwitchName(overlay.Name, other),
+				Name:       other,
 				IP:         nodeIP[other],
 				RTT:        *opts.RTTIntervalSeconds,
 				Throughput: *opts.ThroughputIntervalSecs,
@@ -195,7 +195,7 @@ func BuildMonitoringCollectorResources(
 		switchName := utils.GenerateSwitchName(overlay.Name, node)
 		// Use LPM API types as requested
 		cfg := lpmv1.NodeConfig{
-			NodeName:              switchName,
+			NodeName:              node,
 			MetricsNeighbourNodes: neigh,
 		}
 
@@ -231,7 +231,7 @@ func BuildMonitoringCollectorResources(
 		ImagePullPolicy: *opts.CollectorImagePullPolicy,
 		Args: []string{
 			"collector",
-			"config_file=" + collectorMountPath,
+			"--config_file=" + collectorMountPath,
 		},
 		Ports: []corev1.ContainerPort{
 			{ContainerPort: defaultCollectorPort, Name: "lpm"},
@@ -240,7 +240,6 @@ func BuildMonitoringCollectorResources(
 				Name:      collectorVolumeName,
 				MountPath: collectorMountPath,
 				SubPath:   collectorMountedCfgName,
-				ReadOnly:  true,
 			},
 		},
 	}
@@ -249,6 +248,27 @@ func BuildMonitoringCollectorResources(
 }
 func GenerateConfigmapName(rsName string) string {
 	return fmt.Sprintf("%s-config", rsName)
+}
+
+func AddLPMConfigMapToSps(ps *corev1.PodSpec) {
+	for i := range ps.Containers {
+		if ps.Containers[i].Name != "l2sm-switch" {
+			continue
+		}
+
+		for _, vm := range ps.Containers[i].VolumeMounts {
+			if vm.MountPath == collectorMountPath {
+				return
+			}
+		}
+
+		ps.Containers[i].VolumeMounts = append(ps.Containers[i].VolumeMounts, corev1.VolumeMount{
+			Name:      collectorVolumeName,
+			MountPath: collectorMountPath,
+			SubPath:   collectorMountedCfgName,
+		})
+		return
+	}
 }
 
 // AttachCollectorConfigToReplicaSet patches the Pod template with the right per-node CM.

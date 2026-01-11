@@ -340,6 +340,7 @@ func (r *OverlayReconciler) createExternalResources(ctx context.Context, overlay
 			return fmt.Errorf("failed to build collector monitoring resources; continuing without monitoring %w", err)
 		}
 		for _, rs := range replicaSets {
+			lpminterface.AddLPMConfigMapToSps(&rs.Spec.Template.Spec)
 			rs.Spec.Template.Spec.Containers = append(rs.Spec.Template.Spec.Containers, *monCont)
 			lpminterface.AttachCollectorConfigToReplicaSet(&rs.Spec.Template.Spec, rs.Name)
 		}
