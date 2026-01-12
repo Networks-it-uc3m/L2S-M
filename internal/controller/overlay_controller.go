@@ -106,6 +106,7 @@ func (r *OverlayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 				return ctrl.Result{}, err
 			}
 
+			deleteMonitoringNetwork(overlay)
 			// remove our finalizer from the list and update it.
 			controllerutil.RemoveFinalizer(overlay, l2smFinalizer)
 			if err := r.Update(ctx, overlay); err != nil {
@@ -148,7 +149,17 @@ func (r *OverlayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 	return ctrl.Result{}, nil
 }
+func deleteMonitoringNetwork(overlay *l2smv1.Overlay) error {
 
+	clientConfig := sdnclient.ClientConfig{BaseURL: fmt.Sprintf("http://%s:%s/onos", env.GetControllerIP(), env.GetControllerPort()), Username: "karaf", Password: "karaf"}
+	internalClient, err := sdnclient.NewClient(sdnclient.InternalType, clientConfig)
+	if err != nil {
+		return fmt.Errorf("could not create a new client with the sdn controller. Error: %w", err)
+	}
+	lpmNetName := utils.GenerateLPMNetworkName(overlay.Name)
+	internalClient.DeleteNetwork(l2smv1.NetworkTypeVnet, lpmNetName)
+	return nil
+}
 func createMonitoringNetwork(overlay *l2smv1.Overlay) error {
 
 	clientConfig := sdnclient.ClientConfig{BaseURL: fmt.Sprintf("http://%s:%s/onos", env.GetControllerIP(), env.GetControllerPort()), Username: "karaf", Password: "karaf"}
