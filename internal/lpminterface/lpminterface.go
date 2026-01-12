@@ -39,7 +39,7 @@ const (
 	collectorConfigKey            = "config.json"
 	collectorVolumeName           = "lpm-collector-config"
 	lpmImage                      = "alexdecb/lpm"
-	lpmVersion                    = "1.2.2"
+	lpmVersion                    = "1.2.3"
 	collectorMountedCfgName       = "lpm-config.json"
 	collectorMountPath            = "/etc/lpm/lpm-config.json"
 )
@@ -163,7 +163,7 @@ func BuildMonitoringCollectorResources(
 
 	nodes := overlay.Spec.Topology.Nodes
 
-	allocated, err := utils.AllocateIPv4s(*opts.NetworkCIDR, *opts.IPStart, len(nodes))
+	allocated, mask, err := utils.AllocateIPv4s(*opts.NetworkCIDR, *opts.IPStart, len(nodes))
 	if err != nil {
 		return nil, nil, fmt.Errorf("monitoring CIDR allocation failed: %w", err)
 	}
@@ -196,6 +196,7 @@ func BuildMonitoringCollectorResources(
 		// Use LPM API types as requested
 		cfg := lpmv1.NodeConfig{
 			NodeName:              node,
+			IpAddress:             fmt.Sprintf("%s%s", nodeIP[node], mask),
 			MetricsNeighbourNodes: neigh,
 		}
 
