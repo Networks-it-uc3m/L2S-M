@@ -232,7 +232,7 @@ func BuildMonitoringCollectorResources(
 		ImagePullPolicy: *opts.CollectorImagePullPolicy,
 		Args: []string{
 			"collector",
-			"--config_file=" + collectorMountPath,
+			fmt.Sprintf("--config_file=%s", collectorMountPath),
 		},
 		Ports: []corev1.ContainerPort{
 			{ContainerPort: defaultCollectorPort, Name: "lpm"},
@@ -263,6 +263,7 @@ func AddLPMConfigMapToSps(ps *corev1.PodSpec) {
 			}
 		}
 
+		ps.Containers[i].Args = append(ps.Containers[i].Args, "--monitor_file", collectorMountPath)
 		ps.Containers[i].VolumeMounts = append(ps.Containers[i].VolumeMounts, corev1.VolumeMount{
 			Name:      collectorVolumeName,
 			MountPath: collectorMountPath,
