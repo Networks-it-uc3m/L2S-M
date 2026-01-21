@@ -297,6 +297,83 @@ spec:
           spec:
             description: NetworkEdgeDeviceSpec defines the desired state of NetworkEdgeDevice
             properties:
+              monitor:
+                description: |-
+                  Monitor enables the performance measurement probing mechanism.
+                  If omitted, no metrics are collected.
+                properties:
+                  exportMetric:
+                    properties:
+                      config:
+                        additionalProperties:
+                          type: string
+                        description: |-
+                          Additional configuration parameters that may be set by developer to implement different kinds
+                          of flexible key-value pairs. In the case of the codeco-swm, "namespace" is included.
+                        type: object
+                      method:
+                        default: default
+                        description: |-
+                          Method to export the metrics. Reserved names include: "codeco-swm", which includes an interface for the
+                          codeco swm crd. Interface must be implemented
+                          for the method, so this must be designed beforehand.
+                        type: string
+                      serviceAccount:
+                        default: default
+                        type: string
+                    type: object
+                  metrics:
+                    description: |-
+                      Metrics is the list of measurements to perform on the overlay network.
+                      Supports built-in metrics (rtt, jitter, throughput) and custom script-based metrics.
+                    items:
+                      description: Metric defines a specific network measurement task.
+                      properties:
+                        interval:
+                          description: |-
+                            Interval specifies the time in minutes between measurements.
+                            If not set (nil), the metric runs in "continuous mode", consuming the live stream of the measurement tool.
+                          type: integer
+                        name:
+                          description: |-
+                            Name identifies the metric.
+                            Reserved names: "rtt", "jitter", "throughput".
+                            If a reserved name is used, the internal Go implementation is used by default.
+                            If a custom name is used, 'scriptSource' is required.
+                          type: string
+                        scriptSource:
+                          description: |-
+                            ScriptSource points to a ConfigMap containing a shell script to execute for this metric.
+                            If provided, this script overrides the internal implementation (even for reserved names).
+                            The script must print the measurement value to stdout.
+                          properties:
+                            key:
+                              description: Key within the ConfigMap that contains
+                                the script (e.g., "measure.sh").
+                              type: string
+                            name:
+                              description: Name of the ConfigMap.
+                              type: string
+                          required:
+                          - key
+                          - name
+                          type: object
+                      required:
+                      - name
+                      type: object
+                    type: array
+                  networkCIDR:
+                    type: string
+                  spreadFactor:
+                    default: "0.2"
+                    description: |-
+                      SpreadFactor determines how metric execution is distributed over time to avoid congestion.
+                      A higher value spreads execution more widely.
+                    type: string
+                required:
+                - exportMetric
+                - metrics
+                type: object
               neighbors:
                 description: Field exclusive to the multi-domain overlay type. If
                   specified in other  types of overlays, the reosurce will launch
@@ -4807,6 +4884,51 @@ spec:
                   - node
                   type: object
                 type: array
+              linkMetrics:
+                description: LinkMetrics holds the performance data for every monitored
+                  link.
+                items:
+                  description: LinkStatus defines the observed state of a specific
+                    link between two nodes.
+                  properties:
+                    metrics:
+                      description: Metrics contains the list of latest measurements
+                        for this link.
+                      items:
+                        description: MetricValue holds the latest measurement for
+                          a specific metric.
+                        properties:
+                          name:
+                            description: Name of the metric (e.g., "rtt", "jitter",
+                              "custom-loss").
+                            type: string
+                          value:
+                            description: Value is the latest measurement as a float
+                              (e.g., 12.5).
+                            type: string
+                        required:
+                        - name
+                        - value
+                        type: object
+                      type: array
+                    sourceNode:
+                      description: SourceNode is the name of the node where the measurement
+                        originated.
+                      type: string
+                    status:
+                      description: Status indicates if the link is "Up", "Down", or
+                        "Degraded".
+                      type: string
+                    targetNode:
+                      description: TargetNode is the name of the neighbor node being
+                        measured.
+                      type: string
+                  required:
+                  - sourceNode
+                  - status
+                  - targetNode
+                  type: object
+                type: array
               openflowId:
                 type: string
             required:
@@ -4863,6 +4985,83 @@ spec:
                 description: Interface number specifies how many interfaces the switch
                   should have predefined (if used with multus)
                 type: integer
+              monitor:
+                description: |-
+                  Monitor enables the performance measurement probing mechanism.
+                  If omitted, no metrics are collected.
+                properties:
+                  exportMetric:
+                    properties:
+                      config:
+                        additionalProperties:
+                          type: string
+                        description: |-
+                          Additional configuration parameters that may be set by developer to implement different kinds
+                          of flexible key-value pairs. In the case of the codeco-swm, "namespace" is included.
+                        type: object
+                      method:
+                        default: default
+                        description: |-
+                          Method to export the metrics. Reserved names include: "codeco-swm", which includes an interface for the
+                          codeco swm crd. Interface must be implemented
+                          for the method, so this must be designed beforehand.
+                        type: string
+                      serviceAccount:
+                        default: default
+                        type: string
+                    type: object
+                  metrics:
+                    description: |-
+                      Metrics is the list of measurements to perform on the overlay network.
+                      Supports built-in metrics (rtt, jitter, throughput) and custom script-based metrics.
+                    items:
+                      description: Metric defines a specific network measurement task.
+                      properties:
+                        interval:
+                          description: |-
+                            Interval specifies the time in minutes between measurements.
+                            If not set (nil), the metric runs in "continuous mode", consuming the live stream of the measurement tool.
+                          type: integer
+                        name:
+                          description: |-
+                            Name identifies the metric.
+                            Reserved names: "rtt", "jitter", "throughput".
+                            If a reserved name is used, the internal Go implementation is used by default.
+                            If a custom name is used, 'scriptSource' is required.
+                          type: string
+                        scriptSource:
+                          description: |-
+                            ScriptSource points to a ConfigMap containing a shell script to execute for this metric.
+                            If provided, this script overrides the internal implementation (even for reserved names).
+                            The script must print the measurement value to stdout.
+                          properties:
+                            key:
+                              description: Key within the ConfigMap that contains
+                                the script (e.g., "measure.sh").
+                              type: string
+                            name:
+                              description: Name of the ConfigMap.
+                              type: string
+                          required:
+                          - key
+                          - name
+                          type: object
+                      required:
+                      - name
+                      type: object
+                    type: array
+                  networkCIDR:
+                    type: string
+                  spreadFactor:
+                    default: "0.2"
+                    description: |-
+                      SpreadFactor determines how metric execution is distributed over time to avoid congestion.
+                      A higher value spreads execution more widely.
+                    type: string
+                required:
+                - exportMetric
+                - metrics
+                type: object
               provider:
                 description: The SDN Controller that manages the overlay network.
                   Must specify a domain and a name.
@@ -9314,11 +9513,19 @@ spec:
                   selecting the nodes that are going to be linked.
                 properties:
                   links:
+                    description: Links is a list of connections between the defined
+                      nodes.
                     items:
+                      description: Link represents a bidirectional connection between
+                        two nodes in the topology.
                       properties:
                         endpointA:
+                          description: EndpointA is the name of the first node in
+                            the link.
                           type: string
                         endpointB:
+                          description: EndpointB is the name of the second node in
+                            the link.
                           type: string
                       required:
                       - endpointA
@@ -9326,6 +9533,8 @@ spec:
                       type: object
                     type: array
                   nodes:
+                    description: Nodes is a list of node names where switches will
+                      be deployed.
                     items:
                       type: string
                     type: array
@@ -9339,21 +9548,49 @@ spec:
           status:
             description: OverlayStatus defines the observed state of Overlay
             properties:
-              connectedNeighbors:
+              linkMetrics:
+                description: LinkMetrics holds the performance data for every monitored
+                  link.
                 items:
+                  description: LinkStatus defines the observed state of a specific
+                    link between two nodes.
                   properties:
-                    domain:
-                      description: |-
-                        Domain where the neighbor's NED switch can be reached at. Must be a valid IP Address or Domain name, reachable from the node the NED
-                        is going to be deployed at.
+                    metrics:
+                      description: Metrics contains the list of latest measurements
+                        for this link.
+                      items:
+                        description: MetricValue holds the latest measurement for
+                          a specific metric.
+                        properties:
+                          name:
+                            description: Name of the metric (e.g., "rtt", "jitter",
+                              "custom-loss").
+                            type: string
+                          value:
+                            description: Value is the latest measurement as a float
+                              (e.g., 12.5).
+                            type: string
+                        required:
+                        - name
+                        - value
+                        type: object
+                      type: array
+                    sourceNode:
+                      description: SourceNode is the name of the node where the measurement
+                        originated.
                       type: string
-                    node:
-                      description: Name of the cluster the link is going to be made
-                        upon.
+                    status:
+                      description: Status indicates if the link is "Up", "Down", or
+                        "Degraded".
+                      type: string
+                    targetNode:
+                      description: TargetNode is the name of the neighbor node being
+                        measured.
                       type: string
                   required:
-                  - domain
-                  - node
+                  - sourceNode
+                  - status
+                  - targetNode
                   type: object
                 type: array
             type: object
@@ -9373,7 +9610,13 @@ metadata:
     app.kubernetes.io/managed-by: kustomize
     app.kubernetes.io/name: serviceaccount
     app.kubernetes.io/part-of: l2network
-  name: sec-con-controller-manager
+  name: l2sm-controller-manager
+  namespace: he-codeco-netma
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: l2sm-lpm-codeco-sa
   namespace: he-codeco-netma
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -9386,7 +9629,7 @@ metadata:
     app.kubernetes.io/managed-by: kustomize
     app.kubernetes.io/name: role
     app.kubernetes.io/part-of: l2network
-  name: sec-con-leader-election-role
+  name: l2sm-leader-election-role
   namespace: he-codeco-netma
 rules:
 - apiGroups:
@@ -9424,7 +9667,25 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: sec-con-manager-role
+  name: l2sm-lpm-topology-manager
+rules:
+- apiGroups:
+  - qos-scheduler.siemens.com
+  resources:
+  - networktopologies
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: l2sm-manager-role
 rules:
 - apiGroups:
   - ""
@@ -9538,7 +9799,7 @@ metadata:
     app.kubernetes.io/managed-by: kustomize
     app.kubernetes.io/name: clusterrole
     app.kubernetes.io/part-of: l2network
-  name: sec-con-metrics-reader
+  name: l2sm-metrics-reader
 rules:
 - nonResourceURLs:
   - /metrics
@@ -9555,7 +9816,7 @@ metadata:
     app.kubernetes.io/managed-by: kustomize
     app.kubernetes.io/name: clusterrole
     app.kubernetes.io/part-of: l2network
-  name: sec-con-proxy-role
+  name: l2sm-proxy-role
 rules:
 - apiGroups:
   - authentication.k8s.io
@@ -9580,15 +9841,28 @@ metadata:
     app.kubernetes.io/managed-by: kustomize
     app.kubernetes.io/name: rolebinding
     app.kubernetes.io/part-of: l2network
-  name: sec-con-leader-election-rolebinding
+  name: l2sm-leader-election-rolebinding
   namespace: he-codeco-netma
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: sec-con-leader-election-role
+  name: l2sm-leader-election-role
 subjects:
 - kind: ServiceAccount
-  name: sec-con-controller-manager
+  name: l2sm-controller-manager
+  namespace: he-codeco-netma
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: l2sm-lpm-topology-manager-crb
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: l2sm-lpm-topology-manager
+subjects:
+- kind: ServiceAccount
+  name: l2sm-lpm-codeco-sa
   namespace: he-codeco-netma
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -9601,14 +9875,14 @@ metadata:
     app.kubernetes.io/managed-by: kustomize
     app.kubernetes.io/name: clusterrolebinding
     app.kubernetes.io/part-of: l2network
-  name: sec-con-manager-rolebinding
+  name: l2sm-manager-rolebinding
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: sec-con-manager-role
+  name: l2sm-manager-role
 subjects:
 - kind: ServiceAccount
-  name: sec-con-controller-manager
+  name: l2sm-controller-manager
   namespace: he-codeco-netma
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -9621,14 +9895,14 @@ metadata:
     app.kubernetes.io/managed-by: kustomize
     app.kubernetes.io/name: clusterrolebinding
     app.kubernetes.io/part-of: l2network
-  name: sec-con-proxy-rolebinding
+  name: l2sm-proxy-rolebinding
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: sec-con-proxy-role
+  name: l2sm-proxy-role
 subjects:
 - kind: ServiceAccount
-  name: sec-con-controller-manager
+  name: l2sm-controller-manager
   namespace: he-codeco-netma
 ---
 apiVersion: v1
@@ -9642,7 +9916,7 @@ metadata:
     app.kubernetes.io/name: service
     app.kubernetes.io/part-of: l2network
     control-plane: controller-manager
-  name: sec-con-controller-manager-metrics-service
+  name: l2sm-controller-manager-metrics-service
   namespace: he-codeco-netma
 spec:
   ports:
@@ -9656,7 +9930,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: sec-con-controller-service
+  name: l2sm-controller-service
   namespace: he-codeco-netma
 spec:
   ports:
@@ -9682,7 +9956,7 @@ metadata:
     app.kubernetes.io/managed-by: kustomize
     app.kubernetes.io/name: service
     app.kubernetes.io/part-of: controllermanager
-  name: sec-con-webhook-service
+  name: l2sm-webhook-service
   namespace: he-codeco-netma
 spec:
   ports:
@@ -9695,7 +9969,7 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: sec-con-controller
+  name: l2sm-controller
   namespace: he-codeco-netma
 spec:
   replicas: 1
@@ -9731,7 +10005,7 @@ metadata:
     app.kubernetes.io/name: deployment
     app.kubernetes.io/part-of: l2network
     control-plane: controller-manager
-  name: sec-con-controller-manager
+  name: l2sm-controller-manager
   namespace: he-codeco-netma
 spec:
   replicas: 1
@@ -9753,6 +10027,8 @@ spec:
         command:
         - /manager
         env:
+        - name: SWITCHES_NAMESPACE
+          value: he-codeco-netma
         - name: CONTROLLER_IP
           value: l2sm-controller-service.l2sm-system.svc.cluster.local
         - name: CONTROLLER_PORT
@@ -9818,7 +10094,7 @@ spec:
             - ALL
       securityContext:
         runAsNonRoot: true
-      serviceAccountName: sec-con-controller-manager
+      serviceAccountName: l2sm-controller-manager
       terminationGracePeriodSeconds: 10
       volumes:
       - name: cert
@@ -9836,15 +10112,15 @@ metadata:
     app.kubernetes.io/managed-by: kustomize
     app.kubernetes.io/name: certificate
     app.kubernetes.io/part-of: controllermanager
-  name: sec-con-serving-cert
+  name: l2sm-serving-cert
   namespace: he-codeco-netma
 spec:
   dnsNames:
-  - sec-con-webhook-service.he-codeco-netma.svc
-  - sec-con-webhook-service.he-codeco-netma.svc.cluster.local
+  - l2sm-webhook-service.he-codeco-netma.svc
+  - l2sm-webhook-service.he-codeco-netma.svc.cluster.local
   issuerRef:
     kind: Issuer
-    name: sec-con-selfsigned-issuer
+    name: l2sm-selfsigned-issuer
   secretName: webhook-server-cert
 ---
 apiVersion: cert-manager.io/v1
@@ -9857,7 +10133,7 @@ metadata:
     app.kubernetes.io/managed-by: kustomize
     app.kubernetes.io/name: certificate
     app.kubernetes.io/part-of: controllermanager
-  name: sec-con-selfsigned-issuer
+  name: l2sm-selfsigned-issuer
   namespace: he-codeco-netma
 spec:
   selfSigned: {}
@@ -9866,7 +10142,7 @@ apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
 metadata:
   annotations:
-    cert-manager.io/inject-ca-from: he-codeco-netma/sec-con-serving-cert
+    cert-manager.io/inject-ca-from: he-codeco-netma/l2sm-serving-cert
   labels:
     app.kubernetes.io/component: webhook
     app.kubernetes.io/created-by: controllermanager
@@ -9874,7 +10150,7 @@ metadata:
     app.kubernetes.io/managed-by: kustomize
     app.kubernetes.io/name: mutatingwebhookconfiguration
     app.kubernetes.io/part-of: controllermanager
-  name: sec-con-mutating-webhook-configuration
+  name: l2sm-mutating-webhook-configuration
 webhooks:
 - admissionReviewVersions:
   - v1
