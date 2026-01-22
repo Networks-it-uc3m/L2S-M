@@ -51,6 +51,7 @@ type ExporterStrategy interface {
 
 func NewExporter(m, ns string, o map[string]string) ExporterStrategy {
 	if m == l2smv1.SWM_METHOD {
+		// todo: nt is created in ns for some reason, check what is happening
 		return &swmStrategy{Namespace: ns, NetworkTopologyNamespace: o[l2smv1.SWM_NT_NAMESPACE_OPTION]}
 	}
 	return &regularStrategy{Namespace: ns}
