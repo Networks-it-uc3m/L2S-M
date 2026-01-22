@@ -65,6 +65,7 @@ rules:
 - apiGroups:
   - apps
   resources:
+  - deployments
   - replicasets
   verbs:
   - create
@@ -92,7 +93,6 @@ rules:
   - l2networks
   - networkedgedevices
   - overlays
-  - replicasets
   verbs:
   - create
   - delete

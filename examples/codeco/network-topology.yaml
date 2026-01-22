@@ -1,0 +1,203 @@
+# SPDX-FileCopyrightText: 2023 Siemens AG
+# SPDX-License-Identifier: Apache-2.0
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.16.5
+  name: networktopologies.qos-scheduler.siemens.com
+spec:
+  group: qos-scheduler.siemens.com
+  names:
+    kind: NetworkTopology
+    listKind: NetworkTopologyList
+    plural: networktopologies
+    shortNames:
+    - topo
+    singular: networktopology
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - description: Status
+      jsonPath: .status.status
+      name: Status
+      type: string
+    - description: Status
+      jsonPath: .spec.networkImplementation
+      name: Implementation
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: NetworkTopology specifies how the nodes are connected in a network.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: |-
+              NetworkTopologySpec describes the topology and
+              provides the name of the network type (network implementation).
+              The default Topology operator will not delete a network when
+              the topology spec is deleted.
+            properties:
+              links:
+                description: |-
+                  All the links in your topology. Links are directed, so if you
+                  want both a->b and b->a to exist, you need to specify both.
+                  Loopback links (from each node to itself) will be inserted
+                  automatically.
+                items:
+                  description: TopologyLinkSpec is one link in the topology. Links
+                    are directed.
+                  properties:
+                    capabilities:
+                      description: |-
+                        The link's QoS Capabilities.
+                        These are required for physical links but optional
+                        for logical links. Empty capabilities on a logical
+                        link means the link will use the capabilities of the
+                        underlying physical link.
+                        If a logical link specifies capabilities in excess of
+                        what the underlying physical link supports, it is up
+                        to the corresponding network operator to decide what to do.
+                      properties:
+                        bandWidthBits:
+                          description: |-
+                            Bandwidth capacity of a link.
+                            It is specified in bit/s, e.g. 5M means 5Mbit/s.
+                          type: string
+                        latencyNanos:
+                          description: |-
+                            Worst-case delay in nanoseconds.
+                            You can use scientific notation, so 10e6 is 1ms.
+                          type: string
+                        otherCapabilities:
+                          additionalProperties:
+                            type: string
+                          description: |-
+                            Network type (implementation)-dependent
+                            qos information.
+                          type: object
+                      type: object
+                    name:
+                      description: The name of this link
+                      type: string
+                    source:
+                      description: The source node of this link.
+                      type: string
+                    target:
+                      description: The target node of this link
+                      type: string
+                  required:
+                  - source
+                  - target
+                  type: object
+                type: array
+              networkImplementation:
+                description: |-
+                  This is the value of the network-implementation tag that
+                  will be attached to NetworkLinks and NetworkPaths created from
+                  this topology.
+                  It is used to distinguish between different network types
+                  with different QoS capabilities.
+                type: string
+              nodes:
+                description: The nodes in your topology.
+                items:
+                  description: |-
+                    TopologyNodeSpec describes one node in the topology,
+                    can be a compute node or a network node.
+                  properties:
+                    ipAddress:
+                      description: |-
+                        The IP address of the network interface that your network
+                        uses for this node.
+                        You have to specify this or the MacAddress for physical networks,
+                        but it is redundant for logical networks.
+                      type: string
+                    macaddress:
+                      description: |-
+                        The MAC address of the network interface that your network
+                        uses for this node.
+                        You have to specify this or the IPAddress for physical networks,
+                        but it is redundant for logical networks.
+                      type: string
+                    name:
+                      description: |-
+                        The name of this node. Must be unique within the topology.
+                        If this node is also a Kubernetes node, use the name
+                        of the Kubernetes node here.
+                      type: string
+                    type:
+                      default: COMPUTE
+                      description: Values are COMPUTE or NETWORK.
+                      type: string
+                  type: object
+                type: array
+              paths:
+                description: |-
+                  If you do not specify paths, the network operator will compute paths from the links
+                  you gave it. Otherwise, it will use only the paths you give it.
+                items:
+                  description: TopologyPathSpec is a list of nodes connected by a
+                    path.
+                  properties:
+                    nodes:
+                      description: |-
+                        The list of nodes that this path traverses.
+                        For every consecutive pair of nodes on this path,
+                        a corresponding TopologyLink must exist.
+                      items:
+                        type: string
+                      type: array
+                  required:
+                  - nodes
+                  type: object
+                type: array
+              physicalBase:
+                description: |-
+                  The network-implementation tag of the physical network that
+                  this network's links are based on.
+                  When this is empty, this topology will be considered to declare
+                  a physical network.
+                  We might need to have a list of bases here and then let each link
+                  declare which of those bases it uses.
+                type: string
+            required:
+            - networkImplementation
+            type: object
+          status:
+            properties:
+              status:
+                description: Status of the topology inside the cluster.
+                type: string
+              topoHash:
+                description: hash of topology fields
+                type: string
+            required:
+            - status
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

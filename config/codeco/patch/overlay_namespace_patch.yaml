@@ -24,3 +24,5 @@ spec:
           env:
             - name: SWITCHES_NAMESPACE
               value: "he-codeco-netma"
+            - name: CONTROLLER_IP
+              value: l2sm-controller-service.he-codeco-netma.svc.cluster.local

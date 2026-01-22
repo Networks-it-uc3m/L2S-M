@@ -1,0 +1,62 @@
+# Copyright 2024 Universidad Carlos III de Madrid
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+apiVersion: l2sm.l2sm.k8s.local/v1
+kind: Overlay
+metadata:
+  name: overlay-sample
+  namespace: he-codeco-netma
+spec:
+  provider:
+    name: l2sm-test-sdn
+    domain: 
+      - "l2sm-controller-service.he-codeco-netma.svc"
+  monitor:
+    metrics:
+      - name: "rtt"
+      - name: "jitter"
+      - name: "throughput"
+    exportMetric:
+      method: codeco-swm
+      serviceAccount: l2sm-lpm-codeco-sa
+      config: 
+        nt_namespace: network-l2sm-namespace
+  topology:
+    nodes:
+      - l2sm-test-control-plane
+      - l2sm-test-worker
+      - l2sm-test-worker2
+    links:
+      - endpointA: l2sm-test-worker
+        endpointB: l2sm-test-worker2
+      - endpointA: l2sm-test-worker
+        endpointB: l2sm-test-control-plane
+      - endpointA: l2sm-test-control-plane
+        endpointB: l2sm-test-worker2
+  switchTemplate:
+    spec:
+      containers:
+        - name: l2sm-switch
+          image: alexdecb/talpa:1.3.6
+          resources: {}
+          args: ["sps-init", "--node_name=$(NODENAME)"]
+          env:
+          - name: NODENAME
+            valueFrom:
+              fieldRef:
+                fieldPath: spec.nodeName
+          securityContext:
+            capabilities:
+              add: ["NET_ADMIN"]
+

@@ -9734,6 +9734,7 @@ rules:
 - apiGroups:
   - apps
   resources:
+  - deployments
   - replicasets
   verbs:
   - create
@@ -9761,7 +9762,6 @@ rules:
   - l2networks
   - networkedgedevices
   - overlays
-  - replicasets
   verbs:
   - create
   - delete
@@ -10030,12 +10030,12 @@ spec:
         - name: SWITCHES_NAMESPACE
           value: he-codeco-netma
         - name: CONTROLLER_IP
-          value: l2sm-controller-service.l2sm-system.svc.cluster.local
+          value: l2sm-controller-service.he-codeco-netma.svc.cluster.local
         - name: CONTROLLER_PORT
           value: "8181"
         - name: DNS_PORT_NUMBER
           value: "30808"
-        image: alexdecb/l2sm-controller-manager:2.8.1
+        image: alexdecb/l2sm-controller-manager:2.8.2
         livenessProbe:
           httpGet:
             path: /healthz
@@ -10053,13 +10053,6 @@ spec:
             port: 8081
           initialDelaySeconds: 5
           periodSeconds: 10
-        resources:
-          limits:
-            cpu: 500m
-            memory: 128Mi
-          requests:
-            cpu: 10m
-            memory: 64Mi
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
