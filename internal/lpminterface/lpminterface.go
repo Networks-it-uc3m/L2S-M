@@ -378,7 +378,7 @@ scrape_configs:
 							ImagePullPolicy: corev1.PullAlways,
 							Args: []string{
 								"exporter",
-								"--type",
+								"--target",
 								"swm",
 							},
 							Env: []corev1.EnvVar{
