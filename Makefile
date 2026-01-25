@@ -231,7 +231,7 @@ copy-to-container:
 .PHONY: delete-cluster
 delete-cluster:
 	kind delete cluster --name l2sm-test
-	sudo rm -r ./plugins/
+	sudo rm -fr ./plugins/
 	
 .PHONY: deploy-dev
 deploy-dev: webhook-certs install manifests kustomize ## Deploy validating and mutating webhooks to the K8s cluster specified in ~/.kube/config.

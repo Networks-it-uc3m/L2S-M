@@ -19,6 +19,11 @@ metadata:
 spec:
   template:
     spec:
+      initContainers:
+        - name: wait-controller-healthy
+          env:
+            - name: CONTROLLER_IP
+              value: l2sm-controller-service.he-codeco-netma.svc.cluster.local
       containers:
         - name: manager
           env:

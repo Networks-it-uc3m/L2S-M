@@ -52,6 +52,33 @@ spec:
     spec:
       securityContext:
         runAsNonRoot: true
+      initContainers:
+      - name: wait-controller-healthy
+        image: curlimages/curl:8.6.0
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
+        env:
+        - name: CONTROLLER_IP
+          value: l2sm-controller-service.l2sm-system.svc.cluster.local
+        - name: CONTROLLER_PORT
+          value: "8181"
+        command: ["/bin/sh", "-c"]
+        args:
+        - |
+          set -eu
+          USER="karaf"
+          PASS="karaf"
+          URL="http://${CONTROLLER_IP}:${CONTROLLER_PORT}/onos/vnets/api/status"
+          echo "Waiting for controller to become healthy at: ${URL}"
+          until curl -sS -u "${USER}:${PASS}" -o /dev/null -w "%{http_code}" "${URL}" | grep -q "^200$"; do
+            echo "Controller not ready yet; retrying in 5s..."
+            sleep 5
+          done
+          echo "Controller is healthy."
       containers:
       - command:
         - /manager

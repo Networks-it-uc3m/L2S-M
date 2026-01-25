@@ -9993,6 +9993,8 @@ spec:
             port: 8181
           initialDelaySeconds: 30
           periodSeconds: 10
+      nodeSelector:
+        kubernetes.io/arch: amd64
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -10085,6 +10087,36 @@ spec:
           capabilities:
             drop:
             - ALL
+      initContainers:
+      - args:
+        - |
+          set -eu
+          USER="karaf"
+          PASS="karaf"
+          URL="http://${CONTROLLER_IP}:${CONTROLLER_PORT}/onos/vnets/api/status"
+          echo "Waiting for controller to become healthy at: ${URL}"
+          until curl -sS -u "${USER}:${PASS}" -o /dev/null -w "%{http_code}" "${URL}" | grep -q "^200$"; do
+            echo "Controller not ready yet; retrying in 5s..."
+            sleep 5
+          done
+          echo "Controller is healthy."
+        command:
+        - /bin/sh
+        - -c
+        env:
+        - name: CONTROLLER_IP
+          value: l2sm-controller-service.he-codeco-netma.svc.cluster.local
+        - name: CONTROLLER_PORT
+          value: "8181"
+        image: curlimages/curl:8.6.0
+        name: wait-controller-healthy
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          runAsNonRoot: true
+          runAsUser: 1000
       securityContext:
         runAsNonRoot: true
       serviceAccountName: l2sm-controller-manager
