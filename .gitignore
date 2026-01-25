@@ -1,4 +1,5 @@
 .vscode
+README.md
 tls.b64
 bin/
 plugins/
