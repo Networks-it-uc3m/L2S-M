@@ -16,6 +16,7 @@ package lpminterface
 
 import (
 	"fmt"
+	"strconv"
 
 	"encoding/json"
 
@@ -34,6 +35,7 @@ const (
 	defaultRTTIntervalSeconds     = 10
 	defaultThroughputIntervalSecs = 20
 	defaultJitterIntervalSeconds  = 5
+	defaultSpreadfactor           = "0.2"
 	defaultIPStart                = 2
 	defaultNetworkCIDR            = "10.0.0.0/24"
 	collectorConfigKey            = "config.json"
@@ -162,6 +164,10 @@ func BuildMonitoringCollectorResources(
 		opts.CollectorImage = &v
 	}
 
+	if opts.SpreadFactor == nil || *opts.SpreadFactor == "" {
+		v := defaultSpreadfactor
+		opts.SpreadFactor = &v
+	}
 	nodes := overlay.Spec.Topology.Nodes
 
 	allocated, mask, err := utils.AllocateIPv4s(*opts.NetworkCIDR, *opts.IPStart, len(nodes))
@@ -177,6 +183,10 @@ func BuildMonitoringCollectorResources(
 
 	var configMaps []*corev1.ConfigMap
 
+	sf, err := strconv.ParseFloat(*opts.SpreadFactor, 64)
+	if err != nil {
+		return nil, nil, fmt.Errorf("spread factor not inputted as float64, please input correct field in crd.")
+	}
 	for _, node := range nodes {
 		// Build neighbour metrics list: all nodes except self
 		neigh := make([]lpmv1.MetricConfiguration, 0, len(nodes)-1)
@@ -199,6 +209,7 @@ func BuildMonitoringCollectorResources(
 			NodeName:              node,
 			IpAddress:             fmt.Sprintf("%s%s", nodeIP[node], mask),
 			MetricsNeighbourNodes: neigh,
+			SpreadFactor:          sf,
 		}
 
 		b, err := json.MarshalIndent(cfg, "", "  ")

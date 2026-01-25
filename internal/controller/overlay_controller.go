@@ -340,7 +340,10 @@ func (r *OverlayReconciler) createExternalResources(ctx context.Context, overlay
 		if err != nil {
 			return fmt.Errorf("failed to build monitoring resources: %w", err)
 		}
-		collectorBuildOptions := lpminterface.CollectorBuildOptions{}
+		collectorBuildOptions := lpminterface.CollectorBuildOptions{
+
+			SpreadFactor: &overlay.Spec.Monitor.SpreadFactor,
+		}
 		if overlay.Spec.Monitor.NetworkCIDR != nil {
 			collectorBuildOptions.NetworkCIDR = overlay.Spec.Monitor.NetworkCIDR
 		}
