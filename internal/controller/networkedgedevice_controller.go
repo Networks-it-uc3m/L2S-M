@@ -185,121 +185,120 @@ func (r *NetworkEdgeDeviceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 //		return nil
 //	}
 func (r *NetworkEdgeDeviceReconciler) createExternalResources(ctx context.Context, netEdgeDevice *l2smv1.NetworkEdgeDevice) error {
+	var extResources []client.Object
+
 	// Create a ConfigMap to store the neighbors JSON
-
 	configMap, err := constructConfigMapForNED(netEdgeDevice, r.Scheme)
-
 	if err != nil {
 		return fmt.Errorf("could not construct the config map for the network edge device: %v", err)
 	}
-	// Create the ConfigMap in Kubernetes
-	if err := r.Client.Create(ctx, configMap); err != nil {
-		return err
-	}
+	extResources = append(extResources, configMap)
 
-	constructReplicaSetforNED := func(netEdgeDevice *l2smv1.NetworkEdgeDevice) (*appsv1.ReplicaSet, error) {
-		name := fmt.Sprintf("%s-%s", netEdgeDevice.Name, utils.GenerateHash(netEdgeDevice))
-
-		// Define volume mounts to be added to each container
-		volumeMounts := []corev1.VolumeMount{
-			{
-				Name:      "configurations",
-				MountPath: "/etc/l2sm/",
-				ReadOnly:  true,
-			},
-		}
-
-		// Update containers to include the volume mount
-		containers := make([]corev1.Container, len(netEdgeDevice.Spec.SwitchTemplate.Spec.Containers))
-		for i, container := range netEdgeDevice.Spec.SwitchTemplate.Spec.Containers {
-			container.VolumeMounts = append(container.VolumeMounts, volumeMounts...)
-			containers[i] = container
-		}
-
-		// Define the volume using the created ConfigMap
-		volumes := []corev1.Volume{
-			{
-				Name: "configurations",
-				VolumeSource: corev1.VolumeSource{
-					ConfigMap: &corev1.ConfigMapVolumeSource{
-						LocalObjectReference: corev1.LocalObjectReference{
-							Name: configMap.Name,
-						},
-						Items: []corev1.KeyToPath{
-							{
-								Key:  "neighbors.json",
-								Path: "neighbors.json",
-							},
-							{
-								Key:  "config.json",
-								Path: "config.json",
-							},
-						},
-					},
-				},
-			},
-		}
-
-		replicaSet := &appsv1.ReplicaSet{
-			ObjectMeta: metav1.ObjectMeta{
-				Labels:      make(map[string]string),
-				Annotations: make(map[string]string),
-				Name:        name,
-				Namespace:   netEdgeDevice.Namespace,
-			},
-			Spec: appsv1.ReplicaSetSpec{
-				Replicas: utils.Int32Ptr(1),
-				Selector: &metav1.LabelSelector{
-					MatchLabels: map[string]string{
-						"app": "l2sm",
-					},
-				},
-				Template: corev1.PodTemplateSpec{
-					ObjectMeta: metav1.ObjectMeta{
-						Labels: map[string]string{
-							"app": "l2sm",
-						},
-					},
-					Spec: corev1.PodSpec{
-						InitContainers: netEdgeDevice.Spec.SwitchTemplate.Spec.InitContainers,
-						Containers:     containers,
-						Volumes:        volumes,
-						HostNetwork:    netEdgeDevice.Spec.SwitchTemplate.Spec.HostNetwork,
-						NodeSelector: map[string]string{
-							corev1.LabelHostname: netEdgeDevice.Spec.NodeConfig.NodeName,
-						},
-						Tolerations: []corev1.Toleration{
-							{Operator: corev1.TolerationOpExists},
-						},
-					},
-				},
-			},
-		}
-
-		for k, v := range netEdgeDevice.Spec.SwitchTemplate.Annotations {
-			replicaSet.Annotations[k] = v
-		}
-		for k, v := range netEdgeDevice.Spec.SwitchTemplate.Labels {
-			replicaSet.Labels[k] = v
-		}
-		if err := controllerutil.SetControllerReference(netEdgeDevice, replicaSet, r.Scheme); err != nil {
-			return nil, err
-		}
-		return replicaSet, nil
-	}
-
-	replicaSet, err := constructReplicaSetforNED(netEdgeDevice)
+	replicaSet, err := constructReplicaSetforNED(netEdgeDevice, configMap.Name)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not construct replicaset for network edge device: %v", err)
 	}
+	extResources = append(extResources, replicaSet)
 
-	if err = r.Client.Create(ctx, replicaSet); err != nil {
-		return err
+	for _, obj := range extResources {
+		if err := controllerutil.SetControllerReference(netEdgeDevice, obj, r.Scheme); err != nil {
+			return fmt.Errorf("failed to set controller reference to obj %s: %w", obj.GetName(), err)
+		}
+		if err := r.Client.Create(ctx, obj); err != nil {
+			return fmt.Errorf("failed to create %s %s: %w", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName(), err)
+		}
 	}
 
 	return nil
 }
 
+func constructReplicaSetforNED(netEdgeDevice *l2smv1.NetworkEdgeDevice, configmapName string) (*appsv1.ReplicaSet, error) {
+	name := fmt.Sprintf("%s-%s", netEdgeDevice.Name, utils.GenerateHash(netEdgeDevice))
+
+	// Define volume mounts to be added to each container
+	volumeMounts := []corev1.VolumeMount{
+		{
+			Name:      "configurations",
+			MountPath: "/etc/l2sm/",
+			ReadOnly:  true,
+		},
+	}
+
+	// Update containers to include the volume mount
+	containers := make([]corev1.Container, len(netEdgeDevice.Spec.SwitchTemplate.Spec.Containers))
+	for i, container := range netEdgeDevice.Spec.SwitchTemplate.Spec.Containers {
+		container.VolumeMounts = append(container.VolumeMounts, volumeMounts...)
+		containers[i] = container
+	}
+
+	// Define the volume using the created ConfigMap
+	volumes := []corev1.Volume{
+		{
+			Name: "configurations",
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: configmapName,
+					},
+					Items: []corev1.KeyToPath{
+						{
+							Key:  "neighbors.json",
+							Path: "neighbors.json",
+						},
+						{
+							Key:  "config.json",
+							Path: "config.json",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	replicaSet := &appsv1.ReplicaSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Labels:      make(map[string]string),
+			Annotations: make(map[string]string),
+			Name:        name,
+			Namespace:   netEdgeDevice.Namespace,
+		},
+		Spec: appsv1.ReplicaSetSpec{
+			Replicas: utils.Int32Ptr(1),
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"app": "l2sm",
+				},
+			},
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"app": "l2sm",
+					},
+				},
+				Spec: corev1.PodSpec{
+					InitContainers: netEdgeDevice.Spec.SwitchTemplate.Spec.InitContainers,
+					Containers:     containers,
+					Volumes:        volumes,
+					HostNetwork:    netEdgeDevice.Spec.SwitchTemplate.Spec.HostNetwork,
+					NodeSelector: map[string]string{
+						corev1.LabelHostname: netEdgeDevice.Spec.NodeConfig.NodeName,
+					},
+					Tolerations: []corev1.Toleration{
+						{Operator: corev1.TolerationOpExists},
+					},
+				},
+			},
+		},
+	}
+
+	for k, v := range netEdgeDevice.Spec.SwitchTemplate.Annotations {
+		replicaSet.Annotations[k] = v
+	}
+	for k, v := range netEdgeDevice.Spec.SwitchTemplate.Labels {
+		replicaSet.Labels[k] = v
+	}
+	return replicaSet, nil
+}
 func (r *NetworkEdgeDeviceReconciler) reconcileConfigMap(ctx context.Context, netEdgeDevice *l2smv1.NetworkEdgeDevice) error {
 
 	configMap, err := constructConfigMapForNED(netEdgeDevice, r.Scheme)
@@ -346,9 +345,6 @@ func constructConfigMapForNED(netEdgeDevice *l2smv1.NetworkEdgeDevice, scheme *r
 			"neighbors.json": string(nedNeighbors),
 			"config.json":    string(nedConfig),
 		},
-	}
-	if err := controllerutil.SetControllerReference(netEdgeDevice, configMap, scheme); err != nil {
-		return nil, err
 	}
 	return configMap, nil
 }
