@@ -21,6 +21,7 @@ import (
 	"time"
 
 	l2smv1 "github.com/Networks-it-uc3m/L2S-M/api/v1"
+	"github.com/Networks-it-uc3m/L2S-M/internal/lpminterface"
 	"github.com/Networks-it-uc3m/L2S-M/internal/utils"
 	talpav1 "github.com/Networks-it-uc3m/l2sm-switch/api/v1"
 	dp "github.com/Networks-it-uc3m/l2sm-switch/pkg/datapath"
@@ -198,6 +199,11 @@ func (r *NetworkEdgeDeviceReconciler) createExternalResources(ctx context.Contex
 	if err != nil {
 		return fmt.Errorf("could not construct replicaset for network edge device: %v", err)
 	}
+
+	if netEdgeDevice.Spec.Monitor != nil {
+
+		monCont, monCMs, err := lpminterface.BuildMonitoringCollectorResources()
+	}
 	extResources = append(extResources, replicaSet)
 
 	for _, obj := range extResources {
@@ -213,8 +219,8 @@ func (r *NetworkEdgeDeviceReconciler) createExternalResources(ctx context.Contex
 }
 
 func constructReplicaSetforNED(netEdgeDevice *l2smv1.NetworkEdgeDevice, configmapName string) (*appsv1.ReplicaSet, error) {
-	name := fmt.Sprintf("%s-%s", netEdgeDevice.Name, utils.GenerateHash(netEdgeDevice))
 
+	name := utils.GenerateReplicaSetName(utils.GenerateSwitchName(netEdgeDevice.Name, netEdgeDevice.Spec.NodeConfig.NodeName, utils.NetworkEdgeDevice))
 	// Define volume mounts to be added to each container
 	volumeMounts := []corev1.VolumeMount{
 		{

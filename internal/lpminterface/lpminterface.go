@@ -85,6 +85,7 @@ type CollectorBuildOptions struct {
 	// IPs are computed as: fmt.Sprintf("%s%d", IPPrefix, IPStart+index)
 	// Example: prefix "10.0.0.", start 2 => index0=10.0.0.2, index1=10.0.0.3 ...
 	NetworkCIDR *string
+	IpCidr      *string
 	IPStart     *int
 
 	SpreadFactor             *string
@@ -203,7 +204,7 @@ func BuildMonitoringCollectorResources(
 			})
 		}
 
-		switchName := utils.GenerateSwitchName(overlay.Name, node)
+		switchName := utils.GenerateSwitchName(overlay.Name, node, utils.SlicePacketSwitch)
 		// Use LPM API types as requested
 		cfg := lpmv1.NodeConfig{
 			NodeName:              node,
@@ -444,7 +445,6 @@ scrape_configs:
 }
 
 func (exp *regularStrategy) buildRegularExporterInternal(serviceAccount, exporterName string, targets []string) (*appsv1.Deployment, *corev1.ConfigMap, *corev1.Service, error) {
-
 	appName := fmt.Sprintf("prometheus-%s", exporterName)
 
 	// 1. Generate Prometheus Config (Scrape Targets)
@@ -554,4 +554,132 @@ scrape_configs:
 	}
 
 	return deployment, configMap, service, nil
+}
+
+func BuildNEDMonitoringResources(
+	ned *l2smv1.NetworkEdgeDevice,
+	opts CollectorBuildOptions,
+) (*corev1.Container, []*corev1.ConfigMap, error) {
+
+	if ned == nil {
+		return nil, nil, fmt.Errorf("ned is nil")
+	}
+
+	if opts.IpCidr == nil || *opts.IpCidr == "" {
+		return nil, nil, fmt.Errorf("monitoring set, but no ip specified for ned probe interface")
+	}
+
+	if opts.RTTIntervalSeconds == nil {
+		v := defaultRTTIntervalSeconds
+		opts.RTTIntervalSeconds = &v
+	}
+	if opts.ThroughputIntervalSecs == nil {
+		v := defaultThroughputIntervalSecs
+		opts.ThroughputIntervalSecs = &v
+	}
+	if opts.JitterIntervalSeconds == nil {
+		v := defaultJitterIntervalSeconds
+		opts.JitterIntervalSeconds = &v
+	}
+
+	if opts.CollectorName == nil || *opts.CollectorName == "" {
+		v := "lpm-collector"
+		opts.CollectorName = &v
+	}
+
+	if opts.CollectorImagePullPolicy == nil {
+		v := corev1.PullIfNotPresent
+		opts.CollectorImagePullPolicy = &v
+	}
+
+	if opts.CollectorImage == nil || *opts.CollectorImage == "" {
+		v := fmt.Sprintf("%s:%s", lpmImage, lpmVersion)
+
+		opts.CollectorImage = &v
+	}
+
+	if opts.SpreadFactor == nil || *opts.SpreadFactor == "" {
+		v := defaultSpreadfactor
+		opts.SpreadFactor = &v
+	}
+	neighs := ned.Spec.Neighbors
+
+	// Map node -> IP by index (stable ordering depends on overlay.Spec.Topology.Nodes order)
+	nodeIP := make(map[string]string, len(nodes))
+	for i, n := range nodes {
+		nodeIP[n] = allocated[i]
+	}
+
+	var configMaps []*corev1.ConfigMap
+
+	sf, err := strconv.ParseFloat(*opts.SpreadFactor, 64)
+	if err != nil {
+		return nil, nil, fmt.Errorf("spread factor not inputted as float64, please input correct field in crd.")
+	}
+	var conf []lpmv1.MetricConfiguration
+	for _, neigh := range neighs {
+
+		conf = append(conf, lpmv1.MetricConfiguration{
+			Name:       neigh.Node,
+			IP:         neigh.LpmIP,
+			RTT:        *opts.RTTIntervalSeconds,
+			Throughput: *opts.ThroughputIntervalSecs,
+			Jitter:     *opts.JitterIntervalSeconds,
+		})
+	}
+
+	switchName := utils.GenerateSwitchName(overlay.Name, node)
+	// Use LPM API types as requested
+	cfg := lpmv1.NodeConfig{
+		NodeName:              node,
+		IpAddress:             *opts.IpCidr,
+		MetricsNeighbourNodes: neigh,
+		SpreadFactor:          sf,
+	}
+
+	b, err := json.MarshalIndent(cfg, "", "  ")
+	if err != nil {
+		return nil, nil, fmt.Errorf("marshal node config for %q: %w", node, err)
+	}
+
+	cmName := GenerateConfigmapName(utils.GenerateReplicaSetName(switchName))
+
+	cm := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      cmName,
+			Namespace: overlay.Namespace,
+			Labels: map[string]string{
+				"app":     "l2sm",
+				"overlay": overlay.Name,
+			},
+		},
+		Data: map[string]string{
+			collectorConfigKey: string(b),
+		},
+	}
+
+	configMaps = append(configMaps, cm)
+
+	// Collector sidecar container: mounts /etc/l2sm/lpm-conf.json (SubPath) from a CM volume.
+	// The volume itself must be attached per-ReplicaSet (because CM differs per node).
+	collectorContainer := &corev1.Container{
+		Name:            *opts.CollectorName,
+		Image:           *opts.CollectorImage,
+		ImagePullPolicy: *opts.CollectorImagePullPolicy,
+		Args: []string{
+			"collector",
+			fmt.Sprintf("--config_file=%s", collectorMountPath),
+		},
+		Ports: []corev1.ContainerPort{
+			{ContainerPort: defaultCollectorPort, Name: "lpm"},
+		}, VolumeMounts: []corev1.VolumeMount{
+			{
+				Name:      collectorVolumeName,
+				MountPath: collectorMountPath,
+				SubPath:   collectorMountedCfgName,
+			},
+		},
+	}
+
+	return collectorContainer, configMaps, nil
 }
