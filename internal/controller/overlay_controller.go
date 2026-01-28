@@ -318,7 +318,7 @@ func (r *OverlayReconciler) createExternalResources(ctx context.Context, overlay
 		var targets []string
 		for _, node := range overlay.Spec.Topology.Nodes {
 			// Target the service created in buildNodeResources (port 8090 for lpm-collector)
-			switchName := utils.GenerateSwitchName(overlay.Name, node)
+			switchName := utils.GenerateSwitchName(overlay.Name, node, utils.SlicePacketSwitch)
 			serviceName := utils.GenerateServiceName(switchName)
 			// Format: "service-name:8090"
 			targets = append(targets, fmt.Sprintf("%s:8090", serviceName))
@@ -326,7 +326,7 @@ func (r *OverlayReconciler) createExternalResources(ctx context.Context, overlay
 		var method string
 		var config map[string]string
 
-		if overlay.Spec.Monitor != nil && overlay.Spec.Monitor.ExportMetrics != nil {
+		if overlay.Spec.Monitor.ExportMetrics != nil {
 			method = overlay.Spec.Monitor.ExportMetrics.Method
 			config = overlay.Spec.Monitor.ExportMetrics.Config
 		}
@@ -389,7 +389,7 @@ func (r *OverlayReconciler) buildTopologyConfigMap(overlay *l2smv1.Overlay) (*co
 	for _, nodeName := range overlay.Spec.Topology.Nodes {
 		node := talpav1.Node{
 			Name:   nodeName,
-			NodeIP: utils.GenerateServiceName(utils.GenerateSwitchName(overlay.ObjectMeta.Name, nodeName)),
+			NodeIP: utils.GenerateServiceName(utils.GenerateSwitchName(overlay.ObjectMeta.Name, nodeName, utils.SlicePacketSwitch)),
 		}
 		topologySwitch.Nodes = append(topologySwitch.Nodes, node)
 	}
@@ -508,7 +508,7 @@ func (r *OverlayReconciler) buildNodeResources(overlay *l2smv1.Overlay, configMa
 
 	for _, node := range overlay.Spec.Topology.Nodes {
 
-		switchName := utils.GenerateSwitchName(overlay.Name, node)
+		switchName := utils.GenerateSwitchName(overlay.Name, node, utils.SlicePacketSwitch)
 		serviceName := utils.GenerateServiceName(switchName)
 
 		// 1. Create ReplicaSet

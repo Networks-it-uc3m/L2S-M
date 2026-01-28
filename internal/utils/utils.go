@@ -99,12 +99,19 @@ func GetPortNumberFromNetAttachDef(netAttachName string) (string, error) {
 	return portNumber, nil
 }
 
-func GenerateSwitchName(overlayName, nodeName string) string {
+type SwitchType string
+
+const (
+	SlicePacketSwitch SwitchType = "sps"
+	NetworkEdgeDevice SwitchType = "ned"
+)
+
+func GenerateSwitchName(resourceName, nodeName string, switchType SwitchType) string {
 	hash := fnv.New32() // Using FNV hash for a compact hash, but still 32 bits
-	hash.Write([]byte(fmt.Sprintf("%s%s", overlayName, nodeName)))
+	hash.Write([]byte(fmt.Sprintf("%s%s", resourceName, nodeName)))
 	sum := hash.Sum32()
 	// Encode the hash as a base32 string and take the first 4 characters
-	return fmt.Sprintf("sps-%04x", sum) // H
+	return fmt.Sprintf("%s-%04x", switchType, sum) // H
 }
 func GenerateReplicaSetName(switchName string) string {
 	return switchName
