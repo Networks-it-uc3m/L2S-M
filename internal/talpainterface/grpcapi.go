@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package nedinterface
+package talpainterface
 
 import (
 	"context"
@@ -73,8 +73,4 @@ func GetNetworkEdgeDevice(ctx context.Context, c client.Client, providerName str
 
 	// Return a clearer message indicating the provider was not found.
 	return l2smv1.NetworkEdgeDevice{}, fmt.Errorf("no NetworkEdgeDevice found for provider: %s", providerName)
-}
-
-func GenerateNedName() string {
-	return ""
 }
