@@ -604,12 +604,6 @@ func BuildNEDMonitoringResources(
 	}
 	neighs := ned.Spec.Neighbors
 
-	// Map node -> IP by index (stable ordering depends on overlay.Spec.Topology.Nodes order)
-	nodeIP := make(map[string]string, len(nodes))
-	for i, n := range nodes {
-		nodeIP[n] = allocated[i]
-	}
-
 	var configMaps []*corev1.ConfigMap
 
 	sf, err := strconv.ParseFloat(*opts.SpreadFactor, 64)
@@ -621,25 +615,25 @@ func BuildNEDMonitoringResources(
 
 		conf = append(conf, lpmv1.MetricConfiguration{
 			Name:       neigh.Node,
-			IP:         neigh.LpmIP,
+			IP:         *neigh.LpmIp,
 			RTT:        *opts.RTTIntervalSeconds,
 			Throughput: *opts.ThroughputIntervalSecs,
 			Jitter:     *opts.JitterIntervalSeconds,
 		})
 	}
 
-	switchName := utils.GenerateSwitchName(overlay.Name, node)
+	switchName := utils.GenerateSwitchName(ned.Name, ned.Spec.NodeConfig.NodeName, utils.NetworkEdgeDevice)
 	// Use LPM API types as requested
 	cfg := lpmv1.NodeConfig{
-		NodeName:              node,
+		NodeName:              ned.Spec.NodeConfig.NodeName,
 		IpAddress:             *opts.IpCidr,
-		MetricsNeighbourNodes: neigh,
+		MetricsNeighbourNodes: conf,
 		SpreadFactor:          sf,
 	}
 
 	b, err := json.MarshalIndent(cfg, "", "  ")
 	if err != nil {
-		return nil, nil, fmt.Errorf("marshal node config for %q: %w", node, err)
+		return nil, nil, fmt.Errorf("marshal node config for ned %q: %w", ned.Name, err)
 	}
 
 	cmName := GenerateConfigmapName(utils.GenerateReplicaSetName(switchName))
@@ -647,10 +641,10 @@ func BuildNEDMonitoringResources(
 	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cmName,
-			Namespace: overlay.Namespace,
+			Namespace: ned.Namespace,
 			Labels: map[string]string{
-				"app":     "l2sm",
-				"overlay": overlay.Name,
+				"app": "l2sm",
+				"ned": ned.Name,
 			},
 		},
 		Data: map[string]string{
