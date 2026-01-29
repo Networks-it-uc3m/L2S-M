@@ -31,8 +31,8 @@ import (
 	"github.com/Networks-it-uc3m/L2S-M/internal/dnsinterface"
 	"github.com/Networks-it-uc3m/L2S-M/internal/env"
 	"github.com/Networks-it-uc3m/L2S-M/internal/ids"
-	"github.com/Networks-it-uc3m/L2S-M/internal/nedinterface"
 	"github.com/Networks-it-uc3m/L2S-M/internal/sdnclient"
+	"github.com/Networks-it-uc3m/L2S-M/internal/talpainterface"
 	"github.com/Networks-it-uc3m/L2S-M/internal/utils"
 	nettypes "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
 )
@@ -133,7 +133,7 @@ func (r *L2NetworkReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 			// First we get information from the NED, required to perform the next operations.
 			// The info we need is the node name it is residing in.
-			ned, err := nedinterface.GetNetworkEdgeDevice(ctx, r.Client, network.Spec.Provider.Name)
+			ned, err := talpainterface.GetNetworkEdgeDevice(ctx, r.Client, network.Spec.Provider.Name)
 
 			if err != nil {
 				logger.Error(err, "error getting NED")
@@ -327,7 +327,7 @@ func (r *L2NetworkReconciler) CreateNewNEDConnection(network *l2smv1.L2Network, 
 	}
 	// AddPort returns the port number to attach so we can talk directly with the IDCO
 	// It needs to know which exiting interface to add to the network
-	nedPortNumber, err := nedinterface.AttachInterface(fmt.Sprintf("%s:50051", ned.Spec.NodeConfig.IPAddress), nedNetworkAttachDef)
+	nedPortNumber, err := talpainterface.AttachInterface(fmt.Sprintf("%s:50051", ned.Spec.NodeConfig.IPAddress), nedNetworkAttachDef)
 
 	if err != nil {
 		return fmt.Errorf("no connection could be made with ned: %v", err)

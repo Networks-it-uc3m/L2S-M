@@ -30,6 +30,9 @@ type NeighborSpec struct {
 	// Domain where the neighbor's NED switch can be reached at. Must be a valid IP Address or Domain name, reachable from the node the NED
 	// is going to be deployed at.
 	Domain string `json:"domain"`
+
+	// only used in monitoring mode. Ip address for network edge device probing interface
+	LpmIp *string `json:"lpmIp,omitempty"`
 }
 
 type SwitchPodSpec struct {

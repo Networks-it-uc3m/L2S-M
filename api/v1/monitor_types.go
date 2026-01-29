@@ -80,6 +80,7 @@ type MonitorSpec struct {
 	ExportMetrics *ExportMetricSpec `json:"exportMetric"`
 
 	NetworkCIDR *string `json:"networkCIDR,omitempty"`
+	IpCIDR      *string `json:"ipCIDR,omitempty"`
 }
 
 const SWM_METHOD = "codeco-swm"

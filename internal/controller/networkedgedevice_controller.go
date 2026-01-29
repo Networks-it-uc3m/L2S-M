@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"time"
 
 	l2smv1 "github.com/Networks-it-uc3m/L2S-M/api/v1"
@@ -125,7 +126,7 @@ func (r *NetworkEdgeDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		log.Info("NED Launched")
 		return ctrl.Result{RequeueAfter: time.Second * 20}, nil
 	} else {
-		if err := r.reconcileConfigMap(ctx, netEdgeDevice); err != nil {
+		if err := r.reconcileNed(ctx, netEdgeDevice); err != nil {
 			log.Error(err, "unable to reconcile configmap")
 			return ctrl.Result{}, err
 		}
@@ -142,8 +143,8 @@ func (r *NetworkEdgeDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Re
 func (r *NetworkEdgeDeviceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	if err := mgr.GetFieldIndexer().IndexField(context.Background(), &appsv1.ReplicaSet{}, replicaSetOwnerKey, func(rawObj client.Object) []string {
 		// grab the replica set object, extract the owner...
-		replicaSet := rawObj.(*appsv1.ReplicaSet)
-		owner := metav1.GetControllerOf(replicaSet)
+		rs := rawObj.(*appsv1.ReplicaSet)
+		owner := metav1.GetControllerOf(rs)
 		if owner == nil {
 			return nil
 		}
@@ -189,22 +190,31 @@ func (r *NetworkEdgeDeviceReconciler) createExternalResources(ctx context.Contex
 	var extResources []client.Object
 
 	// Create a ConfigMap to store the neighbors JSON
-	configMap, err := constructConfigMapForNED(netEdgeDevice, r.Scheme)
+	configMap, err := constructConfigMapForNED(netEdgeDevice)
 	if err != nil {
 		return fmt.Errorf("could not construct the config map for the network edge device: %v", err)
 	}
 	extResources = append(extResources, configMap)
 
-	replicaSet, err := constructReplicaSetforNED(netEdgeDevice, configMap.Name)
+	rs, err := constructReplicaSetforNED(netEdgeDevice, configMap.Name)
 	if err != nil {
 		return fmt.Errorf("could not construct replicaset for network edge device: %v", err)
 	}
+	extResources = append(extResources, rs)
 
 	if netEdgeDevice.Spec.Monitor != nil {
+		opts := lpminterface.CollectorBuildOptions{IpCidr: netEdgeDevice.Spec.Monitor.IpCIDR,
+			SpreadFactor: &netEdgeDevice.Spec.Monitor.SpreadFactor,
+		}
 
-		monCont, monCMs, err := lpminterface.BuildMonitoringCollectorResources()
+		monCont, monCMs, err := lpminterface.BuildNEDMonitoringResources(netEdgeDevice, opts)
+		if err != nil {
+			return fmt.Errorf("could not build monitoring resources. error: %w", err)
+		}
+		rs.Spec.Template.Spec.Containers = append(rs.Spec.Template.Spec.Containers, *monCont)
+		lpminterface.AttachCollectorConfigToReplicaSet(&rs.Spec.Template.Spec, rs.Name)
+		extResources = append(extResources, monCMs[0])
 	}
-	extResources = append(extResources, replicaSet)
 
 	for _, obj := range extResources {
 		if err := controllerutil.SetControllerReference(netEdgeDevice, obj, r.Scheme); err != nil {
@@ -261,7 +271,7 @@ func constructReplicaSetforNED(netEdgeDevice *l2smv1.NetworkEdgeDevice, configma
 		},
 	}
 
-	replicaSet := &appsv1.ReplicaSet{
+	rs := &appsv1.ReplicaSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels:      make(map[string]string),
 			Annotations: make(map[string]string),
@@ -297,29 +307,34 @@ func constructReplicaSetforNED(netEdgeDevice *l2smv1.NetworkEdgeDevice, configma
 		},
 	}
 
-	for k, v := range netEdgeDevice.Spec.SwitchTemplate.Annotations {
-		replicaSet.Annotations[k] = v
-	}
-	for k, v := range netEdgeDevice.Spec.SwitchTemplate.Labels {
-		replicaSet.Labels[k] = v
-	}
-	return replicaSet, nil
+	maps.Copy(rs.Annotations, netEdgeDevice.Spec.SwitchTemplate.Annotations)
+	maps.Copy(rs.Labels, netEdgeDevice.Spec.SwitchTemplate.Labels)
+	return rs, nil
 }
-func (r *NetworkEdgeDeviceReconciler) reconcileConfigMap(ctx context.Context, netEdgeDevice *l2smv1.NetworkEdgeDevice) error {
+func (r *NetworkEdgeDeviceReconciler) reconcileNed(ctx context.Context, ned *l2smv1.NetworkEdgeDevice) error {
 
-	configMap, err := constructConfigMapForNED(netEdgeDevice, r.Scheme)
+	cm, err := constructConfigMapForNED(ned)
 	if err != nil {
 		return fmt.Errorf("could not construct the config map for the network edge device: %v", err)
 	}
 
-	if err := r.Client.Patch(ctx, configMap, client.Apply, client.FieldOwner("yo"), client.ForceOwnership); err != nil {
+	if err := r.Client.Patch(ctx, cm, client.Apply, client.FieldOwner("yo"), client.ForceOwnership); err != nil {
 		return fmt.Errorf("failed to apply config map: %w", err)
+	}
+	if ned.Spec.Monitor != nil {
+		_, monCm, err := lpminterface.BuildNEDMonitoringResources(ned, lpminterface.CollectorBuildOptions{IpCidr: ned.Spec.Monitor.IpCIDR})
+		if err != nil {
+			return fmt.Errorf("could not construct the config map for the network edge device: %v", err)
+		}
+		if err := r.Client.Patch(ctx, monCm[0], client.Apply, client.FieldOwner("yo"), client.ForceOwnership); err != nil {
+			return fmt.Errorf("failed to apply config map: %w", err)
+		}
 	}
 
 	return nil
 }
 
-func constructConfigMapForNED(netEdgeDevice *l2smv1.NetworkEdgeDevice, scheme *runtime.Scheme) (*corev1.ConfigMap, error) {
+func constructConfigMapForNED(netEdgeDevice *l2smv1.NetworkEdgeDevice) (*corev1.ConfigMap, error) {
 	neighbors := make([]string, len(netEdgeDevice.Spec.Neighbors))
 	for i, neighbor := range netEdgeDevice.Spec.Neighbors {
 		neighbors[i] = neighbor.Domain
