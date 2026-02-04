@@ -426,7 +426,7 @@ scrape_configs:
 	// 4. Create Service
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      appName,
+			Name:      "prometheus-lpm-network",
 			Namespace: exp.Namespace,
 			Labels:    map[string]string{"app": appName},
 		},
