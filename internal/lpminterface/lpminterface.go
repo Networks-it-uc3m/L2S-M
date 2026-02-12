@@ -67,7 +67,7 @@ type swmStrategy struct {
 
 func (s *swmStrategy) BuildResources(saName string, targets []string) (*appsv1.Deployment, *corev1.ConfigMap, *corev1.Service, error) {
 	// Call internal logic for SWM
-	return s.buildSWMExporterInternal(saName, s.Namespace, "swm-lpm", targets)
+	return s.buildSWMExporterInternal(saName, s.NetworkTopologyNamespace, "swm-lpm", targets)
 }
 
 // RegularStrategy implements the default logic
