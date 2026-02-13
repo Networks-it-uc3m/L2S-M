@@ -323,7 +323,8 @@ func AttachCollectorConfigToReplicaSet(ps *corev1.PodSpec, rsName string) error 
 
 func (exp *swmStrategy) buildSWMExporterInternal(serviceAccount, networkTopologyNamespace, exporterName string, targets []string) (*appsv1.Deployment, *corev1.ConfigMap, *corev1.Service, error) {
 
-	appName := fmt.Sprintf("prometheus-%s", exporterName)
+	appName := fmt.Sprintf("prometheus-%s", "lpm-network")
+	// appName := fmt.Sprintf("prometheus-%s", exporterName)
 
 	// 1. Generate Prometheus Config (Scrape Targets)
 
