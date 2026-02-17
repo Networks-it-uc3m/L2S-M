@@ -86,6 +86,8 @@ spec:
                         default: default
                         type: string
                     type: object
+                  ipCIDR:
+                    type: string
                   metrics:
                     description: |-
                       Metrics is the list of measurements to perform on the overlay network.
@@ -148,6 +150,10 @@ spec:
                       description: |-
                         Domain where the neighbor's NED switch can be reached at. Must be a valid IP Address or Domain name, reachable from the node the NED
                         is going to be deployed at.
+                      type: string
+                    lpmIp:
+                      description: only used in monitoring mode. Ip address for network
+                        edge device probing interface
                       type: string
                     node:
                       description: Name of the cluster the link is going to be made
@@ -4638,6 +4644,10 @@ spec:
                       description: |-
                         Domain where the neighbor's NED switch can be reached at. Must be a valid IP Address or Domain name, reachable from the node the NED
                         is going to be deployed at.
+                      type: string
+                    lpmIp:
+                      description: only used in monitoring mode. Ip address for network
+                        edge device probing interface
                       type: string
                     node:
                       description: Name of the cluster the link is going to be made

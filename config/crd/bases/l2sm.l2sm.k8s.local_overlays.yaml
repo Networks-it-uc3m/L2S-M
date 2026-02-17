@@ -83,6 +83,8 @@ spec:
                         default: default
                         type: string
                     type: object
+                  ipCIDR:
+                    type: string
                   metrics:
                     description: |-
                       Metrics is the list of measurements to perform on the overlay network.
