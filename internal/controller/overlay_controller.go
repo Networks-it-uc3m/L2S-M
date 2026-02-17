@@ -46,7 +46,6 @@ type OverlayReconciler struct {
 }
 
 var setOwnerKeyOverlay = ".metadata.controller.overlay"
-var OVERLAY_PROVIDER = "l2sm-controller"
 
 // +kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core,resources=services,verbs=get;list;watch;create;update;patch;delete
@@ -169,7 +168,7 @@ func createMonitoringNetwork(overlay *l2smv1.Overlay) error {
 	}
 	lpmNetName := utils.GenerateLPMNetworkName(overlay.Name)
 	internalClient.CreateNetwork(l2smv1.NetworkTypeVnet, sdnclient.VnetPayload{NetworkId: lpmNetName})
-	lpmPorts := lpminterface.GenerateLPMPorts(overlay.Spec.Topology.Nodes, OVERLAY_PROVIDER)
+	lpmPorts := lpminterface.GenerateLPMPorts(overlay.Spec.Topology.Nodes, l2smv1.OVERLAY_PROVIDER)
 	err = internalClient.AttachPodToNetwork(l2smv1.NetworkTypeVnet, sdnclient.VnetPortPayload{NetworkId: lpmNetName, Port: lpmPorts})
 	if err != nil {
 		return fmt.Errorf("could not attach lpm pods to lpm network. Error: %w", err)
@@ -408,7 +407,7 @@ func (r *OverlayReconciler) buildTopologyConfigMap(overlay *l2smv1.Overlay) (*co
 		ControllerIP:     overlay.Spec.Provider.Domain,
 		ControllerPort:   overlay.Spec.Provider.OFPort,
 		InterfacesNumber: overlay.Spec.InterfaceNumber,
-		ProviderName:     OVERLAY_PROVIDER,
+		ProviderName:     l2smv1.OVERLAY_PROVIDER,
 	}
 
 	// Marshal JSONs

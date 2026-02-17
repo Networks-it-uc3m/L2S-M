@@ -195,7 +195,7 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 		//.GenerateDatapathID(pod.Spec.NodeName))
 
 		for index, network := range networks {
-			ofID := fmt.Sprintf("of:%s", dp.GenerateID(dp.GetSwitchName(dp.DatapathParams{NodeName: pod.Spec.NodeName, ProviderName: OVERLAY_PROVIDER})))
+			ofID := fmt.Sprintf("of:%s", dp.GenerateID(dp.GetSwitchName(dp.DatapathParams{NodeName: pod.Spec.NodeName, ProviderName: l2smv1.OVERLAY_PROVIDER})))
 
 			// We get the port number based on the name of the multus annotation. veth1 -> port num 1.
 			portNumber, err := utils.GetPortNumberFromNetAttachDef(multusNetAttachDefinitions[index].Name)

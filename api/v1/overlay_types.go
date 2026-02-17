@@ -18,6 +18,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const OVERLAY_PROVIDER = "l2sm-controller"
+
 // Link represents a bidirectional connection between two nodes in the topology.
 type Link struct {
 	// EndpointA is the name of the first node in the link.

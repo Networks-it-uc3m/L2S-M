@@ -230,7 +230,7 @@ func (r *NetworkEdgeDeviceReconciler) createExternalResources(ctx context.Contex
 
 func constructReplicaSetforNED(netEdgeDevice *l2smv1.NetworkEdgeDevice, configmapName string) (*appsv1.ReplicaSet, error) {
 
-	name := utils.GenerateReplicaSetName(utils.GenerateSwitchName(netEdgeDevice.Name, netEdgeDevice.Spec.NodeConfig.NodeName, utils.NetworkEdgeDevice))
+	name := utils.GenerateReplicaSetName(utils.GenerateSwitchPodName(netEdgeDevice.Name, netEdgeDevice.Spec.NodeConfig.NodeName, utils.NetworkEdgeDevice))
 	// Define volume mounts to be added to each container
 	volumeMounts := []corev1.VolumeMount{
 		{
