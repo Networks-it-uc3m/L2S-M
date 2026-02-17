@@ -24,6 +24,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	l2smv1 "github.com/Networks-it-uc3m/L2S-M/api/v1"
+	talpav1 "github.com/Networks-it-uc3m/l2sm-switch/api/v1"
+	dp "github.com/Networks-it-uc3m/l2sm-switch/pkg/datapath"
 	nedpb "github.com/Networks-it-uc3m/l2sm-switch/pkg/nedpb"
 )
 
@@ -73,4 +75,10 @@ func GetNetworkEdgeDevice(ctx context.Context, c client.Client, providerName str
 
 	// Return a clearer message indicating the provider was not found.
 	return l2smv1.NetworkEdgeDevice{}, fmt.Errorf("no NetworkEdgeDevice found for provider: %s", providerName)
+}
+
+func ProbeInterface(node, provider string) string {
+
+	ifid := dp.New(dp.GetSwitchName(dp.DatapathParams{NodeName: node, ProviderName: provider}))
+	return ifid.Probe(talpav1.RESERVED_PROBE_ID)
 }

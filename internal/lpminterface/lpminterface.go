@@ -20,6 +20,8 @@ import (
 
 	"encoding/json"
 
+	"github.com/Networks-it-uc3m/L2S-M/internal/talpainterface"
+
 	l2smv1 "github.com/Networks-it-uc3m/L2S-M/api/v1"
 	"github.com/Networks-it-uc3m/L2S-M/internal/utils"
 	lpmv1 "github.com/Networks-it-uc3m/LPM/api/v1"
@@ -41,7 +43,7 @@ const (
 	collectorConfigKey            = "config.json"
 	collectorVolumeName           = "lpm-collector-config"
 	lpmImage                      = "alexdecb/lpm"
-	lpmVersion                    = "1.2.3"
+	lpmVersion                    = "1.2.4"
 	collectorMountedCfgName       = "lpm-config.json"
 	collectorMountPath            = "/etc/lpm/lpm-config.json"
 )
@@ -171,7 +173,7 @@ func BuildMonitoringCollectorResources(
 	}
 	nodes := overlay.Spec.Topology.Nodes
 
-	allocated, mask, err := utils.AllocateIPv4s(*opts.NetworkCIDR, *opts.IPStart, len(nodes))
+	allocated, _, err := utils.AllocateIPv4s(*opts.NetworkCIDR, *opts.IPStart, len(nodes))
 	if err != nil {
 		return nil, nil, fmt.Errorf("monitoring CIDR allocation failed: %w", err)
 	}
@@ -208,7 +210,7 @@ func BuildMonitoringCollectorResources(
 		// Use LPM API types as requested
 		cfg := lpmv1.NodeConfig{
 			NodeName:              node,
-			IpAddress:             fmt.Sprintf("%s%s", nodeIP[node], mask),
+			ProbeInterface:        talpainterface.ProbeInterface(node, l2smv1.OVERLAY_PROVIDER),
 			MetricsNeighbourNodes: neigh,
 			SpreadFactor:          sf,
 		}
@@ -627,7 +629,7 @@ func BuildNEDMonitoringResources(
 	// Use LPM API types as requested
 	cfg := lpmv1.NodeConfig{
 		NodeName:              ned.Spec.NodeConfig.NodeName,
-		IpAddress:             *opts.IpCidr,
+		ProbeInterface:        talpainterface.ProbeInterface(ned.Spec.NodeConfig.NodeName, ned.Spec.Provider.Name),
 		MetricsNeighbourNodes: conf,
 		SpreadFactor:          sf,
 	}
