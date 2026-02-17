@@ -503,10 +503,9 @@ func (r *OverlayReconciler) buildNodeResources(overlay *l2smv1.Overlay, configMa
 		},
 	}
 
-	switchInterfacesAnnotations := GenerateAnnotations(overlay.Name, overlay.Spec.InterfaceNumber)
-
 	for _, node := range overlay.Spec.Topology.Nodes {
 
+		switchInterfacesAnnotations := GenerateAnnotations(overlay.Name, node, l2smv1.OVERLAY_PROVIDER, overlay.Spec.InterfaceNumber)
 		name := utils.GenerateSwitchPodName(overlay.Name, node, utils.SlicePacketSwitch)
 		serviceName := utils.GenerateServiceName(name)
 

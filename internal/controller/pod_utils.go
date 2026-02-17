@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	l2smv1 "github.com/Networks-it-uc3m/L2S-M/api/v1"
+	"github.com/Networks-it-uc3m/L2S-M/internal/talpainterface"
 	nettypes "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -44,6 +45,7 @@ type NetworkAnnotation struct {
 	Name       string   `json:"name"`
 	Namespace  string   `json:"namespace,omitempty"`
 	IPAdresses []string `json:"ips,omitempty"`
+	IfName     string   `json:"ifname,omitempty"`
 }
 
 func extractNetworks(annotations, namespace string) ([]NetworkAnnotation, error) {
@@ -185,11 +187,15 @@ func (r *PodReconciler) DetachNetAttachDef(ctx context.Context, multusNetAttachD
 
 }
 
-func GenerateAnnotations(overlayName string, ammount int) string {
+func GenerateAnnotations(overlayName, nodeName, providerName string, ammount int) string {
+
 	annotationsString := []string{}
 	var newAnnotation string
 	for i := 1; i <= ammount; i++ {
-		newAnnotation = fmt.Sprintf(`{"name": "%s-veth%d", "ips": ["fe80::58d0:b8ff:fe%s:%s/64"]}`, overlayName, i, fmt.Sprintf("%02d", i), Generate4byteChunk())
+		newAnnotation = fmt.Sprintf(`{"name": "%s-veth%d", "ips": ["fe80::58d0:b8ff:fe%s:%s/64"], "interface":"%s"}`,
+			overlayName, i,
+			fmt.Sprintf("%02d", i), Generate4byteChunk(),
+			talpainterface.GetIfName(nodeName, l2smv1.OVERLAY_PROVIDER, i))
 		annotationsString = append(annotationsString, newAnnotation)
 	}
 
