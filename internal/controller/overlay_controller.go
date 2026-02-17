@@ -317,8 +317,8 @@ func (r *OverlayReconciler) createExternalResources(ctx context.Context, overlay
 		var targets []string
 		for _, node := range overlay.Spec.Topology.Nodes {
 			// Target the service created in buildNodeResources (port 8090 for lpm-collector)
-			switchName := utils.GenerateSwitchName(overlay.Name, node, utils.SlicePacketSwitch)
-			serviceName := utils.GenerateServiceName(switchName)
+			name := utils.GenerateSwitchPodName(overlay.Name, node, utils.SlicePacketSwitch)
+			serviceName := utils.GenerateServiceName(name)
 			// Format: "service-name:8090"
 			targets = append(targets, fmt.Sprintf("%s:8090", serviceName))
 		}
