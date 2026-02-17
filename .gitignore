@@ -6,3 +6,4 @@ plugins/
 .env
 examples2/
 config/dev/serving-certs/*
+local/
