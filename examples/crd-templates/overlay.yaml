@@ -31,7 +31,7 @@ spec:
     spec:
       containers:
         - name: l2sm-switch
-          image: alexdecb/talpa:1.3.6
+          image: alexdecb/talpa:1.3.8
           resources: {}
           args: ["sps-init", "--node_name=$(NODENAME)"]
           env:

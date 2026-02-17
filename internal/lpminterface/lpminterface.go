@@ -43,7 +43,7 @@ const (
 	collectorConfigKey            = "config.json"
 	collectorVolumeName           = "lpm-collector-config"
 	lpmImage                      = "alexdecb/lpm"
-	lpmVersion                    = "1.2.4"
+	lpmVersion                    = "1.2.6"
 	collectorMountedCfgName       = "lpm-config.json"
 	collectorMountPath            = "/etc/lpm/lpm-config.json"
 )
