@@ -388,7 +388,7 @@ func (r *OverlayReconciler) buildTopologyConfigMap(overlay *l2smv1.Overlay) (*co
 	for _, nodeName := range overlay.Spec.Topology.Nodes {
 		node := talpav1.Node{
 			Name:   nodeName,
-			NodeIP: utils.GenerateServiceName(utils.GenerateSwitchName(overlay.ObjectMeta.Name, nodeName, utils.SlicePacketSwitch)),
+			NodeIP: utils.GenerateServiceName(utils.GenerateSwitchPodName(overlay.ObjectMeta.Name, nodeName, utils.SlicePacketSwitch)),
 		}
 		topologySwitch.Nodes = append(topologySwitch.Nodes, node)
 	}
@@ -507,13 +507,13 @@ func (r *OverlayReconciler) buildNodeResources(overlay *l2smv1.Overlay, configMa
 
 	for _, node := range overlay.Spec.Topology.Nodes {
 
-		switchName := utils.GenerateSwitchName(overlay.Name, node, utils.SlicePacketSwitch)
-		serviceName := utils.GenerateServiceName(switchName)
+		name := utils.GenerateSwitchPodName(overlay.Name, node, utils.SlicePacketSwitch)
+		serviceName := utils.GenerateServiceName(name)
 
 		// 1. Create ReplicaSet
 		replicaSet := &appsv1.ReplicaSet{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:        utils.GenerateReplicaSetName(switchName),
+				Name:        utils.GenerateReplicaSetName(name),
 				Namespace:   overlay.Namespace,
 				Labels:      make(map[string]string),
 				Annotations: make(map[string]string),
@@ -521,11 +521,11 @@ func (r *OverlayReconciler) buildNodeResources(overlay *l2smv1.Overlay, configMa
 			Spec: appsv1.ReplicaSetSpec{
 				Replicas: utils.Int32Ptr(1),
 				Selector: &metav1.LabelSelector{
-					MatchLabels: map[string]string{"app": switchName},
+					MatchLabels: map[string]string{"app": name},
 				},
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
-						Labels: map[string]string{"app": switchName},
+						Labels: map[string]string{"app": name},
 						Annotations: map[string]string{
 							MULTUS_ANNOTATION_KEY: switchInterfacesAnnotations,
 						},
@@ -552,11 +552,11 @@ func (r *OverlayReconciler) buildNodeResources(overlay *l2smv1.Overlay, configMa
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      serviceName,
 				Namespace: overlay.Namespace,
-				Labels:    map[string]string{"app": switchName},
+				Labels:    map[string]string{"app": name},
 			},
 			Spec: corev1.ServiceSpec{
 				ClusterIP: "None",
-				Selector:  map[string]string{"app": switchName},
+				Selector:  map[string]string{"app": name},
 				Ports: []corev1.ServicePort{
 					{Name: "http", Port: 80},
 				},

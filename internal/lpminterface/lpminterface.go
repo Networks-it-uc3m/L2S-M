@@ -204,7 +204,7 @@ func BuildMonitoringCollectorResources(
 			})
 		}
 
-		switchName := utils.GenerateSwitchName(overlay.Name, node, utils.SlicePacketSwitch)
+		name := utils.GenerateSwitchPodName(overlay.Name, node, utils.SlicePacketSwitch)
 		// Use LPM API types as requested
 		cfg := lpmv1.NodeConfig{
 			NodeName:              node,
@@ -218,7 +218,7 @@ func BuildMonitoringCollectorResources(
 			return nil, nil, fmt.Errorf("marshal node config for %q: %w", node, err)
 		}
 
-		cmName := GenerateConfigmapName(utils.GenerateReplicaSetName(switchName))
+		cmName := GenerateConfigmapName(utils.GenerateReplicaSetName(name))
 
 		cm := &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
@@ -623,7 +623,7 @@ func BuildNEDMonitoringResources(
 		})
 	}
 
-	switchName := utils.GenerateSwitchName(ned.Name, ned.Spec.NodeConfig.NodeName, utils.NetworkEdgeDevice)
+	name := utils.GenerateSwitchPodName(ned.Name, ned.Spec.NodeConfig.NodeName, utils.NetworkEdgeDevice)
 	// Use LPM API types as requested
 	cfg := lpmv1.NodeConfig{
 		NodeName:              ned.Spec.NodeConfig.NodeName,
@@ -637,7 +637,7 @@ func BuildNEDMonitoringResources(
 		return nil, nil, fmt.Errorf("marshal node config for ned %q: %w", ned.Name, err)
 	}
 
-	cmName := GenerateConfigmapName(utils.GenerateReplicaSetName(switchName))
+	cmName := GenerateConfigmapName(utils.GenerateReplicaSetName(name))
 
 	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
