@@ -4,7 +4,7 @@ set -euo pipefail
 TEMPLATE=./examples/crd-templates/codeco-overlay.yaml
 
 # Get node names (one per line)
-mapfile -t NODES < <(kubectl get nodes -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}')
+mapfile -t NODES < <(kubectl get nodes -l 'kubernetes.io/role!=agent' -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}')
 
 mkdir -p ./local/
 
