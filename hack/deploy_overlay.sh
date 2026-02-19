@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-TEMPLATE=./examples/crd-templates/overlay.yaml
+TEMPLATE=./examples/crd-templates/monitored-overlay.yaml
 
 # Get node names (one per line)
 mapfile -t NODES < <(kubectl get nodes -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}')

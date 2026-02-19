@@ -21,7 +21,7 @@ spec:
   provider:
     name: l2sm-test-sdn
     domain: 
-      - "l2sm-controller-service.default.svc"
+      - "l2sm-controller-service.l2sm-service.svc"
   monitor:
     metrics:
       - name: "rtt"

@@ -9994,7 +9994,7 @@ spec:
         app: controller
     spec:
       containers:
-      - image: alexdecb/l2sm-controller:2.4
+      - image: alexdecb/l2sm-controller:2.5.2
         name: l2sm-controller
         ports:
         - containerPort: 6633
