@@ -87,7 +87,7 @@ func (c *InternalClient) CheckNetworkExists(networkType l2smv1.NetworkType, netw
 func (c *InternalClient) DeleteNetwork(networkType l2smv1.NetworkType, networkID string) error {
 	networkType = "vnets"
 
-	response, err := c.Session.Delete(fmt.Sprintf("/%s/api/%s", networkType, networkID))
+	response, err := c.Session.Delete(fmt.Sprintf("/%s/api/%s", networkType, networkID), nil)
 	if err != nil {
 		return err
 	}
@@ -122,20 +122,22 @@ func (c *InternalClient) AttachPodToNetwork(networkType l2smv1.NetworkType, conf
 	return nil
 }
 
-// DetachPodFromNetwork detaches the pod from the network, so it can be used in the future
-// TODO: Implement in onos
-func (c *InternalClient) DetachPodFromNetwork(networkType l2smv1.NetworkType, portID string) error {
+func (c *InternalClient) DetachPodFromNetwork(networkType l2smv1.NetworkType, config any) error {
 
-	// networkType = "vnets"
-	// response, err := c.Session.Delete(fmt.Sprintf("%s/api/port/%s", networkType,portID))
-	// if err != nil {
-	// 	return err
-	// }
-	// defer response.Body.Close()
+	networkType = "vnets"
+	jsonData, err := json.Marshal(config)
+	if err != nil {
+		return err
+	}
+	response, err := c.Session.Delete(fmt.Sprintf("/%s/api/port", networkType), jsonData)
+	if err != nil {
+		return err
+	}
+	defer response.Body.Close()
 
-	// if response.StatusCode != http.StatusNoContent {
-	// 	return fmt.Errorf("failed to create network, status code: %d", response.StatusCode)
-	// }
+	if response.StatusCode != http.StatusNoContent {
+		return fmt.Errorf("failed to create network, status code: %d", response.StatusCode)
+	}
 
 	return nil
 }

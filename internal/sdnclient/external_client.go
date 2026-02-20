@@ -28,6 +28,11 @@ type ExternalClient struct {
 	Session *SessionClient
 }
 
+// DetachPodFromNetwork implements Client.
+func (c *ExternalClient) DetachPodFromNetwork(networkType l2smv1.NetworkType, config interface{}) error {
+	panic("unimplemented")
+}
+
 func (c *ExternalClient) beginSessionController() bool {
 	//TODO: implement healthcheck in idco onos app
 	resp, err := c.Session.Get("/idco/mscs/status")
@@ -73,7 +78,7 @@ func (c *ExternalClient) CheckNetworkExists(networkType l2smv1.NetworkType, netw
 
 // DeleteNetwork deletes an existing network from the SDN controller
 func (c *ExternalClient) DeleteNetwork(networkType l2smv1.NetworkType, networkID string) error {
-	response, err := c.Session.Delete(fmt.Sprintf("/idco/mscs/%s", networkID))
+	response, err := c.Session.Delete(fmt.Sprintf("/idco/mscs/%s", networkID), []byte{})
 	if err != nil {
 		return err
 	}

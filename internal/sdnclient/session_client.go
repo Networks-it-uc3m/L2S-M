@@ -74,8 +74,8 @@ func (c *SessionClient) Post(url string, body []byte) (*http.Response, error) {
 }
 
 // Delete wraps the DELETE method with authorization.
-func (c *SessionClient) Delete(url string) (*http.Response, error) {
-	req, err := c.newRequest("DELETE", url, nil)
+func (c *SessionClient) Delete(url string, body []byte) (*http.Response, error) {
+	req, err := c.newRequest("DELETE", url, body)
 	if err != nil {
 		return nil, err
 	}

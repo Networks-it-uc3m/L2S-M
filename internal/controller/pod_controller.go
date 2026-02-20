@@ -92,27 +92,30 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 
 			// If the pod is being deleted, we should free the interface, both the net-attach-def crd and the openflow port.
 			// This is done for each interface in the pod.
-			// multusAnnotations, ok := pod.Annotations[MULTUS_ANNOTATION_KEY]
+			multusAnnotations, ok := pod.Annotations[MULTUS_ANNOTATION_KEY]
 
-			// if !ok {
-			// 	logger.Error(nil, "Error detaching the pod from the network attachment definitions")
-			// }
+			if !ok {
+				logger.Error(nil, "Error detaching the pod from the network attachment definitions")
+			}
 
-			// multusNetAttachDefinitions, err := extractNetworks(pod.Annotations[multusAnnotations], r.SwitchesNamespace)
+			multusNetAttachDefinitions, err := extractNetworks(multusAnnotations, r.SwitchesNamespace)
 
-			// if err != nil {
-			// 	logger.Error(nil, "Error detaching the pod from the network attachment definitions")
-			// }
+			if err != nil {
+				logger.Error(nil, "Error detaching the pod from the network attachment definitions")
+			}
 
-			// for _, multusNetAttachDef := range multusNetAttachDefinitions {
+			fmt.Println("attach defs:")
+			fmt.Println(multusAnnotations)
+			for _, multusNetAttachDef := range multusNetAttachDefinitions {
 
-			// 	fmt.Println(multusNetAttachDef)
-			// 	// We liberate the specific attachment from the node, so it can be used again
-			// 	//r.DetachNetAttachDef(ctx, multusNetAttachDef, r.SwitchesNamespace)
+				fmt.Println(multusNetAttachDef)
+				// We liberate the specific attachment from the node, so it can be used again
+				r.DetachNetAttachDef(ctx, multusNetAttachDef, r.SwitchesNamespace)
 
-			// 	// We liberate the port in the onos app
-			// 	//r.InternalClient.DetachPodFromNetwork("vnet",multusNetAttachDef)
-			// }
+				// We liberate the port in the onos app
+				r.InternalClient.DetachPodFromNetwork("vnet", multusNetAttachDef)
+				fmt.Println("testeo")
+			}
 
 			// Remove our finalizer from the list and update it.
 			pod.SetFinalizers(utils.RemoveString(pod.GetFinalizers(), l2smFinalizer))

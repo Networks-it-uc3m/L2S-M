@@ -101,6 +101,7 @@ func (a *PodAnnotator) Handle(ctx context.Context, req admission.Request) admiss
 
 		// If there are no available network attachment definitions, we can't attach the pod to the desired networks
 		// So, we launch an error.
+		fmt.Println(a.SwitchesNamespace)
 		if len(netAttachDefs.Items) < len(l2NetAnnotations) {
 			msg := fmt.Sprintf("No interfaces available for node %s", pod.Spec.NodeName)
 			return patchErrorPod(req, pod, &log, msg)
