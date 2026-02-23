@@ -26,7 +26,9 @@ import (
 	"github.com/Networks-it-uc3m/L2S-M/internal/utils"
 	dp "github.com/Networks-it-uc3m/l2sm-switch/pkg/datapath"
 	"github.com/go-logr/logr"
+	nettypes "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -90,37 +92,68 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 		if utils.ContainsString(pod.GetFinalizers(), l2smFinalizer) {
 			logger.Info("L2S-M Pod deleted: detaching l2network")
 
-			// If the pod is being deleted, we should free the interface, both the net-attach-def crd and the openflow port.
-			// This is done for each interface in the pod.
-			multusAnnotations, ok := pod.Annotations[MULTUS_ANNOTATION_KEY]
-
-			if !ok {
-				logger.Error(nil, "Error detaching the pod from the network attachment definitions")
-			}
-
-			multusNetAttachDefinitions, err := extractNetworks(multusAnnotations, r.SwitchesNamespace)
-
-			if err != nil {
-				logger.Error(nil, "Error detaching the pod from the network attachment definitions")
-			}
-
-			fmt.Println("attach defs:")
-			fmt.Println(multusAnnotations)
-			for _, multusNetAttachDef := range multusNetAttachDefinitions {
-
-				fmt.Println(multusNetAttachDef)
-				// We liberate the specific attachment from the node, so it can be used again
-				r.DetachNetAttachDef(ctx, multusNetAttachDef, r.SwitchesNamespace)
-
-				// We liberate the port in the onos app
-				r.InternalClient.DetachPodFromNetwork("vnet", multusNetAttachDef)
-				fmt.Println("testeo")
-			}
-
-			// Remove our finalizer from the list and update it.
 			pod.SetFinalizers(utils.RemoveString(pod.GetFinalizers(), l2smFinalizer))
+			networkAnnotations, err := extractNetworks(pod.Annotations[L2SM_NETWORK_ANNOTATION], r.SwitchesNamespace)
+			if err != nil {
+				logger.Error(err, "l2 networks could not be extracted from the pod annotations during deletion", "pod", fmt.Sprintf("%s/%s", pod.Namespace, pod.Name))
+				return ctrl.Result{}, nil
+			}
+
+			multusAnnotations, ok := pod.Annotations[MULTUS_ANNOTATION_KEY]
+			if !ok {
+				logger.Error(nil, "pod is missing multus annotation during deletion", "pod", fmt.Sprintf("%s/%s", pod.Namespace, pod.Name))
+				return ctrl.Result{}, nil
+			}
+			multusNetAttachDefinitions, err := extractNetworks(multusAnnotations, r.SwitchesNamespace)
+			if err != nil {
+				logger.Error(err, "could not extract multus annotations during pod deletion", "pod", fmt.Sprintf("%s/%s", pod.Namespace, pod.Name))
+				return ctrl.Result{}, nil
+			}
+			if len(multusNetAttachDefinitions) != len(networkAnnotations) {
+				logger.Error(nil, "pod has mismatched l2sm and multus annotation counts during deletion", "pod", fmt.Sprintf("%s/%s", pod.Namespace, pod.Name), "l2smNetworks", len(networkAnnotations), "multusAttachments", len(multusNetAttachDefinitions))
+				return ctrl.Result{}, nil
+			}
+
+			ofID := fmt.Sprintf("of:%s", dp.GenerateID(dp.GetSwitchName(dp.DatapathParams{NodeName: pod.Spec.NodeName, ProviderName: l2smv1.OVERLAY_PROVIDER})))
+			netAttachDefLabel := NET_ATTACH_LABEL_PREFIX + pod.Spec.NodeName
+
+			for i := range networkAnnotations {
+				portNumber, err := utils.GetPortNumberFromNetAttachDef(multusNetAttachDefinitions[i].Name)
+				if err != nil {
+					logger.Error(err, "could not get port number from network attachment definition during pod deletion", "nad", multusNetAttachDefinitions[i].Name, "pod", fmt.Sprintf("%s/%s", pod.Namespace, pod.Name))
+					return ctrl.Result{}, nil
+				}
+				ofPort := fmt.Sprintf("%s/%s", ofID, portNumber)
+
+				if err := r.InternalClient.DetachPodFromNetwork("vnets", sdnclient.VnetPortPayload{NetworkId: networkAnnotations[i].Name, Port: []string{ofPort}}); err != nil {
+					logger.Error(err, "could not detach pod from network in SDN controller during deletion", "pod", fmt.Sprintf("%s/%s", pod.Namespace, pod.Name), "network", networkAnnotations[i].Name, "port", ofPort)
+					return ctrl.Result{}, nil
+				}
+
+				netAttachDef := &nettypes.NetworkAttachmentDefinition{}
+				err = r.Get(ctx, client.ObjectKey{Name: multusNetAttachDefinitions[i].Name, Namespace: r.SwitchesNamespace}, netAttachDef)
+				if err != nil {
+					if apierrors.IsNotFound(err) {
+						logger.Info("NetworkAttachmentDefinition not found during pod deletion cleanup", "nad", multusNetAttachDefinitions[i].Name, "namespace", r.SwitchesNamespace)
+						continue
+					}
+					logger.Error(err, "could not get network attachment definition during pod deletion", "nad", multusNetAttachDefinitions[i].Name, "namespace", r.SwitchesNamespace, "pod", fmt.Sprintf("%s/%s", pod.Namespace, pod.Name))
+					return ctrl.Result{}, nil
+				}
+
+				if netAttachDef.Labels == nil {
+					netAttachDef.Labels = map[string]string{}
+				}
+				netAttachDef.Labels[netAttachDefLabel] = "false"
+				if err := r.Update(ctx, netAttachDef); err != nil {
+					logger.Error(err, "could not update network attachment definition during pod deletion", "nad", netAttachDef.Name, "namespace", netAttachDef.Namespace, "pod", fmt.Sprintf("%s/%s", pod.Namespace, pod.Name))
+					return ctrl.Result{}, nil
+				}
+			}
+
 			if err := r.Update(ctx, pod); err != nil {
-				return ctrl.Result{}, err
+				logger.Error(err, "could not update pod to remove finalizer during deletion", "pod", fmt.Sprintf("%s/%s", pod.Namespace, pod.Name))
+				return ctrl.Result{}, nil
 			}
 			// Stop reconciliation as the item is being deleted
 			return ctrl.Result{}, nil
