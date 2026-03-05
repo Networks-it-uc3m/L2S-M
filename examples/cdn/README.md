@@ -111,7 +111,7 @@ kubectl describe l2network v-network-2
    - Enter the `content-server` pod and check its IP configuration.
      
 ```bash
-kubectl exec -it content-server /bin/bash  
+kubectl exec -it deployment/content-server -- /bin/bash  
 ```
 ```bash
 ip a s          # Show IP addresses
@@ -132,7 +132,7 @@ nginx           # Start the server
 
 To test the connectivity from the cdn server: 
 ```bash
-kubectl exec -it cdn-server /bin/bash   # Enter CDN-Server pod
+kubectl exec -it cdn-server -- /bin/bash   # Enter CDN-Server pod
 ```
 In the CDN pod, execute the following commands:
 
