@@ -116,7 +116,7 @@ func (c *InternalClient) AttachPodToNetwork(networkType l2smv1.NetworkType, conf
 	defer response.Body.Close()
 
 	if response.StatusCode != http.StatusNoContent {
-		return fmt.Errorf("failed to create network, status code: %d", response.StatusCode)
+		return fmt.Errorf("failed to attach pod, status code: %d", response.StatusCode)
 	}
 
 	return nil
@@ -136,7 +136,7 @@ func (c *InternalClient) DetachPodFromNetwork(networkType l2smv1.NetworkType, co
 	defer response.Body.Close()
 
 	if response.StatusCode != http.StatusNoContent {
-		return fmt.Errorf("failed to create network, status code: %d", response.StatusCode)
+		return fmt.Errorf("failed to detach pod from network, status code: %d", response.StatusCode)
 	}
 
 	return nil
