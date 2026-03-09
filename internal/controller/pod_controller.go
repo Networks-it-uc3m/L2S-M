@@ -125,9 +125,10 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 				}
 				ofPort := fmt.Sprintf("%s/%s", ofID, portNumber)
 
+				// if the pod is not attached in the first place, it means the controller has some desync. Just in case we let the code continue operating, as this
+				// doesnt affect the rest of the workflow. Probably should do a more robust reconciliation with the sdn controller in the future.
 				if err := r.InternalClient.DetachPodFromNetwork("vnets", sdnclient.VnetPortPayload{NetworkId: networkAnnotations[i].Name, Port: []string{ofPort}}); err != nil {
 					logger.Error(err, "could not detach pod from network in SDN controller during deletion", "pod", fmt.Sprintf("%s/%s", pod.Namespace, pod.Name), "network", networkAnnotations[i].Name, "port", ofPort)
-					return ctrl.Result{}, nil
 				}
 
 				netAttachDef := &nettypes.NetworkAttachmentDefinition{}
