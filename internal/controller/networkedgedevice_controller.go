@@ -86,7 +86,7 @@ func (r *NetworkEdgeDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		if !controllerutil.ContainsFinalizer(netEdgeDevice, l2smFinalizer) {
 
 			// we apply the defaults to this bad boy
-			err := applyNetworkEdgeDeviceDefaults(netEdgeDevice)
+			err := applyNetworkEdgeDeviceDefaults(ctx, r.Client, netEdgeDevice)
 			if err != nil {
 				return ctrl.Result{}, fmt.Errorf("failed to apply network edge device defaults: %w", err)
 			}
@@ -377,7 +377,7 @@ func constructConfigMapForNED(netEdgeDevice *l2smv1.NetworkEdgeDevice) (*corev1.
 	return configMap, nil
 }
 
-func applyNetworkEdgeDeviceDefaults(ned *l2smv1.NetworkEdgeDevice) error {
+func applyNetworkEdgeDeviceDefaults(ctx context.Context, c client.Client, ned *l2smv1.NetworkEdgeDevice) error {
 	if ned == nil {
 		return fmt.Errorf("ned is nil")
 	}
@@ -391,8 +391,46 @@ func applyNetworkEdgeDeviceDefaults(ned *l2smv1.NetworkEdgeDevice) error {
 	}
 
 	if ned.Spec.NodeConfig == nil {
-		ned.Spec.NodeConfig = &l2smv1.NodeConfigSpec{NodeName: "", IPAddress: ""}
+		nodeName, nodeIP, err := getControlPlaneNodeConfig(ctx, c)
+		if err != nil {
+			return err
+		}
+		ned.Spec.NodeConfig = &l2smv1.NodeConfigSpec{
+			NodeName:  nodeName,
+			IPAddress: nodeIP,
+		}
 	}
 
 	return nil
+}
+
+func getControlPlaneNodeConfig(ctx context.Context, c client.Client) (string, string, error) {
+	nodeList := &corev1.NodeList{}
+	if err := c.List(ctx, nodeList); err != nil {
+		return "", "", fmt.Errorf("failed to list nodes: %w", err)
+	}
+	for _, node := range nodeList.Items {
+		_, isControlPlane := node.Labels["node-role.kubernetes.io/control-plane"]
+		_, isMaster := node.Labels["node-role.kubernetes.io/master"]
+
+		if isControlPlane || isMaster {
+			ip, err := getNodeInternalIP(&node)
+			if err != nil {
+				return "", "", err
+			}
+			return node.Name, ip, nil
+		}
+	}
+
+	return "", "", fmt.Errorf("no control-plane node found")
+}
+
+func getNodeInternalIP(node *corev1.Node) (string, error) {
+	for _, addr := range node.Status.Addresses {
+		if addr.Type == corev1.NodeInternalIP && addr.Address != "" {
+			return addr.Address, nil
+		}
+	}
+
+	return "", fmt.Errorf("node %s does not have an internal IP address", node.Name)
 }
