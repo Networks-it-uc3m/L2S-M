@@ -78,6 +78,13 @@ func (r *NetworkEdgeDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
+	err := applyNetworkEdgeDeviceDefaults(ctx, r.Client, netEdgeDevice)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to apply network edge device defaults: %w", err)
+	}
+	if err := r.Update(ctx, netEdgeDevice); err != nil {
+		return ctrl.Result{}, err
+	}
 	// examine DeletionTimestamp to determine if object is under deletion
 	if netEdgeDevice.ObjectMeta.DeletionTimestamp.IsZero() {
 		// The object is not being deleted, so if it does not have our finalizer,
@@ -86,10 +93,6 @@ func (r *NetworkEdgeDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		if !controllerutil.ContainsFinalizer(netEdgeDevice, l2smFinalizer) {
 
 			// we apply the defaults to this bad boy
-			err := applyNetworkEdgeDeviceDefaults(ctx, r.Client, netEdgeDevice)
-			if err != nil {
-				return ctrl.Result{}, fmt.Errorf("failed to apply network edge device defaults: %w", err)
-			}
 			controllerutil.AddFinalizer(netEdgeDevice, l2smFinalizer)
 			if err := r.Update(ctx, netEdgeDevice); err != nil {
 				return ctrl.Result{}, err
@@ -345,6 +348,9 @@ func constructConfigMapForNED(netEdgeDevice *l2smv1.NetworkEdgeDevice) (*corev1.
 	neighbors := make([]string, len(netEdgeDevice.Spec.Neighbors))
 	for i, neighbor := range netEdgeDevice.Spec.Neighbors {
 		neighbors[i] = neighbor.Domain
+	}
+	if netEdgeDevice.Spec.NodeConfig == nil {
+		return nil, fmt.Errorf("node config is nil")
 	}
 	nedName := dp.GetSwitchName(dp.DatapathParams{NodeName: netEdgeDevice.Spec.NodeConfig.NodeName, ProviderName: netEdgeDevice.Spec.Provider.Name})
 
