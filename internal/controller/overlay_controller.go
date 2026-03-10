@@ -335,20 +335,20 @@ func (r *OverlayReconciler) createExternalResources(ctx context.Context, overlay
 		var method string
 		var config map[string]string
 
+		// if exporter metrics is set, we want ot export the metrics, else we are not building that thing
 		if overlay.Spec.Monitor.ExportMetrics != nil {
 			method = overlay.Spec.Monitor.ExportMetrics.Method
 			config = overlay.Spec.Monitor.ExportMetrics.Config
+			lpmExporter := lpminterface.NewExporter(method, overlay.Namespace, config)
+
+			// Build exporter resources. Disclaimer: exporter is the prometheus exporter that retrieves metric from the collector instances.
+			exporterDeployment, exporterConfig, exporterService, err := lpmExporter.BuildResources(overlay.Spec.Monitor.ExportMetrics.ServiceAccount, targets)
+			if err != nil {
+				return fmt.Errorf("failed to build monitoring resources: %w", err)
+			}
+			extResources = append(extResources, exporterDeployment, exporterConfig, exporterService)
 		}
 
-		lpmExporter := lpminterface.NewExporter(method, overlay.Namespace, config)
-
-		// Build exporter resources. Disclaimer: exporter is the prometheus exporter that retrieves metric from the collector instances.
-		// TODO: add service account in the iunstallation of the component for manipulating the cr
-		fmt.Println(overlay.Spec.Monitor)
-		exporterDeployment, exporterConfig, exporterService, err := lpmExporter.BuildResources(overlay.Spec.Monitor.ExportMetrics.ServiceAccount, targets)
-		if err != nil {
-			return fmt.Errorf("failed to build monitoring resources: %w", err)
-		}
 		collectorBuildOptions := lpminterface.CollectorBuildOptions{
 
 			SpreadFactor: &overlay.Spec.Monitor.SpreadFactor,
@@ -370,7 +370,6 @@ func (r *OverlayReconciler) createExternalResources(ctx context.Context, overlay
 		for _, cm := range monCMs {
 			extResources = append(extResources, cm)
 		}
-		extResources = append(extResources, exporterDeployment, exporterConfig, exporterService)
 	}
 
 	for _, obj := range extResources {

@@ -77,7 +77,7 @@ type MonitorSpec struct {
 	// +kubebuilder:default:="0.2"
 	SpreadFactor string `json:"spreadFactor,omitempty"`
 
-	ExportMetrics *ExportMetricSpec `json:"exportMetric"`
+	ExportMetrics *ExportMetricSpec `json:"exportMetric,omitempty"`
 
 	NetworkCIDR *string `json:"networkCIDR,omitempty"`
 	IpCIDR      *string `json:"ipCIDR,omitempty"`
