@@ -4857,9 +4857,7 @@ spec:
                     type: object
                 type: object
             required:
-            - nodeConfig
             - provider
-            - switchTemplate
             type: object
           status:
             description: NetworkEdgeDeviceStatus defines the observed state of NetworkEdgeDevice
@@ -9555,7 +9553,6 @@ spec:
                 type: object
             required:
             - provider
-            - switchTemplate
             type: object
           status:
             description: OverlayStatus defines the observed state of Overlay
@@ -10062,7 +10059,7 @@ spec:
           value: "8181"
         - name: DNS_PORT_NUMBER
           value: "30808"
-        image: alexdecb/l2sm-controller-manager:2.8.4
+        image: alexdecb/l2sm-controller-manager:2.8.5
         livenessProbe:
           httpGet:
             path: /healthz

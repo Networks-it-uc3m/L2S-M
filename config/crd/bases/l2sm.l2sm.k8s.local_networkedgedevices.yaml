@@ -4621,9 +4621,7 @@ spec:
                     type: object
                 type: object
             required:
-            - nodeConfig
             - provider
-            - switchTemplate
             type: object
           status:
             description: NetworkEdgeDeviceStatus defines the observed state of NetworkEdgeDevice
