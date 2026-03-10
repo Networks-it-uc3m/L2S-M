@@ -52,7 +52,7 @@ type OverlaySpec struct {
 	Topology *TopologySpec `json:"topology,omitempty"`
 
 	// Template describes the virtual switch pod that will be created.
-	SwitchTemplate *SwitchTemplateSpec `json:"switchTemplate"`
+	SwitchTemplate *SwitchTemplateSpec `json:"switchTemplate,omitempty"`
 
 	// Interface number specifies how many interfaces the switch should have predefined (if used with multus)
 	//+kubebuilder:default:value=10

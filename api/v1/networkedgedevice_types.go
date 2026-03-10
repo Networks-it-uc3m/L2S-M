@@ -105,13 +105,13 @@ type NetworkEdgeDeviceSpec struct {
 	Provider *ProviderSpec `json:"provider"`
 
 	// Node Configuration
-	NodeConfig *NodeConfigSpec `json:"nodeConfig"`
+	NodeConfig *NodeConfigSpec `json:"nodeConfig,omitempty"`
 
 	// Field exclusive to the multi-domain overlay type. If specified in other  types of overlays, the reosurce will launch an error and won't be created.
 	Neighbors []NeighborSpec `json:"neighbors,omitempty"`
 
 	// Template describes the virtual switch pod that will be created.
-	SwitchTemplate *SwitchTemplateSpec `json:"switchTemplate"`
+	SwitchTemplate *SwitchTemplateSpec `json:"switchTemplate,omitempty"`
 
 	// Monitor enables the performance measurement probing mechanism.
 	// If omitted, no metrics are collected.

@@ -25,6 +25,7 @@ import (
 	"github.com/Networks-it-uc3m/L2S-M/internal/env"
 	"github.com/Networks-it-uc3m/L2S-M/internal/lpminterface"
 	"github.com/Networks-it-uc3m/L2S-M/internal/sdnclient"
+	"github.com/Networks-it-uc3m/L2S-M/internal/talpainterface"
 	"github.com/Networks-it-uc3m/L2S-M/internal/utils"
 	nettypes "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -69,11 +70,12 @@ var setOwnerKeyOverlay = ".metadata.controller.overlay"
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.17.0/pkg/reconcile
 func (r *OverlayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 
+	var err error
 	log := log.FromContext(ctx)
 
 	overlay := &l2smv1.Overlay{}
 
-	if err := r.Get(ctx, req.NamespacedName, overlay); err != nil {
+	if err = r.Get(ctx, req.NamespacedName, overlay); err != nil {
 		// we'll ignore not-found errors, since they can't be fixed by an immediate
 		// requeue (we'll need to wait for a new notification), and we can get them
 		// on deleted requests.
@@ -87,9 +89,17 @@ func (r *OverlayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		// The object is not being deleted, so if it does not have our finalizer,
 		// then lets add the finalizer and update the object. This is equivalent
 		// to registering our finalizer.
+
 		if !controllerutil.ContainsFinalizer(overlay, l2smFinalizer) {
+
+			//if the object is new, we apply default fields in the first iteration
+			err = applyOverlayDefaults(overlay)
+			if err != nil {
+				return ctrl.Result{}, fmt.Errorf("failed to apply overlay defaults: %w", err)
+			}
+
 			controllerutil.AddFinalizer(overlay, l2smFinalizer)
-			if err := r.Update(ctx, overlay); err != nil {
+			if err = r.Update(ctx, overlay); err != nil {
 				return ctrl.Result{}, err
 			}
 			log.Info("Overlay created", "Overlay", overlay.Name)
@@ -99,7 +109,7 @@ func (r *OverlayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		// The object is being deleted
 		if controllerutil.ContainsFinalizer(overlay, l2smFinalizer) {
 			// our finalizer is present, so lets handle any external dependency
-			if err := r.deleteExternalResources(ctx, overlay); err != nil {
+			if err = r.deleteExternalResources(ctx, overlay); err != nil {
 				// if fail to delete the external dependency here, return with error
 				// so that it can be retried.
 				return ctrl.Result{}, err
@@ -108,7 +118,7 @@ func (r *OverlayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 			deleteMonitoringNetwork(overlay)
 			// remove our finalizer from the list and update it.
 			controllerutil.RemoveFinalizer(overlay, l2smFinalizer)
-			if err := r.Update(ctx, overlay); err != nil {
+			if err = r.Update(ctx, overlay); err != nil {
 				return ctrl.Result{}, err
 			}
 
@@ -119,13 +129,13 @@ func (r *OverlayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	}
 
 	var switchReplicaSets appsv1.ReplicaSetList
-	if err := r.List(ctx, &switchReplicaSets, client.InNamespace(req.Namespace), client.MatchingFields{setOwnerKeyOverlay: req.Name}); err != nil {
+	if err = r.List(ctx, &switchReplicaSets, client.InNamespace(req.Namespace), client.MatchingFields{setOwnerKeyOverlay: req.Name}); err != nil {
 		log.Error(err, "unable to list child ReplicaSets")
 		return ctrl.Result{}, err
 	}
 
 	if len(switchReplicaSets.Items) == 0 {
-		if err := r.createExternalResources(ctx, overlay); err != nil {
+		if err = r.createExternalResources(ctx, overlay); err != nil {
 			log.Error(err, "unable to create ReplicaSet")
 			return ctrl.Result{}, err
 		}
@@ -565,4 +575,20 @@ func (r *OverlayReconciler) buildNodeResources(overlay *l2smv1.Overlay, configMa
 	}
 
 	return replicaSets, services, nil
+}
+
+func applyOverlayDefaults(overlay *l2smv1.Overlay) error {
+	if overlay == nil {
+		return fmt.Errorf("overlay is nil")
+	}
+
+	if overlay.Spec.SwitchTemplate == nil {
+		template, err := talpainterface.DefaultSwitchTemplate(talpainterface.SwitchTemplateModeSPS)
+		if err != nil {
+			return err
+		}
+		overlay.Spec.SwitchTemplate = template
+	}
+
+	return nil
 }

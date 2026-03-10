@@ -23,6 +23,7 @@ import (
 
 	l2smv1 "github.com/Networks-it-uc3m/L2S-M/api/v1"
 	"github.com/Networks-it-uc3m/L2S-M/internal/lpminterface"
+	"github.com/Networks-it-uc3m/L2S-M/internal/talpainterface"
 	"github.com/Networks-it-uc3m/L2S-M/internal/utils"
 	talpav1 "github.com/Networks-it-uc3m/l2sm-switch/api/v1"
 	dp "github.com/Networks-it-uc3m/l2sm-switch/pkg/datapath"
@@ -83,6 +84,12 @@ func (r *NetworkEdgeDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		// then lets add the finalizer and update the object. This is equivalent
 		// to registering our finalizer.
 		if !controllerutil.ContainsFinalizer(netEdgeDevice, l2smFinalizer) {
+
+			// we apply the defaults to this bad boy
+			err := applyNetworkEdgeDeviceDefaults(netEdgeDevice)
+			if err != nil {
+				return ctrl.Result{}, fmt.Errorf("failed to apply network edge device defaults: %w", err)
+			}
 			controllerutil.AddFinalizer(netEdgeDevice, l2smFinalizer)
 			if err := r.Update(ctx, netEdgeDevice); err != nil {
 				return ctrl.Result{}, err
@@ -368,4 +375,24 @@ func constructConfigMapForNED(netEdgeDevice *l2smv1.NetworkEdgeDevice) (*corev1.
 		},
 	}
 	return configMap, nil
+}
+
+func applyNetworkEdgeDeviceDefaults(ned *l2smv1.NetworkEdgeDevice) error {
+	if ned == nil {
+		return fmt.Errorf("ned is nil")
+	}
+
+	if ned.Spec.SwitchTemplate == nil {
+		template, err := talpainterface.DefaultSwitchTemplate(talpainterface.SwitchTemplateModeNED)
+		if err != nil {
+			return err
+		}
+		ned.Spec.SwitchTemplate = template
+	}
+
+	if ned.Spec.NodeConfig == nil {
+		ned.Spec.NodeConfig = &l2smv1.NodeConfigSpec{NodeName: "", IPAddress: ""}
+	}
+
+	return nil
 }
