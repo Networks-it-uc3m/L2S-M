@@ -26,6 +26,7 @@ import (
 	l2smv1 "github.com/Networks-it-uc3m/L2S-M/api/v1"
 	"github.com/Networks-it-uc3m/L2S-M/internal/controller"
 	"github.com/Networks-it-uc3m/L2S-M/internal/env"
+	"github.com/Networks-it-uc3m/L2S-M/internal/monitoringnetwork"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -150,15 +151,17 @@ func main() {
 		os.Exit(1)
 	}
 	if err = (&controller.NetworkEdgeDeviceReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:                  mgr.GetClient(),
+		Scheme:                  mgr.GetScheme(),
+		MonitoringClientFactory: monitoringnetwork.DefaultClientFactory{},
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "NetworkEdgeDevice")
 		os.Exit(1)
 	}
 	if err = (&controller.OverlayReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:                  mgr.GetClient(),
+		Scheme:                  mgr.GetScheme(),
+		MonitoringClientFactory: monitoringnetwork.DefaultClientFactory{},
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Overlay")
 		os.Exit(1)
