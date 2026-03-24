@@ -222,6 +222,7 @@ func (r *NetworkEdgeDeviceReconciler) createExternalResources(ctx context.Contex
 			return fmt.Errorf("could not build monitoring resources. error: %w", err)
 		}
 		rs.Spec.Template.Spec.Containers = append(rs.Spec.Template.Spec.Containers, *monCont)
+		lpminterface.AddLPMConfigMapToSps(&rs.Spec.Template.Spec)
 		lpminterface.AttachCollectorConfigToReplicaSet(&rs.Spec.Template.Spec, rs.Name)
 		extResources = append(extResources, monCMs[0])
 	}
