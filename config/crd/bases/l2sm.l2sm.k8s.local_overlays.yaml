@@ -134,7 +134,6 @@ spec:
                       A higher value spreads execution more widely.
                     type: string
                 required:
-                - exportMetric
                 - metrics
                 type: object
               provider:
