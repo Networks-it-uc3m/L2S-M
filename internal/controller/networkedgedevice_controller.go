@@ -23,6 +23,7 @@ import (
 
 	l2smv1 "github.com/Networks-it-uc3m/L2S-M/api/v1"
 	"github.com/Networks-it-uc3m/L2S-M/internal/lpminterface"
+	"github.com/Networks-it-uc3m/L2S-M/internal/monitoringnetwork"
 	"github.com/Networks-it-uc3m/L2S-M/internal/talpainterface"
 	"github.com/Networks-it-uc3m/L2S-M/internal/utils"
 	talpav1 "github.com/Networks-it-uc3m/l2sm-switch/api/v1"
@@ -40,7 +41,8 @@ import (
 // NetworkEdgeDeviceReconciler reconciles a NetworkEdgeDevice object
 type NetworkEdgeDeviceReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
+	Scheme                  *runtime.Scheme
+	MonitoringClientFactory monitoringnetwork.ClientFactory
 }
 
 var (
@@ -103,6 +105,11 @@ func (r *NetworkEdgeDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	} else {
 		// The object is being deleted
 		if controllerutil.ContainsFinalizer(netEdgeDevice, l2smFinalizer) {
+			if netEdgeDevice.Spec.Monitor != nil {
+				if err := r.deleteMonitoringNetwork(netEdgeDevice); err != nil {
+					return ctrl.Result{}, err
+				}
+			}
 			// our finalizer is present, so lets handle any external dependency
 			// if err := r.deleteExternalResources(ctx, netEdgeDevice); err != nil {
 			// 	// if fail to delete the external dependency here, return with error
@@ -225,6 +232,10 @@ func (r *NetworkEdgeDeviceReconciler) createExternalResources(ctx context.Contex
 		lpminterface.AddLPMConfigMapToSps(&rs.Spec.Template.Spec)
 		lpminterface.AttachCollectorConfigToReplicaSet(&rs.Spec.Template.Spec, rs.Name)
 		extResources = append(extResources, monCMs[0])
+
+		if err := r.createMonitoringNetwork(netEdgeDevice); err != nil {
+			return fmt.Errorf("could not create monitoring network for network edge device: %w", err)
+		}
 	}
 
 	for _, obj := range extResources {
@@ -237,6 +248,34 @@ func (r *NetworkEdgeDeviceReconciler) createExternalResources(ctx context.Contex
 	}
 
 	return nil
+}
+
+func (r *NetworkEdgeDeviceReconciler) monitoringClientFactory() monitoringnetwork.ClientFactory {
+	if r.MonitoringClientFactory != nil {
+		return r.MonitoringClientFactory
+	}
+
+	return monitoringnetwork.DefaultClientFactory{}
+}
+
+func (r *NetworkEdgeDeviceReconciler) createMonitoringNetwork(ned *l2smv1.NetworkEdgeDevice) error {
+	client, err := r.monitoringClientFactory().ForProvider(ned.Spec.Provider)
+	if err != nil {
+		return err
+	}
+
+	manager := monitoringnetwork.Manager{Client: client}
+	return manager.Ensure(ned.Name, ned.Spec.Provider.Name, []string{ned.Spec.NodeConfig.NodeName})
+}
+
+func (r *NetworkEdgeDeviceReconciler) deleteMonitoringNetwork(ned *l2smv1.NetworkEdgeDevice) error {
+	client, err := r.monitoringClientFactory().ForProvider(ned.Spec.Provider)
+	if err != nil {
+		return err
+	}
+
+	manager := monitoringnetwork.Manager{Client: client}
+	return manager.Delete(ned.Name)
 }
 
 func constructReplicaSetforNED(netEdgeDevice *l2smv1.NetworkEdgeDevice, configmapName string) (*appsv1.ReplicaSet, error) {

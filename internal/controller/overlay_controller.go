@@ -22,9 +22,8 @@ import (
 	"time"
 
 	l2smv1 "github.com/Networks-it-uc3m/L2S-M/api/v1"
-	"github.com/Networks-it-uc3m/L2S-M/internal/env"
 	"github.com/Networks-it-uc3m/L2S-M/internal/lpminterface"
-	"github.com/Networks-it-uc3m/L2S-M/internal/sdnclient"
+	"github.com/Networks-it-uc3m/L2S-M/internal/monitoringnetwork"
 	"github.com/Networks-it-uc3m/L2S-M/internal/talpainterface"
 	"github.com/Networks-it-uc3m/L2S-M/internal/utils"
 	nettypes "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
@@ -43,7 +42,8 @@ import (
 // OverlayReconciler reconciles a Overlay object
 type OverlayReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
+	Scheme                  *runtime.Scheme
+	MonitoringClientFactory monitoringnetwork.ClientFactory
 }
 
 var setOwnerKeyOverlay = ".metadata.controller.overlay"
@@ -115,7 +115,11 @@ func (r *OverlayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 				return ctrl.Result{}, err
 			}
 
-			deleteMonitoringNetwork(overlay)
+			if overlay.Spec.Monitor != nil {
+				if err = r.deleteMonitoringNetwork(overlay); err != nil {
+					return ctrl.Result{}, err
+				}
+			}
 			// remove our finalizer from the list and update it.
 			controllerutil.RemoveFinalizer(overlay, l2smFinalizer)
 			if err = r.Update(ctx, overlay); err != nil {
@@ -141,10 +145,8 @@ func (r *OverlayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		}
 		log.Info("Overlay Launched")
 		if overlay.Spec.Monitor != nil {
-			err := createMonitoringNetwork(overlay)
-
-			if err != nil {
-				log.Error(err, "could not create a new client with the sdn controller")
+			if err = r.createMonitoringNetwork(overlay); err != nil {
+				log.Error(err, "could not create monitoring network")
 				return ctrl.Result{}, err
 			}
 		}
@@ -157,33 +159,6 @@ func (r *OverlayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	// }
 
 	return ctrl.Result{}, nil
-}
-func deleteMonitoringNetwork(overlay *l2smv1.Overlay) error {
-
-	clientConfig := sdnclient.ClientConfig{BaseURL: fmt.Sprintf("http://%s:%s/onos", env.GetControllerIP(), env.GetControllerPort()), Username: "karaf", Password: "karaf"}
-	internalClient, err := sdnclient.NewClient(sdnclient.InternalType, clientConfig)
-	if err != nil {
-		return fmt.Errorf("could not create a new client with the sdn controller. Error: %w", err)
-	}
-	lpmNetName := utils.GenerateLPMNetworkName(overlay.Name)
-	internalClient.DeleteNetwork(l2smv1.NetworkTypeVnet, lpmNetName)
-	return nil
-}
-func createMonitoringNetwork(overlay *l2smv1.Overlay) error {
-
-	clientConfig := sdnclient.ClientConfig{BaseURL: fmt.Sprintf("http://%s:%s/onos", env.GetControllerIP(), env.GetControllerPort()), Username: "karaf", Password: "karaf"}
-	internalClient, err := sdnclient.NewClient(sdnclient.InternalType, clientConfig)
-	if err != nil {
-		return fmt.Errorf("could not create a new client with the sdn controller. Error: %w", err)
-	}
-	lpmNetName := utils.GenerateLPMNetworkName(overlay.Name)
-	internalClient.CreateNetwork(l2smv1.NetworkTypeVnet, sdnclient.VnetPayload{NetworkId: lpmNetName})
-	lpmPorts := lpminterface.GenerateLPMPorts(overlay.Spec.Topology.Nodes, l2smv1.OVERLAY_PROVIDER)
-	err = internalClient.AttachPodToNetwork(l2smv1.NetworkTypeVnet, sdnclient.VnetPortPayload{NetworkId: lpmNetName, Port: lpmPorts})
-	if err != nil {
-		return fmt.Errorf("could not attach lpm pods to lpm network. Error: %w", err)
-	}
-	return nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -263,6 +238,34 @@ func (r *OverlayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&corev1.Service{}).
 		Owns(&nettypes.NetworkAttachmentDefinition{}).
 		Complete(r)
+}
+
+func (r *OverlayReconciler) monitoringClientFactory() monitoringnetwork.ClientFactory {
+	if r.MonitoringClientFactory != nil {
+		return r.MonitoringClientFactory
+	}
+
+	return monitoringnetwork.DefaultClientFactory{}
+}
+
+func (r *OverlayReconciler) createMonitoringNetwork(overlay *l2smv1.Overlay) error {
+	client, err := r.monitoringClientFactory().Internal()
+	if err != nil {
+		return err
+	}
+
+	manager := monitoringnetwork.Manager{Client: client}
+	return manager.Ensure(overlay.Name, l2smv1.OVERLAY_PROVIDER, overlay.Spec.Topology.Nodes)
+}
+
+func (r *OverlayReconciler) deleteMonitoringNetwork(overlay *l2smv1.Overlay) error {
+	client, err := r.monitoringClientFactory().Internal()
+	if err != nil {
+		return err
+	}
+
+	manager := monitoringnetwork.Manager{Client: client}
+	return manager.Delete(overlay.Name)
 }
 
 func (r *OverlayReconciler) deleteExternalResources(ctx context.Context, overlay *l2smv1.Overlay) error {
