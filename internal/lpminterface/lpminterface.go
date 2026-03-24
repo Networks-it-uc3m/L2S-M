@@ -15,10 +15,9 @@
 package lpminterface
 
 import (
+	"encoding/json"
 	"fmt"
 	"strconv"
-
-	"encoding/json"
 
 	"github.com/Networks-it-uc3m/L2S-M/internal/talpainterface"
 
@@ -100,16 +99,11 @@ type CollectorBuildOptions struct {
 }
 
 func GenerateLPMPorts(nodes []string, overlayProvider string) []string {
-
-	fmt.Println(len(nodes))
-	fmt.Println(nodes)
 	lpmPorts := make([]string, 0, len(nodes)) // len=0, cap=len(nodes)
 	for _, n := range nodes {
 		p := fmt.Sprintf("of:%s/%d", dp.GenerateID(dp.GetSwitchName(dp.DatapathParams{NodeName: n, ProviderName: overlayProvider})), talpav1.RESERVED_PROBE_ID)
 		lpmPorts = append(lpmPorts, p)
 	}
-	fmt.Println(len(lpmPorts))
-	fmt.Println(lpmPorts)
 	return lpmPorts
 }
 
