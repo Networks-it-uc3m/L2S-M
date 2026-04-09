@@ -29,7 +29,8 @@ type InternalClient struct {
 }
 
 type VnetPayload struct {
-	NetworkId string `json:"networkId"`
+	NetworkId  string `json:"networkId"`
+	MirrorPort string `json:"mirrorPort,omitempty"`
 }
 type VnetPortPayload struct {
 	NetworkId string   `json:"networkId"`
@@ -137,6 +138,26 @@ func (c *InternalClient) DetachPodFromNetwork(networkType l2smv1.NetworkType, co
 
 	if response.StatusCode != http.StatusNoContent {
 		return fmt.Errorf("failed to detach pod from network, status code: %d", response.StatusCode)
+	}
+
+	return nil
+}
+
+func (c *InternalClient) SetUpMirrorPort(networkType l2smv1.NetworkType, config any) error {
+
+	networkType = "vnets"
+	jsonData, err := json.Marshal(config)
+	if err != nil {
+		return err
+	}
+	response, err := c.Session.Post(fmt.Sprintf("/%s/api/mirror-port", networkType), jsonData)
+	if err != nil {
+		return err
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode != http.StatusNoContent {
+		return fmt.Errorf("failed to attach pod, status code: %d", response.StatusCode)
 	}
 
 	return nil

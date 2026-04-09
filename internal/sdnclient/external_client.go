@@ -111,3 +111,7 @@ func (c *ExternalClient) AttachPodToNetwork(networkType l2smv1.NetworkType, conf
 
 	return nil
 }
+
+func (c *ExternalClient) SetUpMirrorPort(networkType l2smv1.NetworkType, config any) error {
+	return fmt.Errorf("unimplemented")
+}
