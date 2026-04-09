@@ -87,6 +87,9 @@ type IdsRules struct {
 	// to improve performance or reduce false positives (BPF Filter generation).
 	// +optional
 	IgnorePorts []int32 `json:"ignorePorts,omitempty"`
+
+	// Node sets in which node of the cluster you are interested in setting the ids pod.
+	Node string `json:"node"`
 }
 
 // L2NetworkSpec defines the desired state of L2Network
