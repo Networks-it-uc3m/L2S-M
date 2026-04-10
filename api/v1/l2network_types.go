@@ -89,6 +89,7 @@ type IdsRules struct {
 	IgnorePorts []int32 `json:"ignorePorts,omitempty"`
 
 	// Node sets in which node of the cluster you are interested in setting the ids pod.
+	// todo: make optional, and choose control plane as default if none is chosen
 	Node string `json:"node"`
 }
 
