@@ -167,7 +167,19 @@ func (r *L2NetworkReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 		}
 
-		if network.Spec.Ids != nil {
+		if network.Spec.Ids != nil && network.Spec.Ids.Enabled {
+			netAttachDefLabel := NET_ATTACH_LABEL_PREFIX + network.Spec.Ids.Node
+			netAttachDefs := GetFreeNetAttachDefs(ctx, r.Client, r.SwitchesNamespace, network.Spec.Ids.Node)
+
+			if len(netAttachDefs.Items) == 0 {
+				err = errors.New("no interfaces available in control plane node")
+				//logger.Error(err, fmt.Sprintf("No interfaces available for node %s", gatewayNodeName))
+				return ctrl.Result{}, err
+			}
+			netAttachDef := &netAttachDefs.Items[0]
+			netAttachDef.Labels[netAttachDefLabel] = "true"
+			mirrorPortOFID := fmt.Sprintf("of:%s", dp.GenerateID(dp.GetSwitchName(dp.DatapathParams{NodeName: network.Spec.Ids.Node, ProviderName: l2smv1.OVERLAY_PROVIDER})))
+			r.InternalClient.SetUpMirrorPort(network.Spec.Type, sdnclient.VnetPortPayload{NetworkId: network.Name, Port: []string{mirrorPortOFID}})
 			resArray, err := ids.GenerateExternalResources(network.Spec.Ids)
 
 			if err != nil {
@@ -181,6 +193,11 @@ func (r *L2NetworkReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 				}
 
 				r.Client.Create(ctx, res)
+			}
+			err = r.Client.Update(ctx, netAttachDef)
+			if err != nil {
+				return ctrl.Result{}, fmt.Errorf("could not update network attachment definition: %s", err)
+
 			}
 		}
 	}
