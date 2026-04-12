@@ -22,6 +22,7 @@ import (
 	"net"
 	"net/http"
 
+	"github.com/Networks-it-uc3m/L2S-M/internal/networkannotation"
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
@@ -73,14 +74,14 @@ func (a *PodAnnotator) Handle(ctx context.Context, req admission.Request) admiss
 	}
 	// Check if the pod has the annotation l2sm/networks. This webhook operation only will happen if so. Else, it will just
 	// let the creation begin.
-	if annot, ok := pod.Annotations[L2SM_NETWORK_ANNOTATION]; ok {
-		if _, ok := pod.Annotations[MULTUS_ANNOTATION_KEY]; ok {
+	if annot, ok := pod.Annotations[networkannotation.L2SM_NETWORK_ANNOTATION]; ok {
+		if _, ok := pod.Annotations[networkannotation.MULTUS_ANNOTATION_KEY]; ok {
 			return admission.Allowed("Pod already using multus cni plugin")
 		}
-		netAttachDefLabel := NET_ATTACH_LABEL_PREFIX + pod.Spec.NodeName
+		netAttachDefLabel := networkannotation.NET_ATTACH_LABEL_PREFIX + pod.Spec.NodeName
 		// We extract which networks the user intends to attach the pod to. If there is any error, or the
 		// Networks aren't created, the pod will be set as errored, until a network is created.
-		l2NetAnnotations, err := extractNetworks(annot, a.SwitchesNamespace)
+		l2NetAnnotations, err := networkannotation.ExtractNetworks(annot, a.SwitchesNamespace)
 		if err != nil {
 			log.Error(err, "L2S-M Network annotations could not be extracted")
 			return admission.Errored(http.StatusInternalServerError, err)
@@ -96,7 +97,7 @@ func (a *PodAnnotator) Handle(ctx context.Context, req admission.Request) admiss
 
 		// We get the available network attachment definitions. These are interfaces attached to the switches, so
 		// by using labelling, we can know which interfaces the switch has.
-		var multusAnnotations []NetworkAnnotation
+		var multusAnnotations []networkannotation.NetworkAnnotation
 		netAttachDefs := GetFreeNetAttachDefs(ctx, a.Client, a.SwitchesNamespace, netAttachDefLabel)
 
 		// If there are no available network attachment definitions, we can't attach the pod to the desired networks
@@ -124,7 +125,7 @@ func (a *PodAnnotator) Handle(ctx context.Context, req admission.Request) admiss
 			netAttachDef := &netAttachDefs.Items[index]
 
 			// New annotation is the multus that will be attached to the pod
-			multusAnnotation := NetworkAnnotation{Name: netAttachDef.Name, Namespace: a.SwitchesNamespace}
+			multusAnnotation := networkannotation.NetworkAnnotation{Name: netAttachDef.Name, Namespace: a.SwitchesNamespace}
 
 			// If the user specified a static ip address, we will use that
 			if len(l2NetAnnot.IPAdresses) != 0 {
@@ -198,7 +199,7 @@ func (a *PodAnnotator) Handle(ctx context.Context, req admission.Request) admiss
 			}
 			multusAnnotations = append(multusAnnotations, multusAnnotation)
 		}
-		pod.Annotations[MULTUS_ANNOTATION_KEY] = multusAnnotationToString(multusAnnotations)
+		pod.Annotations[networkannotation.MULTUS_ANNOTATION_KEY] = networkannotation.MultusAnnotationToString(multusAnnotations)
 
 		// pod.Annotations["k8s.v1.cni.cncf.io/networks"] = `[{"name": "veth10","ips": ["10.0.0.1/24"]}]`
 		log.Info("Pod assigned to the l2networks")

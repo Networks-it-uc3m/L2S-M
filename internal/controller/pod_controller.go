@@ -22,6 +22,7 @@ import (
 	l2smv1 "github.com/Networks-it-uc3m/L2S-M/api/v1"
 	"github.com/Networks-it-uc3m/L2S-M/internal/dnsinterface"
 	"github.com/Networks-it-uc3m/L2S-M/internal/env"
+	"github.com/Networks-it-uc3m/L2S-M/internal/networkannotation"
 	"github.com/Networks-it-uc3m/L2S-M/internal/sdnclient"
 	"github.com/Networks-it-uc3m/L2S-M/internal/utils"
 	dp "github.com/Networks-it-uc3m/l2sm-switch/pkg/datapath"
@@ -72,11 +73,11 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 	}
 
 	// Check if the 'l2sm/network' annotation is present. If not, we are not interested in this pod.
-	if _, ok := pod.GetAnnotations()[L2SM_NETWORK_ANNOTATION]; !ok {
+	if _, ok := pod.GetAnnotations()[networkannotation.L2SM_NETWORK_ANNOTATION]; !ok {
 		return ctrl.Result{}, nil
 
 	}
-	if _, ok := pod.GetAnnotations()[MULTUS_ANNOTATION_KEY]; !ok {
+	if _, ok := pod.GetAnnotations()[networkannotation.MULTUS_ANNOTATION_KEY]; !ok {
 		// Check if the 'l2sm/error' annotation is present. If it is, we leave the pod as the warning is already done and we dont want to attach it
 		if msg, ok := pod.GetAnnotations()[ERROR_ANNOTATION]; ok {
 			CreateErrorEvent(ctx, r.Client, pod, msg, "NoInterfacesAvailable")
@@ -93,18 +94,18 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 			logger.Info("L2S-M Pod deleted: detaching l2network")
 
 			pod.SetFinalizers(utils.RemoveString(pod.GetFinalizers(), l2smFinalizer))
-			networkAnnotations, err := extractNetworks(pod.Annotations[L2SM_NETWORK_ANNOTATION], r.SwitchesNamespace)
+			networkAnnotations, err := networkannotation.ExtractNetworks(pod.Annotations[networkannotation.L2SM_NETWORK_ANNOTATION], r.SwitchesNamespace)
 			if err != nil {
 				logger.Error(err, "l2 networks could not be extracted from the pod annotations during deletion", "pod", fmt.Sprintf("%s/%s", pod.Namespace, pod.Name))
 				return ctrl.Result{}, nil
 			}
 
-			multusAnnotations, ok := pod.Annotations[MULTUS_ANNOTATION_KEY]
+			multusAnnotations, ok := pod.Annotations[networkannotation.MULTUS_ANNOTATION_KEY]
 			if !ok {
 				logger.Error(nil, "pod is missing multus annotation during deletion", "pod", fmt.Sprintf("%s/%s", pod.Namespace, pod.Name))
 				return ctrl.Result{}, nil
 			}
-			multusNetAttachDefinitions, err := extractNetworks(multusAnnotations, r.SwitchesNamespace)
+			multusNetAttachDefinitions, err := networkannotation.ExtractNetworks(multusAnnotations, r.SwitchesNamespace)
 			if err != nil {
 				logger.Error(err, "could not extract multus annotations during pod deletion", "pod", fmt.Sprintf("%s/%s", pod.Namespace, pod.Name))
 				return ctrl.Result{}, nil
@@ -115,7 +116,7 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 			}
 
 			ofID := fmt.Sprintf("of:%s", dp.GenerateID(dp.GetSwitchName(dp.DatapathParams{NodeName: pod.Spec.NodeName, ProviderName: l2smv1.OVERLAY_PROVIDER})))
-			netAttachDefLabel := NET_ATTACH_LABEL_PREFIX + pod.Spec.NodeName
+			netAttachDefLabel := networkannotation.NET_ATTACH_LABEL_PREFIX + pod.Spec.NodeName
 
 			for i := range networkAnnotations {
 				portNumber, err := utils.GetPortNumberFromNetAttachDef(multusNetAttachDefinitions[i].Name)
@@ -171,7 +172,7 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 		if err := r.Update(ctx, pod); err != nil {
 			return ctrl.Result{}, err
 		}
-		if _, ok := pod.GetAnnotations()[MULTUS_ANNOTATION_KEY]; !ok {
+		if _, ok := pod.GetAnnotations()[networkannotation.MULTUS_ANNOTATION_KEY]; !ok {
 			// Check if the 'l2sm/error' annotation is present. If it is, we leave the pod as the warning is already done and we dont want to attach it
 			if msg, ok := pod.GetAnnotations()[ERROR_ANNOTATION]; ok {
 				CreateErrorEvent(ctx, r.Client, pod, msg, "NoInterfacesAvailable")
@@ -183,7 +184,7 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 		logger.Info("L2S-M Pod created: attaching to l2network")
 
 		// We extract the network names and ip adresses desired for our pod.
-		networkAnnotations, err := extractNetworks(pod.Annotations[L2SM_NETWORK_ANNOTATION], r.SwitchesNamespace)
+		networkAnnotations, err := networkannotation.ExtractNetworks(pod.Annotations[networkannotation.L2SM_NETWORK_ANNOTATION], r.SwitchesNamespace)
 
 		// If there's an error, probably the user did input wrongfully the networks, in this case throw an error.
 		if err != nil {
@@ -205,7 +206,7 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 		}
 
 		// Add the pod interfaces to the sdn controller
-		multusAnnotations, ok := pod.Annotations[MULTUS_ANNOTATION_KEY]
+		multusAnnotations, ok := pod.Annotations[networkannotation.MULTUS_ANNOTATION_KEY]
 		// if ok {
 
 		// 	logger.Info(multusAnnotations)
@@ -218,7 +219,7 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 		}
 
 		// We get which interfaces are we using inside the pod, so we can later attach them to the sdn controller
-		multusNetAttachDefinitions, err := extractNetworks(multusAnnotations, r.SwitchesNamespace)
+		multusNetAttachDefinitions, err := networkannotation.ExtractNetworks(multusAnnotations, r.SwitchesNamespace)
 
 		// If there are not the same number of multus annotations as networks, we need to throw an error as we can't
 		// reach the desired state for the user.

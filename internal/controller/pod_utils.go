@@ -16,13 +16,13 @@ package controller
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"math/rand"
 	"net"
 	"strings"
 
 	l2smv1 "github.com/Networks-it-uc3m/L2S-M/api/v1"
+	"github.com/Networks-it-uc3m/L2S-M/internal/networkannotation"
 	"github.com/Networks-it-uc3m/L2S-M/internal/talpainterface"
 	nettypes "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -34,48 +34,11 @@ import (
 )
 
 const (
-	NET_ATTACH_LABEL_PREFIX = "used-"
-	L2SM_NETWORK_ANNOTATION = "l2sm/networks"
-	MULTUS_ANNOTATION_KEY   = "k8s.v1.cni.cncf.io/networks"
-	ERROR_ANNOTATION        = "l2sm/error"
-	L2SM_PODNAME_LABEL      = "l2sm/app"
+	ERROR_ANNOTATION   = "l2sm/error"
+	L2SM_PODNAME_LABEL = "l2sm/app"
 )
 
-type NetworkAnnotation struct {
-	Name       string   `json:"name"`
-	Namespace  string   `json:"namespace,omitempty"`
-	IPAdresses []string `json:"ips,omitempty"`
-	IfName     string   `json:"ifname,omitempty"`
-}
-
-func extractNetworks(annotations, namespace string) ([]NetworkAnnotation, error) {
-
-	var networks []NetworkAnnotation
-	err := json.Unmarshal([]byte(annotations), &networks)
-	if err != nil {
-		// If unmarshalling fails, treat as comma-separated list
-		names := strings.Split(annotations, ",")
-
-		for _, name := range names {
-			name = strings.TrimSpace(name)
-			if name != "" {
-				networks = append(networks, NetworkAnnotation{Name: name})
-			}
-		}
-	}
-
-	// Iterate over the networks to add the namespace
-	for i := range networks {
-		// if len(networks[i].IPAdresses) == 0 {
-		// 	// Call GenerateIPv6Address if IPAddresses are missing
-		// 	networks[i].GenerateIPv6Address()
-		// }
-		networks[i].Namespace = namespace
-	}
-	return networks, nil
-}
-
-func GetL2Networks(ctx context.Context, c client.Client, networks []NetworkAnnotation) ([]l2smv1.L2Network, error) {
+func GetL2Networks(ctx context.Context, c client.Client, networks []networkannotation.NetworkAnnotation) ([]l2smv1.L2Network, error) {
 	// List all L2Networks
 	l2Networks := &l2smv1.L2NetworkList{}
 	if err := c.List(ctx, l2Networks); err != nil {
@@ -102,7 +65,7 @@ func GetL2Networks(ctx context.Context, c client.Client, networks []NetworkAnnot
 }
 
 // TODO: join methods together
-func GetL2NetworksMap(ctx context.Context, c client.Client, networks []NetworkAnnotation) (map[string]l2smv1.L2Network, error) {
+func GetL2NetworksMap(ctx context.Context, c client.Client, networks []networkannotation.NetworkAnnotation) (map[string]l2smv1.L2Network, error) {
 	// List all L2Networks
 	result := make(map[string]l2smv1.L2Network)
 	l2Networks := &l2smv1.L2NetworkList{}
@@ -149,30 +112,7 @@ func GetFreeNetAttachDefs(ctx context.Context, c client.Client, switchesNamespac
 
 }
 
-func (network *NetworkAnnotation) GenerateIPv6Address() {
-
-	// Generating the interface ID (64 bits)
-	interfaceID := rand.Uint64()
-
-	// Formatting to a 16 character hexadecimal string
-	interfaceIDHex := fmt.Sprintf("%016x", interfaceID)
-
-	// Constructing the full IPv6 address in the fe80::/64 range
-	ipv6Address := fmt.Sprintf("fe80::%s:%s:%s:%s/64",
-		interfaceIDHex[:4], interfaceIDHex[4:8], interfaceIDHex[8:12], interfaceIDHex[12:])
-
-	network.IPAdresses = append(network.IPAdresses, ipv6Address)
-
-}
-func multusAnnotationToString(multusAnnotations []NetworkAnnotation) string {
-	jsonData, err := json.Marshal(multusAnnotations)
-	if err != nil {
-		return ""
-	}
-	return string(jsonData)
-}
-
-func (r *PodReconciler) DetachNetAttachDef(ctx context.Context, multusNetAttachDef NetworkAnnotation, namespace string) error {
+func (r *PodReconciler) DetachNetAttachDef(ctx context.Context, multusNetAttachDef networkannotation.NetworkAnnotation, namespace string) error {
 
 	netAttachDef := &nettypes.NetworkAttachmentDefinition{}
 	err := r.Get(ctx, client.ObjectKey{

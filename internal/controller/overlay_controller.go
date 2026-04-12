@@ -24,6 +24,7 @@ import (
 	l2smv1 "github.com/Networks-it-uc3m/L2S-M/api/v1"
 	"github.com/Networks-it-uc3m/L2S-M/internal/lpminterface"
 	"github.com/Networks-it-uc3m/L2S-M/internal/monitoringnetwork"
+	"github.com/Networks-it-uc3m/L2S-M/internal/networkannotation"
 	"github.com/Networks-it-uc3m/L2S-M/internal/talpainterface"
 	"github.com/Networks-it-uc3m/L2S-M/internal/utils"
 	nettypes "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
@@ -538,7 +539,7 @@ func (r *OverlayReconciler) buildNodeResources(overlay *l2smv1.Overlay, configMa
 					ObjectMeta: metav1.ObjectMeta{
 						Labels: map[string]string{"app": name},
 						Annotations: map[string]string{
-							MULTUS_ANNOTATION_KEY: switchInterfacesAnnotations,
+							networkannotation.MULTUS_ANNOTATION_KEY: switchInterfacesAnnotations,
 						},
 					},
 					Spec: corev1.PodSpec{

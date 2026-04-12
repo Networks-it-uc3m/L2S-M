@@ -31,6 +31,7 @@ import (
 	"github.com/Networks-it-uc3m/L2S-M/internal/dnsinterface"
 	"github.com/Networks-it-uc3m/L2S-M/internal/env"
 	"github.com/Networks-it-uc3m/L2S-M/internal/ids"
+	"github.com/Networks-it-uc3m/L2S-M/internal/networkannotation"
 	"github.com/Networks-it-uc3m/L2S-M/internal/sdnclient"
 	"github.com/Networks-it-uc3m/L2S-M/internal/talpainterface"
 	"github.com/Networks-it-uc3m/L2S-M/internal/utils"
@@ -168,8 +169,8 @@ func (r *L2NetworkReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		}
 
 		if network.Spec.Ids != nil && network.Spec.Ids.Enabled {
-			netAttachDefLabel := NET_ATTACH_LABEL_PREFIX + network.Spec.Ids.Node
-			netAttachDefs := GetFreeNetAttachDefs(ctx, r.Client, r.SwitchesNamespace, network.Spec.Ids.Node)
+			netAttachDefLabel := networkannotation.NET_ATTACH_LABEL_PREFIX + network.Spec.Ids.Node
+			netAttachDefs := GetFreeNetAttachDefs(ctx, r.Client, r.SwitchesNamespace, netAttachDefLabel)
 
 			if len(netAttachDefs.Items) == 0 {
 				err = errors.New("no interfaces available in control plane node")
@@ -296,7 +297,7 @@ func (r *L2NetworkReconciler) ConnectInternalSwitchToNED(ctx context.Context, ne
 
 	// We get a free interface in the node name of the NED, this way we can interconnect the NED with the l2sm switch
 	var err error
-	netAttachDefLabel := NET_ATTACH_LABEL_PREFIX + nedNodeName
+	netAttachDefLabel := networkannotation.NET_ATTACH_LABEL_PREFIX + nedNodeName
 	netAttachDefs := GetFreeNetAttachDefs(ctx, r.Client, r.SwitchesNamespace, netAttachDefLabel)
 
 	if len(netAttachDefs.Items) == 0 {
