@@ -44,3 +44,10 @@ func GenerateServiceName(switchPodName string) string {
 func GenerateLPMNetworkName(overlayName string) string {
 	return fmt.Sprintf("lpm-%s", overlayName)
 }
+
+func GenerateIdsCMName(networkName string) string {
+	return fmt.Sprintf("%s-ids-cm", networkName)
+}
+func GenerateIdsDeployname(networkName string) string {
+	return fmt.Sprintf("%s-ids", networkName)
+}
