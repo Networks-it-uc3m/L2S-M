@@ -128,8 +128,8 @@ func (a *PodAnnotator) Handle(ctx context.Context, req admission.Request) admiss
 			multusAnnotation := networkannotation.NetworkAnnotation{Name: netAttachDef.Name, Namespace: a.SwitchesNamespace}
 
 			// If the user specified a static ip address, we will use that
-			if len(l2NetAnnot.IPAdresses) != 0 {
-				assignIPAddr = l2NetAnnot.IPAdresses
+			if len(l2NetAnnot.IPAddresses) != 0 {
+				assignIPAddr = l2NetAnnot.IPAddresses
 			} else {
 
 				// Else, we check if the l2network has a l3 config or not
@@ -167,13 +167,13 @@ func (a *PodAnnotator) Handle(ctx context.Context, req admission.Request) admiss
 
 			// If there is ipv4, we update the multus annotation and network to notify the new ip and pod
 			if len(assignIPAddr) != 0 {
-				multusAnnotation.IPAdresses = assignIPAddr
+				multusAnnotation.IPAddresses = assignIPAddr
 				if network.Status.AssignedIPs == nil {
 					network.Status.AssignedIPs = make(map[string]string)
 				}
 
 				// Now safely assign the IP to the pod
-				assignedIPAddress, _, _ := net.ParseCIDR(multusAnnotation.IPAdresses[0])
+				assignedIPAddress, _, _ := net.ParseCIDR(multusAnnotation.IPAddresses[0])
 				network.Status.AssignedIPs[assignedIPAddress.String()] = pod.Name
 
 			} else {

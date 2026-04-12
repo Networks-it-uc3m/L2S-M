@@ -260,7 +260,7 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 				if appName, ok := pod.GetLabels()[L2SM_PODNAME_LABEL]; ok {
 					podName = appName
 				}
-				if err = CreateDNSEntry(&network, podName, multusNetAttachDefinitions[index].IPAdresses[0]); err != nil {
+				if err = CreateDNSEntry(&network, podName, multusNetAttachDefinitions[index].IPAddresses[0]); err != nil {
 					logger.Error(err, "could not add dns entry")
 				}
 				logger.Info("Connected pod to inter-domain network")

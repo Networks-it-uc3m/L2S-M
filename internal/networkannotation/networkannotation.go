@@ -14,10 +14,10 @@ const (
 )
 
 type NetworkAnnotation struct {
-	Name       string   `json:"name"`
-	Namespace  string   `json:"namespace,omitempty"`
-	IPAdresses []string `json:"ips,omitempty"`
-	IfName     string   `json:"ifname,omitempty"`
+	Name        string   `json:"name"`
+	Namespace   string   `json:"namespace,omitempty"`
+	IPAddresses []string `json:"ips,omitempty"`
+	IfName      string   `json:"ifname,omitempty"`
 }
 
 func MultusAnnotationToString(multusAnnotations []NetworkAnnotation) string {
@@ -46,7 +46,7 @@ func ExtractNetworks(annotations, namespace string) ([]NetworkAnnotation, error)
 
 	// Iterate over the networks to add the namespace
 	for i := range networks {
-		// if len(networks[i].IPAdresses) == 0 {
+		// if len(networks[i].IPAddresses) == 0 {
 		// 	// Call GenerateIPv6Address if IPAddresses are missing
 		// 	networks[i].GenerateIPv6Address()
 		// }
@@ -67,6 +67,6 @@ func (network *NetworkAnnotation) GenerateIPv6Address() {
 	ipv6Address := fmt.Sprintf("fe80::%s:%s:%s:%s/64",
 		interfaceIDHex[:4], interfaceIDHex[4:8], interfaceIDHex[8:12], interfaceIDHex[12:])
 
-	network.IPAdresses = append(network.IPAdresses, ipv6Address)
+	network.IPAddresses = append(network.IPAddresses, ipv6Address)
 
 }
