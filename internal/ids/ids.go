@@ -20,21 +20,34 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	// Assuming your types are in this package
 	l2smv1 "github.com/Networks-it-uc3m/L2S-M/api/v1"
+	"github.com/Networks-it-uc3m/L2S-M/internal/networkannotation"
+	"github.com/Networks-it-uc3m/L2S-M/internal/utils"
 )
 
-// GenerateExternalResources orchestrates the creation of the ConfigMap and Deployment
-func GenerateExternalResources(idsRules *l2smv1.IdsRules) ([]client.Object, error) {
+// GenerateExternalResources orchestrates the creation of the ConfigMap and Deployment.
+func GenerateExternalResources(network *l2smv1.L2Network, netAttachString string) ([]client.Object, error) {
+	if network == nil {
+		return nil, fmt.Errorf("network is nil")
+	}
+	if network.Spec.Ids == nil {
+		return nil, fmt.Errorf("ids configuration is nil")
+	}
+
 	resArray := []client.Object{}
 
+	// if a namespace was specified, we use it. if none was, we use the network namespace
+	namespace := network.Spec.Ids.Namespace
+	if namespace == "" {
+		namespace = network.Namespace
+	}
 	// 1. Create the ConfigMap containing the rules
 	// We pass the custom sources defined in the CR
-	cm, err := constructConfigMap(idsRules.CustomRuleSources)
+	cm, err := constructConfigMap(network, namespace)
 	if err != nil {
 		return nil, fmt.Errorf("failed to construct configmap: %w", err)
 	}
@@ -42,16 +55,24 @@ func GenerateExternalResources(idsRules *l2smv1.IdsRules) ([]client.Object, erro
 
 	// 2. Create the Suricata Deployment
 	// We pass the ConfigMap name AND the custom sources so we can mount the refs
-	suri := generateSuricataDeployment(cm.Name, idsRules.CustomRuleSources)
+	suri := generateSuricataDeployment(network.Spec.Ids, network.Name, netAttachString, namespace)
 	resArray = append(resArray, suri)
 
 	return resArray, nil
 }
 
 // constructConfigMap aggregates rules and creates the K8s object
-func constructConfigMap(customRuleSources []l2smv1.IDSRuleSource) (*corev1.ConfigMap, error) {
+func constructConfigMap(network *l2smv1.L2Network, namespace string) (*corev1.ConfigMap, error) {
 	var rulesBuilder strings.Builder
-
+	idsRules := network.Spec.Ids
+	customRuleSources := idsRules.CustomRuleSources
+	homeNetCIDR := idsRules.HomeNetCIDR
+	if len(homeNetCIDR) == 0 {
+		rulesBuilder.WriteString("var HOME_NET any\n")
+	} else {
+		rulesBuilder.WriteString(fmt.Sprintf("var HOME_NET [%s]\n", strings.Join(homeNetCIDR, ",")))
+	}
+	rulesBuilder.WriteString("var EXTERNAL_NET !$HOME_NET\n")
 	rulesBuilder.WriteString(`
 # ---------------------------------------------------------------------------
 # SYN SCAN DETECTION
@@ -121,8 +142,8 @@ alert tcp $EXTERNAL_NET any -> any any (msg:"Possible XMAS Scan attempt from int
 			APIVersion: "v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "suricata-rules-cfg",
-			Namespace: "default",
+			Name:      utils.GenerateIdsCMName(network.Name),
+			Namespace: namespace,
 		},
 		Data: map[string]string{
 			"suricata.rules": rulesBuilder.String(),
@@ -133,12 +154,14 @@ alert tcp $EXTERNAL_NET any -> any any (msg:"Possible XMAS Scan attempt from int
 }
 
 // generateSuricataDeployment creates the deployment definition
-func generateSuricataDeployment(generatedConfigMapName string, customRuleSources []l2smv1.IDSRuleSource) *appsv1.Deployment {
+func generateSuricataDeployment(idsRules *l2smv1.IdsRules, networkName, netAttachAnnotation, namespace string) *appsv1.Deployment {
 	replicas := int32(1)
-	labels := map[string]string{"app": "suricata-ids"}
+	labels := map[string]string{
+		"app":            "suricata-ids",
+		"l2sm/component": "ids",
+	}
 
 	// This makes sure the Pod runs as Root to allow packet capture capabilities
-	// or you can use specific Capabilities like NET_ADMIN + NET_RAW
 	privileged := true
 
 	// Construct the Projected Volume Sources
@@ -148,14 +171,14 @@ func generateSuricataDeployment(generatedConfigMapName string, customRuleSources
 		{
 			ConfigMap: &corev1.ConfigMapProjection{
 				LocalObjectReference: corev1.LocalObjectReference{
-					Name: generatedConfigMapName,
+					Name: utils.GenerateIdsCMName(networkName),
 				},
 			},
 		},
 	}
 
 	// Add any user-provided ConfigMapRefs to the volume projection
-	for _, source := range customRuleSources {
+	for _, source := range idsRules.CustomRuleSources {
 		if source.ConfigMapRef != nil {
 			projectedSources = append(projectedSources, corev1.VolumeProjection{
 				ConfigMap: &corev1.ConfigMapProjection{
@@ -171,8 +194,8 @@ func generateSuricataDeployment(generatedConfigMapName string, customRuleSources
 			APIVersion: "apps/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "suricata-ids",
-			Namespace: "default",
+			Name:      utils.GenerateIdsDeployname(networkName),
+			Namespace: namespace,
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: &replicas,
@@ -183,12 +206,7 @@ func generateSuricataDeployment(generatedConfigMapName string, customRuleSources
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: labels,
 					Annotations: map[string]string{
-						"k8s.v1.cni.cncf.io/networks": `[
-                            {
-                                "name": "overlay-sample-veth10",
-                                "ips": ["192.168.0.1/24"]
-                            }
-                        ]`,
+						networkannotation.MULTUS_ANNOTATION_KEY: netAttachAnnotation,
 					},
 				},
 				Spec: corev1.PodSpec{
@@ -197,12 +215,11 @@ func generateSuricataDeployment(generatedConfigMapName string, customRuleSources
 							Name:  "suricata",
 							Image: "jasonish/suricata:latest",
 							// Command args to listen specifically on the Multus interface (net1)
-							// New Args: Run Suricata in the background, then tail the log file to stdout
 							Command: []string{"/bin/bash", "-c"},
 							Args: []string{
 								// Start Suricata as a background process (&)
 								// Then tail the log file so it streams to the container's stdout
-								"suricata -D -i net1 && touch /var/log/suricata/fast.log && tail -f /var/log/suricata/fast.log -s 1 ---disable-inotify",
+								"suricata -D -i net1 -S /var/lib/suricata/rules/suricata.rules && touch /var/log/suricata/fast.log && tail -f /var/log/suricata/fast.log -s 1 --disable-inotify",
 							},
 							SecurityContext: &corev1.SecurityContext{
 								// Suricata needs privileges to capture packets
@@ -220,7 +237,7 @@ func generateSuricataDeployment(generatedConfigMapName string, customRuleSources
 							},
 						},
 					},
-					NodeName: "l2sm-test-control-plane",
+					NodeName: idsRules.Node,
 					Volumes: []corev1.Volume{
 						{
 							Name: "rules-volume",
@@ -235,11 +252,4 @@ func generateSuricataDeployment(generatedConfigMapName string, customRuleSources
 			},
 		},
 	}
-}
-
-// Helper to parse resource quantities cleanly
-func parseQuantity(q string) resource.Quantity {
-	// Requires "k8s.io/apimachinery/pkg/api/resource"
-	val, _ := resource.ParseQuantity(q)
-	return val
 }
