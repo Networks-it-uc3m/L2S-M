@@ -70,7 +70,7 @@ type IdsRules struct {
 	Enabled bool `json:"enabled"`
 
 	// HomeNetCIDR overrides the SURICATA $HOME_NET variable.
-	// If empty, the controller should default this to the L2Network's NetworkCIDR.
+	// If empty,will default to "any"
 	// +optional
 	HomeNetCIDR []string `json:"homeNetCidr,omitempty"`
 
@@ -91,6 +91,14 @@ type IdsRules struct {
 	// Node sets in which node of the cluster you are interested in setting the ids pod.
 	// todo: make optional, and choose control plane as default if none is chosen
 	Node string `json:"node"`
+
+	// profile is for various profiles and ids systems. So far we only have "suricata", so any other
+	// should be implemented beforehand in the codebase
+	Profile string `json:"profile"`
+
+	// namespace sets the namespace where the ids resources will be deployed. if not set, it will be the overlay
+	// by default.
+	Namespace string `json:"namespace,omitempty"`
 }
 
 // L2NetworkSpec defines the desired state of L2Network
