@@ -203,6 +203,12 @@ func (r *L2NetworkReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 				return ctrl.Result{}, fmt.Errorf("could not set up mirror port for IDS on network %q: %w", network.Name, err)
 			}
 
+			// we generate the network attachment definition annotation, so that multus appends this interface to the ids pod (not yet specified, that will come later)
+			netAnnot := networkannotation.NetworkAnnotation{Name: netAttachDef.Name, Namespace: netAttachDef.Namespace}
+			netAnnotString := networkannotation.MultusAnnotationToString([]networkannotation.NetworkAnnotation{netAnnot})
+
+			// generate resources. in total we get a configmap with the rules and a deployment
+			resArray, err := ids.GenerateExternalResources(network, netAnnotString)
 
 			if err != nil {
 				logger.Error(err, "error creating intrusion detecion system resources")
