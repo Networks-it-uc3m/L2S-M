@@ -227,32 +227,6 @@ func (r *L2NetworkReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		}
 	}
 
-	// exists, err := r.InternalClient.CheckNetworkExists(network.Spec.Type, network.Name)
-	// if err != nil {
-	// 	logger.Error(err, "failed to check network existence")
-	// 	// Update the status to Unknown due to connection issues
-
-	// 	// Update the status in the Kubernetes API
-	// 	r.updateControllerStatus(ctx, network, l2smv1.UnknownStatus)
-	// 	return ctrl.Result{}, err
-	// }
-
-	// if !exists {
-	// 	err := r.InternalClient.CreateNetwork(network.Spec.Type, sdnclient.VnetPayload{NetworkId: network.Name})
-	// 	if err != nil {
-	// 		logger.Error(err, "failed to create network")
-	// 		r.updateControllerStatus(ctx, network, l2smv1.OfflineStatus)
-
-	// 		return ctrl.Result{}, err
-	// 	}
-	// 	logger.Info("Network created in SDN controller", "NetworkID", network.Name)
-	// } else {
-	// 	logger.Info("Network already exists in SDN controller, no action needed", "NetworkID", network.Name)
-	// }
-	// if statusUpdateErr := r.updateControllerStatus(ctx, network, l2smv1.OnlineStatus); statusUpdateErr != nil {
-	// 	logger.Error(statusUpdateErr, "unable to update L2Network provider status")
-	// 	return ctrl.Result{}, statusUpdateErr
-	// }
 	return ctrl.Result{}, nil
 }
 
