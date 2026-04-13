@@ -168,20 +168,41 @@ func (r *L2NetworkReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 		}
 
+		// we check if intrusion detection system is set and true. if not, we skip this part
 		if network.Spec.Ids != nil && network.Spec.Ids.Enabled {
+
+			// first lets use a network attachment definition for our new ids pod. IDS in l2sm relies on traffic duplicated through the ovs switches
+			// so we need a multus interface where all network traffic will be sent to.
+			// note: the node is important as it will specify which node to get a free net attach def from
 			netAttachDefLabel := networkannotation.NET_ATTACH_LABEL_PREFIX + network.Spec.Ids.Node
 			netAttachDefs := GetFreeNetAttachDefs(ctx, r.Client, r.SwitchesNamespace, netAttachDefLabel)
 
+			// no interfaces means no monitoring for us
 			if len(netAttachDefs.Items) == 0 {
 				err = errors.New("no interfaces available in control plane node")
 				//logger.Error(err, fmt.Sprintf("No interfaces available for node %s", gatewayNodeName))
+
+				//todo: check if we should handle this differently. pending to test this case... should we continue but just with no monitoring and give back an error? by this
+				// point there is already some stuff we have created, and we would need to delete it...
 				return ctrl.Result{}, err
 			}
+
+			// we get a free attach definition from the node we chose. the first one, we just need one
 			netAttachDef := &netAttachDefs.Items[0]
+
+			// we specify that we are keeping this network attachment definition in the spec node by configuring to true
+			if netAttachDef.Labels == nil {
+				netAttachDef.Labels = map[string]string{}
+			}
 			netAttachDef.Labels[netAttachDefLabel] = "true"
+
+			// we generate the openflow id from this networkattach def + switch in the node. this way we can tell the network that we want to mirror to this new port
+
 			mirrorPortOFID := fmt.Sprintf("of:%s", dp.GenerateID(dp.GetSwitchName(dp.DatapathParams{NodeName: network.Spec.Ids.Node, ProviderName: l2smv1.OVERLAY_PROVIDER})))
-			r.InternalClient.SetUpMirrorPort(network.Spec.Type, sdnclient.VnetPortPayload{NetworkId: network.Name, Port: []string{mirrorPortOFID}})
-			resArray, err := ids.GenerateExternalResources(network.Spec.Ids)
+			if err := r.InternalClient.SetUpMirrorPort(network.Spec.Type, sdnclient.VnetPortPayload{NetworkId: network.Name, Port: []string{mirrorPortOFID}}); err != nil {
+				return ctrl.Result{}, fmt.Errorf("could not set up mirror port for IDS on network %q: %w", network.Name, err)
+			}
+
 
 			if err != nil {
 				logger.Error(err, "error creating intrusion detecion system resources")
@@ -189,12 +210,15 @@ func (r *L2NetworkReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 			}
 			for _, res := range resArray {
 
+				// we set ownership to our new resources so that when deleting the network, these resources will go with it
 				if err := controllerutil.SetControllerReference(network, res, r.Scheme); err != nil {
 					return ctrl.Result{}, nil
 				}
 
+				// create ids deploy + configmap in the k8s cluster
 				r.Client.Create(ctx, res)
 			}
+			// if everything went as expected, we update the network attachment definition with the used label, so that we dontr try using it again
 			err = r.Client.Update(ctx, netAttachDef)
 			if err != nil {
 				return ctrl.Result{}, fmt.Errorf("could not update network attachment definition: %s", err)
