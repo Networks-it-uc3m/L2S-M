@@ -198,14 +198,21 @@ func (r *L2NetworkReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 			netAttachDef.Labels[netAttachDefLabel] = "true"
 
 			// we generate the openflow id from this networkattach def + switch in the node. this way we can tell the network that we want to mirror to this new port
+			portNumber, err := utils.GetPortNumberFromNetAttachDef(netAttachDef.Name)
+			if err != nil {
+				// If there is an error, it must be that the name is not compliant, so we can't be certain of which
+				// port we are trying to attach.
+				return ctrl.Result{}, fmt.Errorf("could not get port number from the multus network annotation: %v. Can't attach pod to network", err)
+			}
 
-			mirrorPortOFID := fmt.Sprintf("of:%s", dp.GenerateID(dp.GetSwitchName(dp.DatapathParams{NodeName: network.Spec.Ids.Node, ProviderName: l2smv1.OVERLAY_PROVIDER})))
-			if err := r.InternalClient.SetUpMirrorPort(network.Spec.Type, sdnclient.VnetPortPayload{NetworkId: network.Name, Port: []string{mirrorPortOFID}}); err != nil {
+			mirrorPortOFID := fmt.Sprintf("of:%s/%s", dp.GenerateID(dp.GetSwitchName(dp.DatapathParams{NodeName: network.Spec.Ids.Node, ProviderName: l2smv1.OVERLAY_PROVIDER})), portNumber)
+			if err := r.InternalClient.SetUpMirrorPort(network.Spec.Type, sdnclient.VnetPayload{NetworkId: network.Name, MirrorPort: mirrorPortOFID}); err != nil {
 				return ctrl.Result{}, fmt.Errorf("could not set up mirror port for IDS on network %q: %w", network.Name, err)
 			}
 
 			// we generate the network attachment definition annotation, so that multus appends this interface to the ids pod (not yet specified, that will come later)
 			netAnnot := networkannotation.NetworkAnnotation{Name: netAttachDef.Name, Namespace: netAttachDef.Namespace}
+			netAnnot.GenerateIPv6Address()
 			netAnnotString := networkannotation.MultusAnnotationToString([]networkannotation.NetworkAnnotation{netAnnot})
 
 			// generate resources. in total we get a configmap with the rules and a deployment
