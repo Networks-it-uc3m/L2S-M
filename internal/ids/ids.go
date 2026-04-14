@@ -73,59 +73,6 @@ func constructConfigMap(network *l2smv1.L2Network, namespace string) (*corev1.Co
 		rulesBuilder.WriteString(fmt.Sprintf("var HOME_NET [%s]\n", strings.Join(homeNetCIDR, ",")))
 	}
 	rulesBuilder.WriteString("var EXTERNAL_NET !$HOME_NET\n")
-	rulesBuilder.WriteString(`
-# ---------------------------------------------------------------------------
-# SYN SCAN DETECTION
-# ---------------------------------------------------------------------------
-
-# Internal SYN scanning to common ports
-alert tcp $HOME_NET any -> $HOME_NET [7,9,13,21:23,25:26,37,53,79:81,88,106,110:111,113,119,135,139,143:144,179,199,389,427,443:445,465,513:515,543:544,548,554,587,631,646,873,990,993,995,1025:1029,1110,1433,1720,1723,1755,1900,2000:2001,2049,2121,2717,3000,3128,3306,3389,3986,4899,5000,5009,5051,5060,5101,5190,5357,5432,5631,5666,5800,5900,6000:6001,6646,7070,8000,8008:8009,8080:8081,8443,8888,9100,9999:10000,32768,49152:49157] (msg:"Possible Syn Scan Technique attempted from internal host"; flow:to_server, stateless; flags:S; window:1024; detection_filter:track by_src, count 10, seconds 15; classtype:attempted_internal_port_scan; sid:40000001; rev:1;)
-
-# Internal SYN scanning to NON-common ports (inverse selection)
-alert tcp $HOME_NET any -> $HOME_NET ![7,9,13,21:23,25:26,37,53,79:81,88,106,110:111,113,119,135,139,143:144,179,199,389,427,443:445,465,513:515,543:544,548,554,587,631,646,873,990,993,995,1025:1029,1110,1433,1720,1723,1755,1900,2000:2001,2049,2121,2717,3000,3128,3306,3389,3986,4899,5000,5009,5051,5060,5101,5190,5357,5432,5631,5666,5800,5900,6000:6001,6646,7070,8000,8008:8009,8080:8081,8443,8888,9100,9999:10000,32768,49152:49157] (msg:"Possible Syn Scan Technique attempted from internal host"; flow:to_server, stateless; flags:S; window:1024; detection_filter:track by_src, count 10, seconds 15; classtype:attempted_internal_port_scan; sid:40000002; rev:1;)
-
-# External SYN scanning
-alert tcp $EXTERNAL_NET any -> any any (msg:"Possible Syn Scan Technique attempted from the internet"; flow:to_server, stateless; flags:S; window:1024; detection_filter:track by_src, count 10, seconds 15; classtype:attempted_port_scan_from_the_internet; sid:40000003; rev:1;)
-
-# ---------------------------------------------------------------------------
-# NULL SCAN DETECTION
-# ---------------------------------------------------------------------------
-
-# Internal NULL scanning to common ports
-alert tcp $HOME_NET any -> $HOME_NET [7,9,13,21:23,25:26,37,53,79:81,88,106,110:111,113,119,135,139,143:144,179,199,389,427,443:445,465,513:515,543:544,548,554,587,631,646,873,990,993,995,1025:1029,1110,1433,1720,1723,1755,1900,2000:2001,2049,2121,2717,3000,3128,3306,3389,3986,4899,5000,5009,5051,5060,5101,5190,5357,5432,5631,5666,5800,5900,6000:6001,6646,7070,8000,8008:8009,8080:8081,8443,8888,9100,9999:10000,32768,49152:49157] (msg:"Possible Null Scan Attempt from internal host"; flow:to_server, stateless; flags:0; window:1024; detection_filter:track by_src, count 10, seconds 15; classtype:attempted_internal_port_scan; sid:40000004; rev:1;)
-
-# Internal NULL scanning to NON-common ports
-alert tcp $HOME_NET any -> $HOME_NET ![7,9,13,21:23,25:26,37,53,79:81,88,106,110:111,113,119,135,139,143:144,179,199,389,427,443:445,465,513:515,543:544,548,554,587,631,646,873,990,993,995,1025:1029,1110,1433,1720,1723,1755,1900,2000:2001,2049,2121,2717,3000,3128,3306,3389,3986,4899,5000,5009,5051,5060,5101,5190,5357,5432,5631,5666,5800,5900,6000:6001,6646,7070,8000,8008:8009,8080:8081,8443,8888,9100,9999:10000,32768,49152:49157] (msg:"Possible Null Scan Technique from internal host"; flow:to_server, stateless; flags:0; window:1024; detection_filter:track by_src, count 10, seconds 15; classtype:attempted_internal_port_scan; sid:40000005; rev:1;)
-
-# External NULL scanning
-alert tcp $EXTERNAL_NET any -> any any (msg:"Possible Null Scan attempt from internet"; flow:to_server, stateless; flags:0; window:1024; detection_filter:track by_src, count 10, seconds 15; classtype:attempted_port_scan_from_the_internet; sid:40000006; rev:1;)
-
-# ---------------------------------------------------------------------------
-# FIN SCAN DETECTION
-# ---------------------------------------------------------------------------
-
-# Internal FIN scanning to common ports
-alert tcp $HOME_NET any -> $HOME_NET [7,9,13,21:23,25:26,37,53,79:81,88,106,110:111,113,119,135,139,143:144,179,199,389,427,443:445,465,513:515,543:544,548,554,587,631,646,873,990,993,995,1025:1029,1110,1433,1720,1723,1755,1900,2000:2001,2049,2121,2717,3000,3128,3306,3389,3986,4899,5000,5009,5051,5060,5101,5190,5357,5432,5631,5666,5800,5900,6000:6001,6646,7070,8000,8008:8009,8080:8081,8443,8888,9100,9999:10000,32768,49152:49157] (msg:"Possible FIN Scan Attempt from internal host"; flow:to_server, stateless; flags:F; window:1024; detection_filter:track by_src, count 10, seconds 15; classtype:attempted_internal_port_scan; sid:40000007; rev:1;)
-
-# Internal FIN scanning to NON-common ports
-alert tcp $HOME_NET any -> $HOME_NET ![7,9,13,21:23,25:26,37,53,79:81,88,106,110:111,113,119,135,139,143:144,179,199,389,427,443:445,465,513:515,543:544,548,554,587,631,646,873,990,993,995,1025:1029,1110,1433,1720,1723,1755,1900,2000:2001,2049,2121,2717,3000,3128,3306,3389,3986,4899,5000,5009,5051,5060,5101,5190,5357,5432,5631,5666,5800,5900,6000:6001,6646,7070,8000,8008:8009,8080:8081,8443,8888,9100,9999:10000,32768,49152:49157] (msg:"Possible FIN Scan Technique from internal host"; flow:to_server, stateless; flags:F; window:1024; detection_filter:track by_src, count 10, seconds 15; classtype:attempted_internal_port_scan; sid:40000008; rev:1;)
-
-# External FIN scanning
-alert tcp $EXTERNAL_NET any -> any any (msg:"Possible FIN Scan attempt from internet"; flow:to_server, stateless; flags:F; window:1024; detection_filter:track by_src, count 10, seconds 15; classtype:attempted_port_scan_from_the_internet; sid:40000009; rev:1;)
-
-# ---------------------------------------------------------------------------
-# XMAS SCAN DETECTION
-# ---------------------------------------------------------------------------
-
-# Internal XMAS scanning to common ports
-alert tcp $HOME_NET any -> $HOME_NET [7,9,13,21:23,25:26,37,53,79:81,88,106,110:111,113,119,135,139,143:144,179,199,389,427,443:445,465,513:515,543:544,548,554,587,631,646,873,990,993,995,1025:1029,1110,1433,1720,1723,1755,1900,2000:2001,2049,2121,2717,3000,3128,3306,3389,3986,4899,5000,5009,5051,5060,5101,5190,5357,5432,5631,5666,5800,5900,6000:6001,6646,7070,8000,8008:8009,8080:8081,8443,8888,9100,9999:10000,32768,49152:49157] (msg:"Possible XMAS Scan Attempt from internal host"; flow:to_server, stateless; flags:FPU; window:1024; detection_filter:track by_src, count 10, seconds 15; classtype:attempted_internal_port_scan; sid:400000011; rev:1;)
-
-# Internal XMAS scanning to NON-common ports
-alert tcp $HOME_NET any -> $HOME_NET ![7,9,13,21:23,25:26,37,53,79:81,88,106,110:111,113,119,135,139,143:144,179,199,389,427,443:445,465,513:515,543:544,548,554,587,631,646,873,990,993,995,1025:1029,1110,1433,1720,1723,1755,1900,2000:2001,2049,2121,2717,3000,3128,3306,3389,3986,4899,5000,5009,5051,5060,5101,5190,5357,5432,5631,5666,5800,5900,6000:6001,6646,7070,8000,8008:8009,8080:8081,8443,8888,9100,9999:10000,32768,49152:49157] (msg:"Possible XMAS Scan Technique from internal host"; flow:to_server, stateless; flags:FPU; window:1024; detection_filter:track by_src, count 10, seconds 15; classtype:attempted_internal_port_scan; sid:400000012; rev:1;)
-
-# External XMAS scanning
-alert tcp $EXTERNAL_NET any -> any any (msg:"Possible XMAS Scan attempt from internet"; flow:to_server, stateless; flags:FPU; window:1024; detection_filter:track by_src, count 10, seconds 15; classtype:attempted_port_scan_from_the_internet; sid:400000013; rev:1;)
-		`)
 
 	// Iterate over the API sources (Logic placeholder for future expansion)
 	for _, source := range customRuleSources {
@@ -155,7 +102,6 @@ alert tcp $EXTERNAL_NET any -> any any (msg:"Possible XMAS Scan attempt from int
 
 // generateSuricataDeployment creates the deployment definition
 func generateSuricataDeployment(idsRules *l2smv1.IdsRules, networkName, netAttachAnnotation, namespace string) *appsv1.Deployment {
-	replicas := int32(1)
 	labels := map[string]string{
 		"app":            "suricata-ids",
 		"l2sm/component": "ids",
@@ -164,26 +110,54 @@ func generateSuricataDeployment(idsRules *l2smv1.IdsRules, networkName, netAttac
 	// This makes sure the Pod runs as Root to allow packet capture capabilities
 	privileged := true
 
-	// Construct the Projected Volume Sources
-	// This allows us to merge the generated inline rules AND any external ConfigMaps (like the portscan one)
-	// into a single directory: /var/lib/suricata/rules/
-	projectedSources := []corev1.VolumeProjection{
+	volumes := []corev1.Volume{
 		{
-			ConfigMap: &corev1.ConfigMapProjection{
-				LocalObjectReference: corev1.LocalObjectReference{
-					Name: utils.GenerateIdsCMName(networkName),
+			Name: "active-rules",
+			VolumeSource: corev1.VolumeSource{
+				EmptyDir: &corev1.EmptyDirVolumeSource{},
+			},
+		},
+		{
+			Name: "generated-rules",
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: utils.GenerateIdsCMName(networkName),
+					},
 				},
 			},
 		},
 	}
 
-	// Add any user-provided ConfigMapRefs to the volume projection
-	for _, source := range idsRules.CustomRuleSources {
-		if source.ConfigMapRef != nil {
-			projectedSources = append(projectedSources, corev1.VolumeProjection{
-				ConfigMap: &corev1.ConfigMapProjection{
-					LocalObjectReference: *source.ConfigMapRef,
+	volumeMounts := []corev1.VolumeMount{
+		{
+			Name:      "active-rules",
+			MountPath: "/var/lib/suricata/rules",
+		},
+		{
+			Name:      "generated-rules",
+			MountPath: "/var/lib/suricata/generated-rules",
+			ReadOnly:  true,
+		},
+	}
+
+	// Mount every referenced ConfigMap in its own directory so rule keys from
+	// different ConfigMaps cannot collide in a projected volume.
+	for i, source := range idsRules.CustomRuleSources {
+		if source.ConfigMapRef != nil && source.ConfigMapRef.Name != "" {
+			volumeName := fmt.Sprintf("custom-rules-%d", i)
+			volumes = append(volumes, corev1.Volume{
+				Name: volumeName,
+				VolumeSource: corev1.VolumeSource{
+					ConfigMap: &corev1.ConfigMapVolumeSource{
+						LocalObjectReference: *source.ConfigMapRef,
+					},
 				},
+			})
+			volumeMounts = append(volumeMounts, corev1.VolumeMount{
+				Name:      volumeName,
+				MountPath: fmt.Sprintf("/var/lib/suricata/custom-rules/%d", i),
+				ReadOnly:  true,
 			})
 		}
 	}
@@ -198,7 +172,6 @@ func generateSuricataDeployment(idsRules *l2smv1.IdsRules, networkName, netAttac
 			Namespace: namespace,
 		},
 		Spec: appsv1.DeploymentSpec{
-			Replicas: &replicas,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: labels,
 			},
@@ -217,9 +190,8 @@ func generateSuricataDeployment(idsRules *l2smv1.IdsRules, networkName, netAttac
 							// Command args to listen specifically on the Multus interface (net1)
 							Command: []string{"/bin/bash", "-c"},
 							Args: []string{
-								// Start Suricata as a background process (&)
-								// Then tail the log file so it streams to the container's stdout
-								"suricata -D -i net1 -S /var/lib/suricata/rules/suricata.rules && touch /var/log/suricata/fast.log && tail -f /var/log/suricata/fast.log -s 1 --disable-inotify",
+								// Merge generated inline rules with every file from referenced rule ConfigMaps.
+								"set -eu; rules=/var/lib/suricata/rules/suricata.rules; cat /var/lib/suricata/generated-rules/suricata.rules > \"$rules\"; for dir in /var/lib/suricata/custom-rules/*; do [ -d \"$dir\" ] || continue; find \"$dir\" -maxdepth 1 -type f | sort | while read -r file; do printf '\\n# Source file: %s\\n' \"$file\" >> \"$rules\"; cat \"$file\" >> \"$rules\"; printf '\\n' >> \"$rules\"; done; done; suricata -D -i net1 && touch /var/log/suricata/fast.log && tail -f /var/log/suricata/fast.log -s 1",
 							},
 							SecurityContext: &corev1.SecurityContext{
 								// Suricata needs privileges to capture packets
@@ -228,26 +200,11 @@ func generateSuricataDeployment(idsRules *l2smv1.IdsRules, networkName, netAttac
 									Add: []corev1.Capability{"NET_ADMIN", "NET_RAW", "IPC_LOCK"},
 								},
 							},
-							VolumeMounts: []corev1.VolumeMount{
-								{
-									Name:      "rules-volume",
-									MountPath: "/var/lib/suricata/rules", // All ConfigMaps will be merged here
-									ReadOnly:  true,
-								},
-							},
+							VolumeMounts: volumeMounts,
 						},
 					},
 					NodeName: idsRules.Node,
-					Volumes: []corev1.Volume{
-						{
-							Name: "rules-volume",
-							VolumeSource: corev1.VolumeSource{
-								Projected: &corev1.ProjectedVolumeSource{
-									Sources: projectedSources,
-								},
-							},
-						},
-					},
+					Volumes:  volumes,
 				},
 			},
 		},
