@@ -28,7 +28,7 @@ const (
 
 func GenerateSwitchPodName(resourceName, nodeName string, switchType SwitchType) string {
 	hash := fnv.New32() // Using FNV hash for a compact hash, but still 32 bits
-	hash.Write([]byte(fmt.Sprintf("%s%s", resourceName, nodeName)))
+	fmt.Fprintf(hash, "%s%s", resourceName, nodeName)
 	sum := hash.Sum32()
 	// Encode the hash as a base32 string and take the first 4 characters
 	return fmt.Sprintf("%s-%04x", switchType, sum) // H
