@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"slices"
 
 	l2smv1 "github.com/Networks-it-uc3m/L2S-M/api/v1"
 	"github.com/Networks-it-uc3m/L2S-M/internal/dnsinterface"
@@ -90,7 +91,7 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 
 	// Check if the pod is being deleted
 	if pod.GetDeletionTimestamp() != nil {
-		if utils.ContainsString(pod.GetFinalizers(), l2smFinalizer) {
+		if slices.Contains(pod.GetFinalizers(), l2smFinalizer) {
 			logger.Info("L2S-M Pod deleted: detaching l2network")
 
 			pod.SetFinalizers(utils.RemoveString(pod.GetFinalizers(), l2smFinalizer))
@@ -166,7 +167,7 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 
 	// Check if the pod has a finalizer attached to it. If not, we asume this pod is being created,
 	// so we attach the l2network to it.
-	if !utils.ContainsString(pod.GetFinalizers(), l2smFinalizer) {
+	if !slices.Contains(pod.GetFinalizers(), l2smFinalizer) {
 		// We add the finalizers now that the pod has been added to the network and we want to keep track of it
 		pod.SetFinalizers(append(pod.GetFinalizers(), l2smFinalizer))
 		if err := r.Update(ctx, pod); err != nil {

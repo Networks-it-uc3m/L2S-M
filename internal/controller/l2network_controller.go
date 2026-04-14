@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 
 	dp "github.com/Networks-it-uc3m/l2sm-switch/pkg/datapath"
 	"github.com/go-logr/logr"
@@ -78,7 +79,7 @@ func (r *L2NetworkReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 	// Check if the object is being deleted
 	if network.GetDeletionTimestamp() != nil {
-		if utils.ContainsString(network.GetFinalizers(), l2smFinalizer) {
+		if slices.Contains(network.GetFinalizers(), l2smFinalizer) {
 			// The object is being deleted
 			if err := r.InternalClient.DeleteNetwork(network.Spec.Type, network.Name); err != nil {
 				// If fail to delete the external dependency here, return with error
@@ -100,7 +101,7 @@ func (r *L2NetworkReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	// Add finalizer for this CR
-	if !utils.ContainsString(network.GetFinalizers(), l2smFinalizer) {
+	if !slices.Contains(network.GetFinalizers(), l2smFinalizer) {
 		err := r.InternalClient.CreateNetwork(network.Spec.Type, sdnclient.VnetPayload{NetworkId: network.Name})
 		if err != nil {
 			logger.Error(err, "failed to create network")
