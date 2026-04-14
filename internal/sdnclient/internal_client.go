@@ -29,12 +29,9 @@ type InternalClient struct {
 }
 
 type VnetPayload struct {
-	NetworkId  string `json:"networkId"`
-	MirrorPort string `json:"mirrorPort,omitempty"`
-}
-type VnetPortPayload struct {
-	NetworkId string   `json:"networkId"`
-	Port      []string `json:"networkEndpoints,omitempty"`
+	NetworkId  string   `json:"networkId"`
+	Port       []string `json:"networkEndpoints,omitempty"`
+	MirrorPort string   `json:"mirrorPort,omitempty"`
 }
 
 func (c *InternalClient) beginSessionController() bool {

@@ -129,7 +129,7 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 
 				// if the pod is not attached in the first place, it means the controller has some desync. Just in case we let the code continue operating, as this
 				// doesnt affect the rest of the workflow. Probably should do a more robust reconciliation with the sdn controller in the future.
-				if err := r.InternalClient.DetachPodFromNetwork("vnets", sdnclient.VnetPortPayload{NetworkId: networkAnnotations[i].Name, Port: []string{ofPort}}); err != nil {
+				if err := r.InternalClient.DetachPodFromNetwork("vnets", sdnclient.VnetPayload{NetworkId: networkAnnotations[i].Name, Port: []string{ofPort}}); err != nil {
 					logger.Error(err, "could not detach pod from network in SDN controller during deletion", "pod", fmt.Sprintf("%s/%s", pod.Namespace, pod.Name), "network", networkAnnotations[i].Name, "port", ofPort)
 				}
 
@@ -247,7 +247,7 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 			ofPort := fmt.Sprintf("%s/%s", ofID, portNumber)
 
 			// we inform the sdn controller of this new port attachment
-			err = r.InternalClient.AttachPodToNetwork("vnets", sdnclient.VnetPortPayload{NetworkId: network.Name, Port: []string{ofPort}})
+			err = r.InternalClient.AttachPodToNetwork("vnets", sdnclient.VnetPayload{NetworkId: network.Name, Port: []string{ofPort}})
 			if err != nil {
 				logger.Error(err, "Error attaching pod to the l2network")
 				return ctrl.Result{}, nil

@@ -319,7 +319,7 @@ func (r *L2NetworkReconciler) ConnectInternalSwitchToNED(ctx context.Context, ne
 
 	internalSwitchOFPort := fmt.Sprintf("%s/%s", internalSwitchOFID, portNumber)
 
-	err = r.InternalClient.AttachPodToNetwork("vnets", sdnclient.VnetPortPayload{NetworkId: networkName, Port: []string{internalSwitchOFPort}})
+	err = r.InternalClient.AttachPodToNetwork("vnets", sdnclient.VnetPayload{NetworkId: networkName, Port: []string{internalSwitchOFPort}})
 
 	if err != nil {
 		return nettypes.NetworkAttachmentDefinition{}, fmt.Errorf("could not make a connection between the internal switch and the NED. Internal SDN controller error: %s", err)
@@ -359,7 +359,7 @@ func (r *L2NetworkReconciler) CreateNewNEDConnection(network *l2smv1.L2Network, 
 	nedOFID := fmt.Sprintf("of:%s", dp.GenerateID(dp.GetSwitchName(dp.DatapathParams{NodeName: ned.Spec.NodeConfig.NodeName, ProviderName: network.Spec.Provider.Name})))
 	nedOFPort := fmt.Sprintf("%s/%s", nedOFID, nedPortNumber)
 
-	err = externalClient.AttachPodToNetwork(network.Spec.Type, sdnclient.VnetPortPayload{NetworkId: network.Name, Port: []string{nedOFPort}})
+	err = externalClient.AttachPodToNetwork(network.Spec.Type, sdnclient.VnetPayload{NetworkId: network.Name, Port: []string{nedOFPort}})
 	if err != nil {
 		return errors.Join(err, errors.New("could not update network attachment definition"))
 
