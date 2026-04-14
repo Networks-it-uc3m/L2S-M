@@ -1,0 +1,59 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: suricata-scan-rules
+  labels:
+    app: suricata
+data:
+  scan.rules: |
+    # ---------------------------------------------------------------------------
+    # SYN SCAN DETECTION
+    # ---------------------------------------------------------------------------
+    
+    # Internal SYN scanning to common ports
+    alert tcp $HOME_NET any -> $HOME_NET [7,9,13,21:23,25:26,37,53,79:81,88,106,110:111,113,119,135,139,143:144,179,199,389,427,443:445,465,513:515,543:544,548,554,587,631,646,873,990,993,995,1025:1029,1110,1433,1720,1723,1755,1900,2000:2001,2049,2121,2717,3000,3128,3306,3389,3986,4899,5000,5009,5051,5060,5101,5190,5357,5432,5631,5666,5800,5900,6000:6001,6646,7070,8000,8008:8009,8080:8081,8443,8888,9100,9999:10000,32768,49152:49157] (msg:"Possible Syn Scan Technique attempted from internal host"; flow:to_server, stateless; flags:S; window:1024; detection_filter:track by_src, count 10, seconds 15; classtype:attempted_internal_port_scan; sid:40000001; rev:1;)
+
+    # Internal SYN scanning to NON-common ports (inverse selection)
+    alert tcp $HOME_NET any -> $HOME_NET ![7,9,13,21:23,25:26,37,53,79:81,88,106,110:111,113,119,135,139,143:144,179,199,389,427,443:445,465,513:515,543:544,548,554,587,631,646,873,990,993,995,1025:1029,1110,1433,1720,1723,1755,1900,2000:2001,2049,2121,2717,3000,3128,3306,3389,3986,4899,5000,5009,5051,5060,5101,5190,5357,5432,5631,5666,5800,5900,6000:6001,6646,7070,8000,8008:8009,8080:8081,8443,8888,9100,9999:10000,32768,49152:49157] (msg:"Possible Syn Scan Technique attempted from internal host"; flow:to_server, stateless; flags:S; window:1024; detection_filter:track by_src, count 10, seconds 15; classtype:attempted_internal_port_scan; sid:40000002; rev:1;)
+
+    # External SYN scanning
+    alert tcp $EXTERNAL_NET any -> any any (msg:"Possible Syn Scan Technique attempted from the internet"; flow:to_server, stateless; flags:S; window:1024; detection_filter:track by_src, count 10, seconds 15; classtype:attempted_port_scan_from_the_internet; sid:40000003; rev:1;)
+
+    # ---------------------------------------------------------------------------
+    # NULL SCAN DETECTION
+    # ---------------------------------------------------------------------------
+
+    # Internal NULL scanning to common ports
+    alert tcp $HOME_NET any -> $HOME_NET [7,9,13,21:23,25:26,37,53,79:81,88,106,110:111,113,119,135,139,143:144,179,199,389,427,443:445,465,513:515,543:544,548,554,587,631,646,873,990,993,995,1025:1029,1110,1433,1720,1723,1755,1900,2000:2001,2049,2121,2717,3000,3128,3306,3389,3986,4899,5000,5009,5051,5060,5101,5190,5357,5432,5631,5666,5800,5900,6000:6001,6646,7070,8000,8008:8009,8080:8081,8443,8888,9100,9999:10000,32768,49152:49157] (msg:"Possible Null Scan Attempt from internal host"; flow:to_server, stateless; flags:0; window:1024; detection_filter:track by_src, count 10, seconds 15; classtype:attempted_internal_port_scan; sid:40000004; rev:1;)
+
+    # Internal NULL scanning to NON-common ports
+    alert tcp $HOME_NET any -> $HOME_NET ![7,9,13,21:23,25:26,37,53,79:81,88,106,110:111,113,119,135,139,143:144,179,199,389,427,443:445,465,513:515,543:544,548,554,587,631,646,873,990,993,995,1025:1029,1110,1433,1720,1723,1755,1900,2000:2001,2049,2121,2717,3000,3128,3306,3389,3986,4899,5000,5009,5051,5060,5101,5190,5357,5432,5631,5666,5800,5900,6000:6001,6646,7070,8000,8008:8009,8080:8081,8443,8888,9100,9999:10000,32768,49152:49157] (msg:"Possible Null Scan Technique from internal host"; flow:to_server, stateless; flags:0; window:1024; detection_filter:track by_src, count 10, seconds 15; classtype:attempted_internal_port_scan; sid:40000005; rev:1;)
+
+    # External NULL scanning
+    alert tcp $EXTERNAL_NET any -> any any (msg:"Possible Null Scan attempt from internet"; flow:to_server, stateless; flags:0; window:1024; detection_filter:track by_src, count 10, seconds 15; classtype:attempted_port_scan_from_the_internet; sid:40000006; rev:1;)
+
+    # ---------------------------------------------------------------------------
+    # FIN SCAN DETECTION
+    # ---------------------------------------------------------------------------
+
+    # Internal FIN scanning to common ports
+    alert tcp $HOME_NET any -> $HOME_NET [7,9,13,21:23,25:26,37,53,79:81,88,106,110:111,113,119,135,139,143:144,179,199,389,427,443:445,465,513:515,543:544,548,554,587,631,646,873,990,993,995,1025:1029,1110,1433,1720,1723,1755,1900,2000:2001,2049,2121,2717,3000,3128,3306,3389,3986,4899,5000,5009,5051,5060,5101,5190,5357,5432,5631,5666,5800,5900,6000:6001,6646,7070,8000,8008:8009,8080:8081,8443,8888,9100,9999:10000,32768,49152:49157] (msg:"Possible FIN Scan Attempt from internal host"; flow:to_server, stateless; flags:F; window:1024; detection_filter:track by_src, count 10, seconds 15; classtype:attempted_internal_port_scan; sid:40000007; rev:1;)
+
+    # Internal FIN scanning to NON-common ports
+    alert tcp $HOME_NET any -> $HOME_NET ![7,9,13,21:23,25:26,37,53,79:81,88,106,110:111,113,119,135,139,143:144,179,199,389,427,443:445,465,513:515,543:544,548,554,587,631,646,873,990,993,995,1025:1029,1110,1433,1720,1723,1755,1900,2000:2001,2049,2121,2717,3000,3128,3306,3389,3986,4899,5000,5009,5051,5060,5101,5190,5357,5432,5631,5666,5800,5900,6000:6001,6646,7070,8000,8008:8009,8080:8081,8443,8888,9100,9999:10000,32768,49152:49157] (msg:"Possible FIN Scan Technique from internal host"; flow:to_server, stateless; flags:F; window:1024; detection_filter:track by_src, count 10, seconds 15; classtype:attempted_internal_port_scan; sid:40000008; rev:1;)
+
+    # External FIN scanning
+    alert tcp $EXTERNAL_NET any -> any any (msg:"Possible FIN Scan attempt from internet"; flow:to_server, stateless; flags:F; window:1024; detection_filter:track by_src, count 10, seconds 15; classtype:attempted_port_scan_from_the_internet; sid:40000009; rev:1;)
+
+    # ---------------------------------------------------------------------------
+    # XMAS SCAN DETECTION
+    # ---------------------------------------------------------------------------
+
+    # Internal XMAS scanning to common ports
+    alert tcp $HOME_NET any -> $HOME_NET [7,9,13,21:23,25:26,37,53,79:81,88,106,110:111,113,119,135,139,143:144,179,199,389,427,443:445,465,513:515,543:544,548,554,587,631,646,873,990,993,995,1025:1029,1110,1433,1720,1723,1755,1900,2000:2001,2049,2121,2717,3000,3128,3306,3389,3986,4899,5000,5009,5051,5060,5101,5190,5357,5432,5631,5666,5800,5900,6000:6001,6646,7070,8000,8008:8009,8080:8081,8443,8888,9100,9999:10000,32768,49152:49157] (msg:"Possible XMAS Scan Attempt from internal host"; flow:to_server, stateless; flags:FPU; window:1024; detection_filter:track by_src, count 10, seconds 15; classtype:attempted_internal_port_scan; sid:400000011; rev:1;)
+
+    # Internal XMAS scanning to NON-common ports
+    alert tcp $HOME_NET any -> $HOME_NET ![7,9,13,21:23,25:26,37,53,79:81,88,106,110:111,113,119,135,139,143:144,179,199,389,427,443:445,465,513:515,543:544,548,554,587,631,646,873,990,993,995,1025:1029,1110,1433,1720,1723,1755,1900,2000:2001,2049,2121,2717,3000,3128,3306,3389,3986,4899,5000,5009,5051,5060,5101,5190,5357,5432,5631,5666,5800,5900,6000:6001,6646,7070,8000,8008:8009,8080:8081,8443,8888,9100,9999:10000,32768,49152:49157] (msg:"Possible XMAS Scan Technique from internal host"; flow:to_server, stateless; flags:FPU; window:1024; detection_filter:track by_src, count 10, seconds 15; classtype:attempted_internal_port_scan; sid:400000012; rev:1;)
+
+    # External XMAS scanning
+    alert tcp $EXTERNAL_NET any -> any any (msg:"Possible XMAS Scan attempt from internet"; flow:to_server, stateless; flags:FPU; window:1024; detection_filter:track by_src, count 10, seconds 15; classtype:attempted_port_scan_from_the_internet; sid:400000013; rev:1;)

@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: attacker
+  labels:
+    l2sm/app: attacker
+    l2sm: "true"
+  annotations:
+    l2sm/networks: ztna-example-1-portscan
+spec:
+  containers:
+  - name: alpine
+    # Installs nmap on startup, then keeps the container running
+    command: ["/bin/ash", "-c", "apk update && apk add nmap && trap : TERM INT; sleep infinity & wait"]
+    image: alpine:latest

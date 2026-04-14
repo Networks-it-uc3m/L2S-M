@@ -1,0 +1,14 @@
+apiVersion: l2sm.l2sm.k8s.local/v1
+kind: L2Network
+metadata:
+  name: ztna-example-1-portscan
+spec:
+  type: vnet
+  networkCIDR: "10.0.0.0/24"
+  ids:
+    enabled: true
+    useEmergingThreatsOpen: false
+    customRuleSources:
+      - name: custom-port-scan-rules
+        configMapRef:
+          name: suricata-scan-rules
