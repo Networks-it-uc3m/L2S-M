@@ -46,7 +46,7 @@ func (m Manager) Ensure(name, providerName string, nodes []string) error {
 
 	if err := m.Client.AttachPodToNetwork(
 		l2smv1.NetworkTypeVnet,
-		sdnclient.VnetPortPayload{NetworkId: lpmNetName, Port: lpmPorts},
+		sdnclient.VnetPayload{NetworkId: lpmNetName, Port: lpmPorts},
 	); err != nil {
 		return fmt.Errorf("attach monitoring ports to network %q: %w", lpmNetName, err)
 	}
