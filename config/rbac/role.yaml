@@ -93,6 +93,7 @@ rules:
   - l2networks
   - networkedgedevices
   - overlays
+  - quarantinepodrequests
   verbs:
   - create
   - delete
@@ -107,6 +108,7 @@ rules:
   - l2networks/finalizers
   - networkedgedevices/finalizers
   - overlays/finalizers
+  - quarantinepodrequests/finalizers
   verbs:
   - update
 - apiGroups:
@@ -115,6 +117,7 @@ rules:
   - l2networks/status
   - networkedgedevices/status
   - overlays/status
+  - quarantinepodrequests/status
   verbs:
   - get
   - patch

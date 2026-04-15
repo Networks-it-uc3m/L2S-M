@@ -23,10 +23,6 @@ import (
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
-	l2smv1 "github.com/Networks-it-uc3m/L2S-M/api/v1"
-	"github.com/Networks-it-uc3m/L2S-M/internal/controller"
-	"github.com/Networks-it-uc3m/L2S-M/internal/env"
-	"github.com/Networks-it-uc3m/L2S-M/internal/monitoringnetwork"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -37,6 +33,11 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+
+	l2smv1 "github.com/Networks-it-uc3m/L2S-M/api/v1"
+	"github.com/Networks-it-uc3m/L2S-M/internal/controller"
+	"github.com/Networks-it-uc3m/L2S-M/internal/env"
+	"github.com/Networks-it-uc3m/L2S-M/internal/monitoringnetwork"
 
 	//+kubebuilder:scaffold:imports
 	nettypes "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
@@ -173,6 +174,13 @@ func main() {
 			os.Exit(1)
 		}
 		mgr.GetWebhookServer().Register("/mutate-v1-pod", &webhook.Admission{Handler: podAnnotator})
+	}
+	if err := (&controller.QuarantinePodRequestReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "QuarantinePodRequest")
+		os.Exit(1)
 	}
 	//+kubebuilder:scaffold:builder
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {

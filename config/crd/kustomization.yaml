@@ -19,6 +19,7 @@ resources:
 - bases/l2sm.l2sm.k8s.local_l2networks.yaml
 - bases/l2sm.l2sm.k8s.local_networkedgedevices.yaml
 - bases/l2sm.l2sm.k8s.local_overlays.yaml
+- bases/l2sm.l2sm.k8s.local_quarantinepodrequests.yaml
 #+kubebuilder:scaffold:crdkustomizeresource
 
 patches:

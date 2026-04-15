@@ -12,11 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-## Append samples of your project ##
-resources:
-- l2sm_v1_l2network.yaml
-- l2sm_v1_networkedgedevice.yaml
-- l2sm_v1_networkedgedevice.yaml
-- l2sm_v1_overlay.yaml
-- l2sm_v1_quarantinepodrequest.yaml
-#+kubebuilder:scaffold:manifestskustomizesamples
+apiVersion: l2sm.l2sm.k8s.local/v1
+kind: QuarantinePodRequest
+metadata:
+  labels:
+    app.kubernetes.io/name: controllermanager
+    app.kubernetes.io/managed-by: kustomize
+  name: quarantinepodrequest-sample
+spec:
+  selector:
+    podLabelSelector:
+      matchLabels:
+        app: ping
+    l2NetworkSelector:
+      matchLabels:
+        l2sm/network: production
+  targetL2Network: quarantine-network

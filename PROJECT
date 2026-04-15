@@ -44,4 +44,13 @@ resources:
     defaulting: true
     validation: true
     webhookVersion: v1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: l2sm.k8s.local
+  group: l2sm
+  kind: QuarantinePodRequest
+  path: github.com/Networks-it-uc3m/L2S-M/api/v1
+  version: v1
 version: "3"
