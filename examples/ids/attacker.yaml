@@ -6,7 +6,7 @@ metadata:
     l2sm/app: attacker
     l2sm: "true"
   annotations:
-    l2sm/networks: ztna-example-1-portscan
+    l2sm/networks: '[{"name": "ztna-example-1-portscan", "ips": ["10.0.0.100/24"]}]'
 spec:
   containers:
   - name: alpine

@@ -5,8 +5,13 @@ metadata:
 spec:
   type: vnet
   networkCIDR: "10.0.0.0/24"
+  podAddressRange: "10.0.0.0/24"
   ids:
     enabled: true
+    node: l2sm-test-control-plane
+    profile: suricata
+    homeNetCidr:
+      - "10.0.0.0/24"
     useEmergingThreatsOpen: false
     customRuleSources:
       - name: custom-port-scan-rules

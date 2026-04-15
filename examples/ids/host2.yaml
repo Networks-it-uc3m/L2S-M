@@ -2,12 +2,12 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: host1
+  name: host2
   labels:
-    l2sm/app: host1
+    l2sm/app: host2
     l2sm: "true"
   annotations:
-    l2sm/networks: ztna-example-1-portscan
+    l2sm/networks: '[{"name": "ztna-example-1-portscan", "ips": ["10.0.0.2/24"]}]'
 spec:
   containers:
   - name: alpine
