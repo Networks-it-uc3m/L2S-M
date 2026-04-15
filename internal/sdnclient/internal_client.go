@@ -133,7 +133,7 @@ func (c *InternalClient) DetachPodFromNetwork(networkType l2smv1.NetworkType, co
 	}
 	defer response.Body.Close()
 
-	if response.StatusCode != http.StatusNoContent {
+	if response.StatusCode != http.StatusNoContent && response.StatusCode != http.StatusOK {
 		return fmt.Errorf("failed to detach pod from network, status code: %d", response.StatusCode)
 	}
 
