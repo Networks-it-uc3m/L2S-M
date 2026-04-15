@@ -1,0 +1,153 @@
+# Copyright 2024 Universidad Carlos III de Madrid
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: quarantine-server
+  labels:
+    app.kubernetes.io/name: quarantine-server
+    app.kubernetes.io/component: server
+    l2sm: "true"
+    l2sm/example: quarantine
+  annotations:
+    l2sm/networks: '[{"name": "quarantine-demo-production", "ips": ["10.20.0.10/24"]}]'
+spec:
+  containers:
+  - name: agnhost
+    image: k8s.gcr.io/e2e-test-images/agnhost:2.21
+    args:
+      - netexec
+      - --http-port=80
+      - --udp-port=80
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: quarantine-client-a
+  labels:
+    app.kubernetes.io/name: quarantine-client-a
+    app.kubernetes.io/component: client
+    l2sm: "true"
+    l2sm/example: quarantine
+  annotations:
+    l2sm/networks: '[{"name": "quarantine-demo-production", "ips": ["10.20.0.101/24"]}]'
+spec:
+  containers:
+  - name: client
+    image: alpine:latest
+    command:
+      - /bin/ash
+      - -c
+      - |
+        while true; do
+          wget -qO- --timeout=2 http://10.20.0.10:8080/ || true
+          sleep 10
+        done
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: quarantine-client-b
+  labels:
+    app.kubernetes.io/name: quarantine-client-b
+    app.kubernetes.io/component: client
+    l2sm: "true"
+    l2sm/example: quarantine
+  annotations:
+    l2sm/networks: '[{"name": "quarantine-demo-production", "ips": ["10.20.0.102/24"]}]'
+spec:
+  containers:
+  - name: client
+    image: alpine:latest
+    command:
+      - /bin/ash
+      - -c
+      - |
+        while true; do
+          wget -qO- --timeout=2 http://10.20.0.10:8080/ || true
+          sleep 12
+        done
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: quarantine-attacker
+  labels:
+    app.kubernetes.io/name: quarantine-attacker
+    app.kubernetes.io/component: client
+    l2sm: "true"
+    l2sm/example: quarantine
+    security.l2sm/demo-role: attacker
+  annotations:
+    l2sm/networks: '[{"name": "quarantine-demo-production", "ips": ["10.20.0.103/24"]}]'
+spec:
+  containers:
+  - name: attacker
+    image: alpine:latest
+    securityContext:
+      capabilities:
+        add:
+          - NET_RAW
+          - NET_ADMIN
+    command:
+      - /bin/ash
+      - -c
+      - |
+        apk update
+        apk add nmap
+        sleep 45
+        while true; do
+          nmap -sS -Pn -p 1-1024 10.20.0.10 || true
+          sleep 15
+        done
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: cowrie-honeypot
+  annotations:
+    l2sm/networks: '[{"name": "quarantine-demo-isolation", "ips": ["10.20.0.10/24"]}]'
+spec:
+  volumes:
+    - name: cowrie-var
+      emptyDir: {}
+    - name: cowrie-etc
+      emptyDir: {}
+  containers:
+    - name: cowrie
+      image: cowrie/cowrie:latest
+      imagePullPolicy: Always
+      securityContext:
+        runAsUser: 999
+        allowPrivilegeEscalation: false
+        readOnlyRootFilesystem: true
+        capabilities:
+          drop:
+            - all
+      ports:
+        - name: ssh-port
+          containerPort: 2222
+        - name: telnet-port
+          containerPort: 2223
+      readinessProbe:
+        tcpSocket:
+          port: ssh-port
+        initialDelaySeconds: 5
+        periodSeconds: 60
+      livenessProbe:
+        tcpSocket:
+          port: ssh-port
+        initialDelaySeconds: 15
+        periodSeconds: 60
