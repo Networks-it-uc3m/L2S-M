@@ -15,19 +15,15 @@
 apiVersion: l2sm.l2sm.k8s.local/v1
 kind: L2Network
 metadata:
-  name: ztna-example-1-portscan
+  name: ztna-example-1-icmp
 spec:
   type: vnet
   networkCIDR: "10.0.0.0/24"
-  podAddressRange: "10.0.0.0/24"
   ids:
     enabled: true
-    node: l2sm-test-control-plane
-    profile: suricata
-    homeNetCidr:
-      - "10.0.0.0/24"
     useEmergingThreatsOpen: false
     customRuleSources:
-      - name: custom-port-scan-rules
-        configMapRef:
-          name: suricata-scan-rules
+      - name: "icmp-demo-rule"
+        inline: 'alert icmp 0.0.0.0/0 any -> 0.0.0.0/0 any (msg:"IPv4 ICMP Packet Detected"; sid:1000002; rev:2;)'
+    profile: suricata
+    node: l2sm-test-control-plane

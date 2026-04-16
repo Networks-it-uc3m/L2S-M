@@ -12,18 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 apiVersion: v1
 kind: Pod
 metadata:
-  name: attacker
+  name: ping
   labels:
-    l2sm/app: attacker
+    l2sm/app: ping
     l2sm: "true"
   annotations:
-    l2sm/networks: '[{"name": "ztna-example-1-portscan", "ips": ["10.0.0.100/24"]}]'
+    l2sm/networks: ztna-example-1-icmp
 spec:
   containers:
   - name: alpine
-    # Installs nmap on startup, then keeps the container running
-    command: ["/bin/ash", "-c", "apk update && apk add nmap && trap : TERM INT; sleep infinity & wait"]
+    command: ["/bin/ash", "-c", "trap : TERM INT; sleep infinity & wait"]
     image: alpine:latest
+  nodeName: l2sm-test-control-plane
