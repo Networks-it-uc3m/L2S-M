@@ -110,54 +110,26 @@ func generateSuricataDeployment(idsRules *l2smv1.IdsRules, networkName, netAttac
 	// This makes sure the Pod runs as Root to allow packet capture capabilities
 	privileged := true
 
-	volumes := []corev1.Volume{
+	// Construct the Projected Volume Sources
+	// This allows us to merge the generated inline rules AND any external ConfigMaps (like the portscan one)
+	// into a single directory: /var/lib/suricata/rules/
+	projectedSources := []corev1.VolumeProjection{
 		{
-			Name: "active-rules",
-			VolumeSource: corev1.VolumeSource{
-				EmptyDir: &corev1.EmptyDirVolumeSource{},
-			},
-		},
-		{
-			Name: "generated-rules",
-			VolumeSource: corev1.VolumeSource{
-				ConfigMap: &corev1.ConfigMapVolumeSource{
-					LocalObjectReference: corev1.LocalObjectReference{
-						Name: utils.GenerateIdsCMName(networkName),
-					},
+			ConfigMap: &corev1.ConfigMapProjection{
+				LocalObjectReference: corev1.LocalObjectReference{
+					Name: utils.GenerateIdsCMName(networkName),
 				},
 			},
 		},
 	}
 
-	volumeMounts := []corev1.VolumeMount{
-		{
-			Name:      "active-rules",
-			MountPath: "/var/lib/suricata/rules",
-		},
-		{
-			Name:      "generated-rules",
-			MountPath: "/var/lib/suricata/generated-rules",
-			ReadOnly:  true,
-		},
-	}
-
-	// Mount every referenced ConfigMap in its own directory so rule keys from
-	// different ConfigMaps cannot collide in a projected volume.
-	for i, source := range idsRules.CustomRuleSources {
-		if source.ConfigMapRef != nil && source.ConfigMapRef.Name != "" {
-			volumeName := fmt.Sprintf("custom-rules-%d", i)
-			volumes = append(volumes, corev1.Volume{
-				Name: volumeName,
-				VolumeSource: corev1.VolumeSource{
-					ConfigMap: &corev1.ConfigMapVolumeSource{
-						LocalObjectReference: *source.ConfigMapRef,
-					},
+	// Add any user-provided ConfigMapRefs to the volume projection
+	for _, source := range idsRules.CustomRuleSources {
+		if source.ConfigMapRef != nil {
+			projectedSources = append(projectedSources, corev1.VolumeProjection{
+				ConfigMap: &corev1.ConfigMapProjection{
+					LocalObjectReference: *source.ConfigMapRef,
 				},
-			})
-			volumeMounts = append(volumeMounts, corev1.VolumeMount{
-				Name:      volumeName,
-				MountPath: fmt.Sprintf("/var/lib/suricata/custom-rules/%d", i),
-				ReadOnly:  true,
 			})
 		}
 	}
@@ -191,7 +163,7 @@ func generateSuricataDeployment(idsRules *l2smv1.IdsRules, networkName, netAttac
 							Command: []string{"/bin/bash", "-c"},
 							Args: []string{
 								// Merge generated inline rules with every file from referenced rule ConfigMaps.
-								"set -eu; rules=/var/lib/suricata/rules/suricata.rules; cat /var/lib/suricata/generated-rules/suricata.rules > \"$rules\"; for dir in /var/lib/suricata/custom-rules/*; do [ -d \"$dir\" ] || continue; find \"$dir\" -maxdepth 1 -type f | sort | while read -r file; do printf '\\n# Source file: %s\\n' \"$file\" >> \"$rules\"; cat \"$file\" >> \"$rules\"; printf '\\n' >> \"$rules\"; done; done; suricata -D -i net1 && touch /var/log/suricata/fast.log && tail -f /var/log/suricata/fast.log -s 1",
+								"suricata -D -i net1 && touch /var/log/suricata/fast.log && tail -f /var/log/suricata/fast.log -s 1",
 							},
 							SecurityContext: &corev1.SecurityContext{
 								// Suricata needs privileges to capture packets
@@ -200,11 +172,26 @@ func generateSuricataDeployment(idsRules *l2smv1.IdsRules, networkName, netAttac
 									Add: []corev1.Capability{"NET_ADMIN", "NET_RAW", "IPC_LOCK"},
 								},
 							},
-							VolumeMounts: volumeMounts,
+							VolumeMounts: []corev1.VolumeMount{
+								{
+									Name:      "rules-volume",
+									MountPath: "/var/lib/suricata/rules", // All ConfigMaps will be merged here
+									ReadOnly:  true,
+								},
+							},
 						},
 					},
 					NodeName: idsRules.Node,
-					Volumes:  volumes,
+					Volumes: []corev1.Volume{
+						{
+							Name: "rules-volume",
+							VolumeSource: corev1.VolumeSource{
+								Projected: &corev1.ProjectedVolumeSource{
+									Sources: projectedSources,
+								},
+							},
+						},
+					},
 				},
 			},
 		},
