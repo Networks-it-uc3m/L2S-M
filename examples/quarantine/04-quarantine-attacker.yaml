@@ -15,7 +15,7 @@
 apiVersion: l2sm.l2sm.k8s.local/v1
 kind: QuarantinePodRequest
 metadata:
-  name: quarantine-demo-attacker
+  name: example-production-network
   labels:
     l2sm/example: quarantine
 spec:
@@ -27,4 +27,4 @@ spec:
       matchLabels:
         l2sm/example: quarantine
         l2sm/role: production
-  targetL2Network: quarantine-demo-isolation
+  targetL2Network: example-quarantine-network

@@ -20,7 +20,8 @@ metadata:
     app: suricata
     l2sm/example: quarantine
 data:
-  production.rules: |
+  suricata.rules: |
+    var HOME_NET any
     alert tcp $HOME_NET any -> $HOME_NET any (msg:"Production network: possible port scan"; flags:S; flow:to_server,stateless; detection_filter:track by_src,count 12,seconds 20; classtype:attempted-recon; sid:41000001; rev:1;)
     alert tcp $HOME_NET any -> $HOME_NET any (msg:"Production network: repeated connection attempts"; flow:to_server; detection_filter:track by_src,count 20,seconds 20; classtype:attempted-recon; sid:41000002; rev:1;)
 ---
@@ -32,7 +33,8 @@ metadata:
     app: suricata
     l2sm/example: quarantine
 data:
-  quarantine.rules: |
+  suricata.rules: |
+    var HOME_NET any
     alert ip $HOME_NET any -> any any (msg:"Quarantine network: any outbound IP traffic from quarantined pod"; classtype:policy-violation; sid:41001001; rev:1;)
     alert tcp $HOME_NET any -> any any (msg:"Quarantine network: blocked-class TCP attempt from quarantined pod"; flags:S; flow:to_server,stateless; classtype:policy-violation; sid:41001002; rev:1;)
     alert udp $HOME_NET any -> any any (msg:"Quarantine network: UDP attempt from quarantined pod"; classtype:policy-violation; sid:41001003; rev:1;)

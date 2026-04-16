@@ -15,14 +15,14 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: quarantine-server
+  name: server
   labels:
-    app.kubernetes.io/name: quarantine-server
+    app.kubernetes.io/name: server
     app.kubernetes.io/component: server
     l2sm: "true"
     l2sm/example: quarantine
   annotations:
-    l2sm/networks: '[{"name": "quarantine-demo-production", "ips": ["10.20.0.10/24"]}]'
+    l2sm/networks: '[{"name": "example-production-network", "ips": ["10.20.0.10/24"]}]'
 spec:
   containers:
   - name: agnhost
@@ -35,14 +35,14 @@ spec:
 apiVersion: v1
 kind: Pod
 metadata:
-  name: quarantine-client-a
+  name: host1
   labels:
-    app.kubernetes.io/name: quarantine-client-a
+    app.kubernetes.io/name: host1
     app.kubernetes.io/component: client
     l2sm: "true"
     l2sm/example: quarantine
   annotations:
-    l2sm/networks: '[{"name": "quarantine-demo-production", "ips": ["10.20.0.101/24"]}]'
+    l2sm/networks: '[{"name": "example-production-network", "ips": ["10.20.0.101/24"]}]'
 spec:
   containers:
   - name: client
@@ -59,14 +59,14 @@ spec:
 apiVersion: v1
 kind: Pod
 metadata:
-  name: quarantine-client-b
+  name: host2
   labels:
-    app.kubernetes.io/name: quarantine-client-b
+    app.kubernetes.io/name: host2
     app.kubernetes.io/component: client
     l2sm: "true"
     l2sm/example: quarantine
   annotations:
-    l2sm/networks: '[{"name": "quarantine-demo-production", "ips": ["10.20.0.102/24"]}]'
+    l2sm/networks: '[{"name": "example-production-network", "ips": ["10.20.0.102/24"]}]'
 spec:
   containers:
   - name: client
@@ -79,75 +79,23 @@ spec:
           wget -qO- --timeout=2 http://10.20.0.10:8080/ || true
           sleep 12
         done
+
 ---
 apiVersion: v1
 kind: Pod
 metadata:
-  name: quarantine-attacker
+  name: honeypot-server
   labels:
-    app.kubernetes.io/name: quarantine-attacker
-    app.kubernetes.io/component: client
     l2sm: "true"
     l2sm/example: quarantine
-    security.l2sm/demo-role: attacker
   annotations:
-    l2sm/networks: '[{"name": "quarantine-demo-production", "ips": ["10.20.0.103/24"]}]'
+    l2sm/networks: '[{"name": "example-quarantine-network", "ips": ["10.20.0.10/24"]}]'
 spec:
   containers:
-  - name: attacker
-    image: alpine:latest
-    securityContext:
-      capabilities:
-        add:
-          - NET_RAW
-          - NET_ADMIN
-    command:
-      - /bin/ash
-      - -c
-      - |
-        apk update
-        apk add nmap
-        sleep 45
-        while true; do
-          nmap -sS -Pn -p 1-1024 10.20.0.10 || true
-          sleep 15
-        done
----
-apiVersion: v1
-kind: Pod
-metadata:
-  name: cowrie-honeypot
-  annotations:
-    l2sm/networks: '[{"name": "quarantine-demo-isolation", "ips": ["10.20.0.10/24"]}]'
-spec:
-  volumes:
-    - name: cowrie-var
-      emptyDir: {}
-    - name: cowrie-etc
-      emptyDir: {}
-  containers:
-    - name: cowrie
-      image: cowrie/cowrie:latest
-      imagePullPolicy: Always
+    - name: echo
+      image: hashicorp/http-echo
+      args:
+      - "-text=honeypot server responds"
+      - "-listen=:80"
       securityContext:
-        runAsUser: 999
-        allowPrivilegeEscalation: false
-        readOnlyRootFilesystem: true
-        capabilities:
-          drop:
-            - all
-      ports:
-        - name: ssh-port
-          containerPort: 2222
-        - name: telnet-port
-          containerPort: 2223
-      readinessProbe:
-        tcpSocket:
-          port: ssh-port
-        initialDelaySeconds: 5
-        periodSeconds: 60
-      livenessProbe:
-        tcpSocket:
-          port: ssh-port
-        initialDelaySeconds: 15
-        periodSeconds: 60
+        runAsUser: 0

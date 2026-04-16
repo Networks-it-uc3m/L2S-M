@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: attacker
+  labels:
+    app.kubernetes.io/name: attacker
+    app.kubernetes.io/component: client
+    l2sm: "true"
+    l2sm/example: quarantine
+    security.l2sm/demo-role: attacker
+  annotations:
+    l2sm/networks: '[{"name": "example-production-network", "ips": ["10.20.0.103/24"]}]'
+spec:
+  containers:
+  - name: attacker
+    image: alpine:latest
+    securityContext:
+      capabilities:
+        add:
+          - NET_RAW
+          - NET_ADMIN
+    command:
+      - /bin/ash
+      - -c
+      - |
+        apk update
+        apk add nmap
+        sleep 2
+        while true; do
+          nmap -sS -Pn -p 1-1024 10.20.0.10 || true
+          sleep 15
+        done

@@ -15,7 +15,7 @@
 apiVersion: l2sm.l2sm.k8s.local/v1
 kind: L2Network
 metadata:
-  name: quarantine-demo-production
+  name: example-production-network
   labels:
     l2sm/example: quarantine
     l2sm/role: production
@@ -38,7 +38,7 @@ spec:
 apiVersion: l2sm.l2sm.k8s.local/v1
 kind: L2Network
 metadata:
-  name: quarantine-demo-isolation
+  name: example-quarantine-network 
   labels:
     l2sm/example: quarantine
     l2sm/role: quarantine
