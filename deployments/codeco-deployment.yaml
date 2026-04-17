@@ -132,7 +132,7 @@ spec:
                   homeNetCidr:
                     description: |-
                       HomeNetCIDR overrides the SURICATA $HOME_NET variable.
-                      If empty, the controller should default this to the L2Network's NetworkCIDR.
+                      If empty,will default to "any"
                     items:
                       type: string
                     type: array
@@ -144,6 +144,21 @@ spec:
                       format: int32
                       type: integer
                     type: array
+                  namespace:
+                    description: |-
+                      namespace sets the namespace where the ids resources will be deployed. if not set, it will be the overlay
+                      by default.
+                    type: string
+                  node:
+                    description: |-
+                      Node sets in which node of the cluster you are interested in setting the ids pod.
+                      todo: make optional, and choose control plane as default if none is chosen
+                    type: string
+                  profile:
+                    description: |-
+                      profile is for various profiles and ids systems. So far we only have "suricata", so any other
+                      should be implemented beforehand in the codebase
+                    type: string
                   useEmergingThreatsOpen:
                     default: true
                     description: |-
@@ -152,6 +167,8 @@ spec:
                     type: boolean
                 required:
                 - enabled
+                - node
+                - profile
                 - useEmergingThreatsOpen
                 type: object
               networkCIDR:
@@ -9607,6 +9624,259 @@ spec:
     subresources:
       status: {}
 ---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.17.2
+  name: quarantinepodrequests.l2sm.l2sm.k8s.local
+spec:
+  group: l2sm.l2sm.k8s.local
+  names:
+    kind: QuarantinePodRequest
+    listKind: QuarantinePodRequestList
+    plural: quarantinepodrequests
+    singular: quarantinepodrequest
+  scope: Namespaced
+  versions:
+  - name: v1
+    schema:
+      openAPIV3Schema:
+        description: QuarantinePodRequest is the Schema for the quarantinepodrequests
+          API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: spec defines the desired state of QuarantinePodRequest
+            properties:
+              selector:
+                description: |-
+                  Selector identifies the pods to quarantine and the L2Network they are
+                  currently attached to.
+                properties:
+                  l2NetworkSelector:
+                    description: |-
+                      L2NetworkSelector selects the source L2Network where matching pods must
+                      currently be attached.
+                    properties:
+                      matchExpressions:
+                        description: matchExpressions is a list of label selector
+                          requirements. The requirements are ANDed.
+                        items:
+                          description: |-
+                            A label selector requirement is a selector that contains values, a key, and an operator that
+                            relates the key and values.
+                          properties:
+                            key:
+                              description: key is the label key that the selector
+                                applies to.
+                              type: string
+                            operator:
+                              description: |-
+                                operator represents a key's relationship to a set of values.
+                                Valid operators are In, NotIn, Exists and DoesNotExist.
+                              type: string
+                            values:
+                              description: |-
+                                values is an array of string values. If the operator is In or NotIn,
+                                the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                the values array must be empty. This array is replaced during a strategic
+                                merge patch.
+                              items:
+                                type: string
+                              type: array
+                          required:
+                          - key
+                          - operator
+                          type: object
+                        type: array
+                      matchLabels:
+                        additionalProperties:
+                          type: string
+                        description: |-
+                          matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                          map is equivalent to an element of matchExpressions, whose key field is "key", the
+                          operator is "In", and the values array contains only "value". The requirements are ANDed.
+                        type: object
+                    type: object
+                    x-kubernetes-map-type: atomic
+                  podLabelSelector:
+                    description: PodLabelSelector selects the pods to move.
+                    properties:
+                      matchExpressions:
+                        description: matchExpressions is a list of label selector
+                          requirements. The requirements are ANDed.
+                        items:
+                          description: |-
+                            A label selector requirement is a selector that contains values, a key, and an operator that
+                            relates the key and values.
+                          properties:
+                            key:
+                              description: key is the label key that the selector
+                                applies to.
+                              type: string
+                            operator:
+                              description: |-
+                                operator represents a key's relationship to a set of values.
+                                Valid operators are In, NotIn, Exists and DoesNotExist.
+                              type: string
+                            values:
+                              description: |-
+                                values is an array of string values. If the operator is In or NotIn,
+                                the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                the values array must be empty. This array is replaced during a strategic
+                                merge patch.
+                              items:
+                                type: string
+                              type: array
+                          required:
+                          - key
+                          - operator
+                          type: object
+                        type: array
+                      matchLabels:
+                        additionalProperties:
+                          type: string
+                        description: |-
+                          matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                          map is equivalent to an element of matchExpressions, whose key field is "key", the
+                          operator is "In", and the values array contains only "value". The requirements are ANDed.
+                        type: object
+                    type: object
+                    x-kubernetes-map-type: atomic
+                required:
+                - l2NetworkSelector
+                - podLabelSelector
+                type: object
+              targetL2Network:
+                description: TargetL2Network names the L2Network where selected pods
+                  should be moved.
+                minLength: 1
+                type: string
+            required:
+            - selector
+            - targetL2Network
+            type: object
+          status:
+            description: status defines the observed state of QuarantinePodRequest
+            properties:
+              conditions:
+                description: |-
+                  conditions represent the current state of the QuarantinePodRequest resource.
+                  Each condition has a unique type and reflects the status of a specific aspect of the resource.
+
+                  Standard condition types include:
+                  - "Available": the resource is fully functional
+                  - "Progressing": the resource is being created or updated
+                  - "Degraded": the resource failed to reach or maintain its desired state
+
+                  The status of each condition is one of True, False, or Unknown.
+                items:
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
+              matchedPodCount:
+                description: MatchedPodCount is the number of pods matching the request
+                  selector.
+                format: int32
+                type: integer
+              movedPodCount:
+                description: MovedPodCount is the number of pods moved to the target
+                  L2Network.
+                format: int32
+                type: integer
+              observedGeneration:
+                description: ObservedGeneration is the most recent generation reconciled
+                  by the controller.
+                format: int64
+                type: integer
+              sourceL2NetworkName:
+                description: SourceL2NetworkName is the source L2Network selected
+                  by the request.
+                type: string
+              targetL2NetworkName:
+                description: TargetL2NetworkName is the target L2Network used by the
+                  request.
+                type: string
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -9769,6 +10039,7 @@ rules:
   - l2networks
   - networkedgedevices
   - overlays
+  - quarantinepodrequests
   verbs:
   - create
   - delete
@@ -9783,6 +10054,7 @@ rules:
   - l2networks/finalizers
   - networkedgedevices/finalizers
   - overlays/finalizers
+  - quarantinepodrequests/finalizers
   verbs:
   - update
 - apiGroups:
@@ -9791,6 +10063,7 @@ rules:
   - l2networks/status
   - networkedgedevices/status
   - overlays/status
+  - quarantinepodrequests/status
   verbs:
   - get
   - patch
@@ -9837,6 +10110,77 @@ rules:
   - subjectaccessreviews
   verbs:
   - create
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: controllermanager
+  name: l2sm-quarantinepodrequest-admin-role
+rules:
+- apiGroups:
+  - l2sm.l2sm.k8s.local
+  resources:
+  - quarantinepodrequests
+  verbs:
+  - '*'
+- apiGroups:
+  - l2sm.l2sm.k8s.local
+  resources:
+  - quarantinepodrequests/status
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: controllermanager
+  name: l2sm-quarantinepodrequest-editor-role
+rules:
+- apiGroups:
+  - l2sm.l2sm.k8s.local
+  resources:
+  - quarantinepodrequests
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - l2sm.l2sm.k8s.local
+  resources:
+  - quarantinepodrequests/status
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: controllermanager
+  name: l2sm-quarantinepodrequest-viewer-role
+rules:
+- apiGroups:
+  - l2sm.l2sm.k8s.local
+  resources:
+  - quarantinepodrequests
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - l2sm.l2sm.k8s.local
+  resources:
+  - quarantinepodrequests/status
+  verbs:
+  - get
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
@@ -10002,7 +10346,7 @@ spec:
         app: controller
     spec:
       containers:
-      - image: alexdecb/l2sm-controller:2.5.2
+      - image: alexdecb/l2sm-controller:2.5.3
         name: l2sm-controller
         ports:
         - containerPort: 6633
@@ -10057,7 +10401,7 @@ spec:
           value: "8181"
         - name: DNS_PORT_NUMBER
           value: "30808"
-        image: alexdecb/l2sm-controller-manager:2.8.6
+        image: alexdecb/l2sm-controller-manager:2.8.7
         livenessProbe:
           httpGet:
             path: /healthz

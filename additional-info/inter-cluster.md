@@ -44,7 +44,7 @@ sudo docker run -d \
   --name idco-controller \
   -p 6633:6633 \
   -p 8181:8181 \
-  alexdecb/l2sm-controller:2.5.2
+  alexdecb/l2sm-controller:2.5.3
 ```
 
 Ensure that the controller’s IP (e.g., `192.168.122.60`) and API port (e.g., `8181`) are correctly referenced in all subsequent configurations.

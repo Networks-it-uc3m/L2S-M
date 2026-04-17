@@ -1,0 +1,11 @@
+- las redes ahora no diferencian bien nombres con namespace. el cambio sería de name -> namespace/name
+- el orden de creación no está suficientemente testado. Si creas todo a la vez, debería funcionar:
+	- si la overlay no está creada, para la red da igual; pero claro si tu metes overlay con monitoring, tienes que estar escaneando constantemente para añadir la nueva red
+	- si la red no está creada o no está disponible, el pod se debería dejar crear, pero dejarlo esperando en pending a que la red esté disponible
+- if the network is deleted, we are getting error code in the l2sm controller, 409 alongside an exception. this is expected, but doesnt look pretty, so we may want to change it so we return 200 or 204 in such cases
+- the use of the new resource in k8s === dranet. we could dynamically attach interfaces, which is far more interesting, and skip using cni plugins, such as mutlus. 
+	- else, there are alternatives to multus that enable us to scale resources dynamically
+- to preserve l2 while enabling l3, we have to choose l3 (cni plugin limitations) and then what i do is assign ipv6, in localhost so it still feels like l2.
+- namespaces: there is a namespace for the overlay and one for the networks. you can set it up for parent overlay used for all namespaces (codeco) or a single overlay per namespace (nemo)
+
+make deplloy dev requires the .env file with the ip address. cannot use localhost!! dev_ip controller_ip
