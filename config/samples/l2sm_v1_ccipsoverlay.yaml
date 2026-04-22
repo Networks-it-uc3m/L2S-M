@@ -6,7 +6,7 @@ metadata:
     app.kubernetes.io/managed-by: kustomize
   name: ccipsoverlay-sample
 spec:
-  controllerIp: 172.18.0.3
+  controllerIp: 172.18.0.4
   nodes:
    - l2sm-test-worker
    - l2sm-test-worker2

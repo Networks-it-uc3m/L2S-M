@@ -20,7 +20,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"math/rand"
+
+	// "math/rand"
 	"net/http"
 	"time"
 
@@ -67,6 +68,7 @@ type StoredTunnel struct {
 	ID        string `json:"id"`
 	EndpointA string `json:"endpointA"`
 	EndpointB string `json:"endpointB"`
+	State     string `json:"state"`
 }
 
 type StoredTunnelMap map[string]StoredTunnel
@@ -93,14 +95,14 @@ func tunnelKey(a, b string) string {
 	return a + "__" + b
 }
 
-func randomID(n int) string {
-	const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-	b := make([]byte, n)
-	for i := range b {
-		b[i] = letters[rand.Intn(len(letters))]
-	}
-	return string(b)
-}
+// func randomID(n int) string {
+// 	const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+// 	b := make([]byte, n)
+// 	for i := range b {
+// 		b[i] = letters[rand.Intn(len(letters))]
+// 	}
+// 	return string(b)
+// }
 
 func configMapName(ccips *l2smv1.CcipsOverlay) string {
 	return ccips.Name + "-tunnels"
@@ -340,9 +342,15 @@ func (r *CcipsOverlayReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 		key := tunnelKey(endpointA, endpointB)
 		// Skip if already stored
-		if _, exists := storedTunnels[key]; exists {
-			log.Info("tunnel already stored, skipping", "key", key)
-			continue
+		if existing, exists := storedTunnels[key]; exists {
+			switch existing.State {
+			case "Created":
+				log.Info("tunnel already created, skipping", "key", key, "id", existing.ID)
+				continue
+			case "Pending":
+				log.Info("tunnel creation already in progress, skipping", "key", key)
+				continue
+			}
 		}
 
 		ipA, ok := ipAddr[endpointA]
@@ -353,6 +361,17 @@ func (r *CcipsOverlayReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		ipB, ok := ipAddr[endpointB]
 		if !ok || ipB == "" {
 			return ctrl.Result{}, fmt.Errorf("missing IP for endpointB %s", endpointB)
+		}
+
+		//Save tunnel to pending state before sending request, to avoid creating duplicates if reconcile is triggered again before we update the stored state with the new tunnel ID
+		storedTunnels[key] = StoredTunnel{
+			EndpointA: endpointA,
+			EndpointB: endpointB,
+			State:     "Pending",
+		}
+
+		if err := r.saveStoredTunnels(ctx, ccips, cm, storedTunnels); err != nil {
+			return ctrl.Result{}, err
 		}
 
 		reqBody := TunnelRequest{
@@ -441,6 +460,7 @@ func (r *CcipsOverlayReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			ID:        createResp.ID,
 			EndpointA: endpointA,
 			EndpointB: endpointB,
+			State:     "Created",
 		}
 
 	}
