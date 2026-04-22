@@ -1,0 +1,21 @@
+apiVersion: l2sm.l2sm.k8s.local/v1
+kind: CcipsOverlay
+metadata:
+  labels:
+    app.kubernetes.io/name: controllermanager
+    app.kubernetes.io/managed-by: kustomize
+  name: ccipsoverlay-sample
+spec:
+  controllerIp: 172.16.4.1
+  nodes:
+   - l2sm-test-worker
+   - l2sm-test-worker2
+   - l2sm-test-control-plane
+  tunnels:
+   - endpointA: l2sm-test-worker
+     endpointB: l2sm-test-worker2
+   - endpointA: l2sm-test-control-plane
+     endpointB: l2sm-test-worker
+   - endpointA: l2sm-test-control-plane
+     endpointB: l2sm-test-worker2
+  # TODO(user): Add fields here

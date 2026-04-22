@@ -19,4 +19,5 @@ resources:
 - l2sm_v1_networkedgedevice.yaml
 - l2sm_v1_overlay.yaml
 - l2sm_v1_quarantinepodrequest.yaml
+- l2sm_v1_ccipsoverlay.yaml
 #+kubebuilder:scaffold:manifestskustomizesamples

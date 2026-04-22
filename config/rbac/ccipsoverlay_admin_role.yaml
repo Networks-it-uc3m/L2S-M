@@ -1,0 +1,27 @@
+# This rule is not used by the project controllermanager itself.
+# It is provided to allow the cluster admin to help manage permissions for users.
+#
+# Grants full permissions ('*') over l2sm.l2sm.k8s.local.
+# This role is intended for users authorized to modify roles and bindings within the cluster,
+# enabling them to delegate specific permissions to other users or groups as needed.
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: controllermanager
+    app.kubernetes.io/managed-by: kustomize
+  name: ccipsoverlay-admin-role
+rules:
+- apiGroups:
+  - l2sm.l2sm.k8s.local
+  resources:
+  - ccipsoverlays
+  verbs:
+  - '*'
+- apiGroups:
+  - l2sm.l2sm.k8s.local
+  resources:
+  - ccipsoverlays/status
+  verbs:
+  - get
