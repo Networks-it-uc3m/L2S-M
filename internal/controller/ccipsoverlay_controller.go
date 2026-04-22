@@ -15,14 +15,14 @@
 package controller
 
 import (
-	//	"bytes"
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
-
-	//	"io"
-	//	"net/http"
+	"io"
 	"math/rand"
+	"net/http"
+	"time"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -70,6 +70,10 @@ type StoredTunnel struct {
 }
 
 type StoredTunnelMap map[string]StoredTunnel
+
+type CreateTunnelResponse struct {
+	ID string `json:"id"`
+}
 
 // +kubebuilder:rbac:groups=l2sm.l2sm.k8s.local,resources=ccipsoverlays,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=l2sm.l2sm.k8s.local,resources=ccipsoverlays/status,verbs=get;update;patch
@@ -188,43 +192,43 @@ func (r *CcipsOverlayReconciler) deleteOneStoredTunnel(
 
 		url := fmt.Sprintf("http://%s:5000/ccips/%s", ccips.Spec.ControllerIP, tunnel.ID)
 
-		log.Info("DEBUG: would send tunnel delete request",
-			"key", key,
-			"endpointA", tunnel.EndpointA,
-			"endpointB", tunnel.EndpointB,
-			"tunnelID", tunnel.ID,
-			"url", url,
-		)
+		// log.Info("DEBUG: would send tunnel delete request",
+		// 	"key", key,
+		// 	"endpointA", tunnel.EndpointA,
+		// 	"endpointB", tunnel.EndpointB,
+		// 	"tunnelID", tunnel.ID,
+		// 	"url", url,
+		// )
 
 		// --- REAL HTTP DELETE (disabled for now) ---
-		// httpReq, err := http.NewRequestWithContext(ctx, "DELETE", url, nil)
-		// if err != nil {
-		// 	return false, err
-		// }
-		//
-		// httpReq.Header.Set("Accept", "application/json")
-		//
-		// httpClient := &http.Client{Timeout: 10 * time.Second}
-		// resp, err := httpClient.Do(httpReq)
-		// if err != nil {
-		// 	return false, err
-		// }
-		//
-		// body, readErr := io.ReadAll(resp.Body)
-		// resp.Body.Close()
-		// if readErr != nil {
-		// 	return false, readErr
-		// }
-		//
-		// log.Info("server delete response",
-		// 	"url", url,
-		// 	"status", resp.StatusCode,
-		// 	"body", string(body),
-		// )
-		//
-		// if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		// 	return false, fmt.Errorf("delete failed with status %d: %s", resp.StatusCode, string(body))
-		// }
+		httpReq, err := http.NewRequestWithContext(ctx, "DELETE", url, nil)
+		if err != nil {
+			return false, err
+		}
+
+		httpReq.Header.Set("Accept", "application/json")
+
+		httpClient := &http.Client{Timeout: 60 * time.Second}
+		resp, err := httpClient.Do(httpReq)
+		if err != nil {
+			return false, err
+		}
+
+		body, readErr := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		if readErr != nil {
+			return false, readErr
+		}
+
+		log.Info("server delete response",
+			"url", url,
+			"status", resp.StatusCode,
+			"body", string(body),
+		)
+
+		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+			return false, fmt.Errorf("delete failed with status %d: %s", resp.StatusCode, string(body))
+		}
 
 		// Since delete succeeded (or is simulated), remove it from stored state
 		delete(storedTunnels, key)
@@ -362,69 +366,79 @@ func (r *CcipsOverlayReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			HardLifetime: Lifetime{NTime: 30},
 		}
 
-		jsonBody, err := json.MarshalIndent(reqBody, "", "  ")
-		if err != nil {
-			return ctrl.Result{}, err
-		}
-		// Fake response ID (simulate controller response)
-		fakeID := randomID(10)
-		// Log everything
-		log.Info("DEBUG: would send tunnel request",
-			"endpointA", endpointA,
-			"endpointB", endpointB,
-			"request", string(jsonBody),
-			"fakeID", fakeID,
-		)
+		// jsonBody, err := json.MarshalIndent(reqBody, "", "  ")
+		// if err != nil {
+		// 	return ctrl.Result{}, err
+		// }
+		// // Fake response ID (simulate controller response)
+		// fakeID := randomID(10)
+		// // Log everything
+		// log.Info("DEBUG: would send tunnel request",
+		// 	"endpointA", endpointA,
+		// 	"endpointB", endpointB,
+		// 	"request", string(jsonBody),
+		// 	"fakeID", fakeID,
+		// )
 
 		//UNCOMMENT FROM HERE TO ENABLE HTTP REQUEST SEND
 
-		// url := fmt.Sprintf("http://%s:5000/ccips", ccips.Spec.ControllerIP)
+		url := fmt.Sprintf("http://%s:5000/ccips", ccips.Spec.ControllerIP)
 
-		// jsonBody, err := json.Marshal(reqBody)
-		// if err != nil {
-		// 	return ctrl.Result{}, err
-		// }
+		jsonBody, err := json.Marshal(reqBody)
 
-		// httpReq, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(jsonBody))
-		// if err != nil {
-		// 	return ctrl.Result{}, err
-		// }
+		if err != nil {
+			return ctrl.Result{}, err
+		}
 
-		// httpReq.Header.Set("Content-Type", "application/json")
-		// httpReq.Header.Set("Accept", "application/json")
+		httpReq, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(jsonBody))
 
-		// httpClient := &http.Client{Timeout: 30 * time.Second}
-		// resp, err := httpClient.Do(httpReq)
-		// if err != nil {
-		// 	log.Error(err, "failed to send request", "url", url)
-		// 	return ctrl.Result{}, err
-		// }
+		if err != nil {
+			return ctrl.Result{}, err
+		}
 
-		// body, readErr := io.ReadAll(resp.Body)
-		// resp.Body.Close()
-		// if readErr != nil {
-		// 	return ctrl.Result{}, readErr
-		// }
+		httpReq.Header.Set("Content-Type", "application/json")
+		httpReq.Header.Set("Accept", "application/json")
 
-		// log.Info("server response",
-		// 	"url", url,
-		// 	"status", resp.StatusCode,
-		// 	"body", string(body),
-		// 	"endpointA", endpointA,
-		// 	"endpointB", endpointB,
-		// )
+		httpClient := &http.Client{Timeout: 30 * time.Second}
+		resp, err := httpClient.Do(httpReq)
 
-		// if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		// 	return ctrl.Result{}, fmt.Errorf(
-		// 		"controller returned status %d for tunnel %s-%s: %s",
-		// 		resp.StatusCode, endpointA, endpointB, string(body),
-		// 	)
-		// }
+		if err != nil {
+			log.Error(err, "failed to send request", "url", url)
+			return ctrl.Result{}, err
+		}
 
-		// END HTTP REQUEST SEND
+		body, readErr := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		if readErr != nil {
+			return ctrl.Result{}, readErr
+		}
+
+		log.Info("server response",
+			"url", url,
+			"status", resp.StatusCode,
+			"body", string(body),
+			"endpointA", endpointA,
+			"endpointB", endpointB,
+		)
+
+		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+			return ctrl.Result{}, fmt.Errorf(
+				"controller returned status %d for tunnel %s-%s: %s",
+				resp.StatusCode, endpointA, endpointB, string(body),
+			)
+		}
+
+		var createResp CreateTunnelResponse
+		if err := json.Unmarshal(body, &createResp); err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to parse controller response for tunnel %s-%s: %w", endpointA, endpointB, err)
+		}
+
+		if createResp.ID == "" {
+			return ctrl.Result{}, fmt.Errorf("controller response missing id for tunnel %s-%s: %s", endpointA, endpointB, string(body))
+		}
 
 		storedTunnels[key] = StoredTunnel{
-			ID:        fakeID,
+			ID:        createResp.ID,
 			EndpointA: endpointA,
 			EndpointB: endpointB,
 		}

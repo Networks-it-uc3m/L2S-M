@@ -1,7 +1,8 @@
 
 # Image URL to use all building/pushing image targets
 VERSION ?= $(strip $(shell cat VERSION))
-IMG ?= alexdecb/l2sm-controller-manager:$(VERSION)
+# IMG ?= alexdecb/l2sm-controller-manager:$(VERSION)
+IMG ?= lewisfelix24/l2sm-controller-manager:$(VERSION)
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.29.0
 
