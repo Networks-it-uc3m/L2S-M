@@ -167,8 +167,12 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "Overlay")
 		os.Exit(1)
 	}
+	if err := mgr.Add(&controller.AllocationRecovery{Client: mgr.GetClient(), APIReader: mgr.GetAPIReader(), SwitchesNamespace: env.GetSwitchesNamespace()}); err != nil {
+		setupLog.Error(err, "unable to register allocation recovery")
+		os.Exit(1)
+	}
 	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
-		podAnnotator := &controller.PodAnnotator{Client: mgr.GetClient(), SwitchesNamespace: env.GetSwitchesNamespace()}
+		podAnnotator := &controller.PodAnnotator{APIReader: mgr.GetAPIReader(), Client: mgr.GetClient(), SwitchesNamespace: env.GetSwitchesNamespace()}
 		if err := podAnnotator.InjectDecoder(admission.NewDecoder(mgr.GetScheme())); err != nil {
 			setupLog.Error(err, "unable to inject decoder into PodAnnotator")
 			os.Exit(1)
@@ -187,6 +191,13 @@ func main() {
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "Failed to create controller", "controller", "CcipsOverlay")
+		os.Exit(1)
+	}
+	if err := (&controller.CcipsInterOverlayReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "Failed to create controller", "controller", "CcipsInterOverlay")
 		os.Exit(1)
 	}
 	//+kubebuilder:scaffold:builder

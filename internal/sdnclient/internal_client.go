@@ -78,7 +78,14 @@ func (c *InternalClient) CheckNetworkExists(networkType l2smv1.NetworkType, netw
 	}
 	defer response.Body.Close()
 
-	return response.StatusCode == http.StatusOK, nil
+	switch response.StatusCode {
+	case http.StatusOK:
+		return true, nil
+	case http.StatusNotFound:
+		return false, nil
+	default:
+		return false, fmt.Errorf("could not check network existence, status code: %d", response.StatusCode)
+	}
 }
 
 // DeleteNetwork deletes an existing network from the SDN controller

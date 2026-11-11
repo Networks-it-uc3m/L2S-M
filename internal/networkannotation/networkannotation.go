@@ -58,14 +58,14 @@ func ExtractNetworks(annotations, namespace string) ([]NetworkAnnotation, error)
 		}
 	}
 
-	// Iterate over the networks to add the namespace
+	// Explicit JSON namespaces belong to the attachment. Only use the caller's
+	// namespace when none was supplied; an empty default must not erase one.
 	for i := range networks {
-		// if len(networks[i].IPAddresses) == 0 {
-		// 	// Call GenerateIPv6Address if IPAddresses are missing
-		// 	networks[i].GenerateIPv6Address()
-		// }
-		networks[i].Namespace = namespace
+		if networks[i].Namespace == "" {
+			networks[i].Namespace = namespace
+		}
 	}
+
 	return networks, nil
 }
 

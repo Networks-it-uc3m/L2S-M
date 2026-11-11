@@ -1,0 +1,9 @@
+apiVersion: l2sm.l2sm.k8s.local/v1
+kind: CcipsInterOverlay
+metadata:
+  labels:
+    app.kubernetes.io/name: controllermanager
+    app.kubernetes.io/managed-by: kustomize
+  name: ccipsinteroverlay-sample
+spec:
+  # TODO(user): Add fields here

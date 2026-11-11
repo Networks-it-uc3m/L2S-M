@@ -16,9 +16,10 @@ package controller
 
 import (
 	"context"
+	"encoding/binary"
 	"fmt"
 	"math/rand"
-	"net"
+	"net/netip"
 	"strings"
 
 	l2smv1 "github.com/Networks-it-uc3m/L2S-M/api/v1"
@@ -199,33 +200,39 @@ func CreateErrorEvent(
 
 // GetNextAvailableIP generates the next available IP dynamically and returns it with the subnet mask.
 func GetNextAvailableIP(networkCIDR, lastAssignedIP string, assignedIPs map[string]string) (string, string, error) {
-	_, ipNet, err := net.ParseCIDR(networkCIDR)
+	prefix, err := netip.ParsePrefix(networkCIDR)
 	if err != nil {
 		return "", "", fmt.Errorf("invalid CIDR: %s", networkCIDR)
 	}
-
-	mask, _ := ipNet.Mask.Size()
-	subnetMask := fmt.Sprintf("/%d", mask)
-
-	// Convert last assigned IP to net.IP
-	var startIP net.IP
-	if lastAssignedIP == "" || net.ParseIP(lastAssignedIP) == nil {
-		// Start at the first usable IP
-		startIP = ipNet.IP
-		startIP[len(startIP)-1]++ // Increment to skip network address
-	} else {
-		startIP = net.ParseIP(lastAssignedIP)
-		startIP[len(startIP)-1]++ // Move to the next IP
-
+	prefix = prefix.Masked()
+	first := prefix.Addr()
+	// Exclude network/broadcast addresses for ordinary IPv4 subnets. /31 and
+	// /32 retain their point-to-point/host semantics.
+	var broadcast netip.Addr
+	if first.Is4() && prefix.Bits() < 31 {
+		raw := first.As4()
+		number := binary.BigEndian.Uint32(raw[:]) | (^uint32(0) >> prefix.Bits())
+		binary.BigEndian.PutUint32(raw[:], number)
+		broadcast = netip.AddrFrom4(raw)
+		first = first.Next()
 	}
-
-	// Find the next unallocated IP
-	for ip := startIP; ipNet.Contains(ip); ip[len(ip)-1]++ {
-		if _, exists := assignedIPs[ip.String()]; !exists {
-			// Return the IP and subnet
-			return ip.String(), subnetMask, nil
+	candidate := first
+	if previous, err := netip.ParseAddr(lastAssignedIP); err == nil && prefix.Contains(previous) {
+		candidate = previous.Next()
+	}
+	// At most the existing allocations plus reserved boundaries can precede a
+	// free address. Wrap to reuse released addresses; Addr.Next handles carry.
+	for attempt := 0; attempt <= len(assignedIPs)+2; attempt++ {
+		if !candidate.IsValid() || !prefix.Contains(candidate) || candidate == broadcast {
+			candidate = first
 		}
+		if !prefix.Contains(candidate) || candidate == broadcast {
+			break
+		}
+		if _, used := assignedIPs[candidate.String()]; !used {
+			return candidate.String(), fmt.Sprintf("/%d", prefix.Bits()), nil
+		}
+		candidate = candidate.Next()
 	}
-
 	return "", "", fmt.Errorf("no available IPs in CIDR: %s", networkCIDR)
 }

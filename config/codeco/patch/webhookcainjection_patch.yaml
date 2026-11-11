@@ -41,7 +41,7 @@ webhooks:
         apiVersions: ["v1"]
         resources: ["pods"]
     failurePolicy: Fail
-    sideEffects: None
+    sideEffects: NoneOnDryRun
     admissionReviewVersions: ["v1"]
     objectSelector:
       matchLabels:

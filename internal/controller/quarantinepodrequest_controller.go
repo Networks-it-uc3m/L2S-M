@@ -16,8 +16,10 @@ package controller
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
-	"net"
+	"reflect"
+	"time"
 
 	l2smv1 "github.com/Networks-it-uc3m/L2S-M/api/v1"
 	"github.com/Networks-it-uc3m/L2S-M/internal/env"
@@ -30,6 +32,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -38,6 +41,7 @@ import (
 // QuarantinePodRequestReconciler reconciles a QuarantinePodRequest object
 type QuarantinePodRequestReconciler struct {
 	client.Client
+	APIReader      client.Reader
 	Scheme         *runtime.Scheme
 	InternalClient sdnclient.Client
 }
@@ -58,17 +62,21 @@ func (r *QuarantinePodRequestReconciler) Reconcile(ctx context.Context, req ctrl
 	logger := logf.FromContext(ctx)
 
 	quarantineRequest := &l2smv1.QuarantinePodRequest{}
-	if err := r.Get(ctx, req.NamespacedName, quarantineRequest); err != nil {
+	if err := (allocationStore{Client: r.Client, Reader: r.APIReader}).reader().Get(ctx, req.NamespacedName, quarantineRequest); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
+	if condition := meta.FindStatusCondition(quarantineRequest.Status.Conditions, "Available"); condition != nil && condition.Status == metav1.ConditionTrue && condition.ObservedGeneration == quarantineRequest.Generation {
+		return ctrl.Result{}, nil
+	}
+
 	sourceNetwork, result, err := r.resolveSourceNetwork(ctx, quarantineRequest)
-	if err != nil {
+	if err != nil || sourceNetwork == nil {
 		return result, err
 	}
 
 	targetNetwork := &l2smv1.L2Network{}
-	if err := r.Get(ctx, client.ObjectKey{Name: quarantineRequest.Spec.TargetL2Network, Namespace: req.Namespace}, targetNetwork); err != nil {
+	if err := (allocationStore{Client: r.Client, Reader: r.APIReader}).reader().Get(ctx, client.ObjectKey{Name: quarantineRequest.Spec.TargetL2Network, Namespace: req.Namespace}, targetNetwork); err != nil {
 		if apierrors.IsNotFound(err) {
 			statusErr := r.setQuarantineStatus(ctx, quarantineRequest, metav1.ConditionFalse, "TargetL2NetworkNotFound", fmt.Sprintf("target L2Network %q does not exist", quarantineRequest.Spec.TargetL2Network), sourceNetwork.Name, quarantineRequest.Spec.TargetL2Network, 0, 0)
 			return ctrl.Result{}, statusErr
@@ -98,7 +106,7 @@ func (r *QuarantinePodRequestReconciler) Reconcile(ctx context.Context, req ctrl
 	}
 
 	podList := &corev1.PodList{}
-	if err := r.List(ctx, podList, &client.ListOptions{Namespace: req.Namespace, LabelSelector: podSelector}); err != nil {
+	if err := (allocationStore{Client: r.Client, Reader: r.APIReader}).reader().List(ctx, podList, &client.ListOptions{Namespace: req.Namespace, LabelSelector: podSelector}); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -110,10 +118,13 @@ func (r *QuarantinePodRequestReconciler) Reconcile(ctx context.Context, req ctrl
 			continue
 		}
 
-		moved, err := r.movePodToTargetNetwork(ctx, pod, sourceNetwork, targetNetwork)
+		moved, err := r.movePodToTargetNetwork(ctx, pod, sourceNetwork, targetNetwork, string(quarantineRequest.UID))
 		if err != nil {
 			logger.Error(err, "could not quarantine pod", "pod", fmt.Sprintf("%s/%s", pod.Namespace, pod.Name), "sourceL2Network", sourceNetwork.Name, "targetL2Network", targetNetwork.Name)
-			return ctrl.Result{}, r.setQuarantineStatus(ctx, quarantineRequest, metav1.ConditionFalse, "PodMoveFailed", err.Error(), sourceNetwork.Name, targetNetwork.Name, matchedPods, movedPods)
+			if statusErr := r.setQuarantineStatus(ctx, quarantineRequest, metav1.ConditionFalse, "PodMoveFailed", err.Error(), sourceNetwork.Name, targetNetwork.Name, matchedPods, movedPods); statusErr != nil {
+				return ctrl.Result{}, statusErr
+			}
+			return ctrl.Result{RequeueAfter: time.Second}, err
 		}
 		if moved {
 			matchedPods++
@@ -131,7 +142,7 @@ func (r *QuarantinePodRequestReconciler) resolveSourceNetwork(ctx context.Contex
 	}
 
 	sourceNetworks := &l2smv1.L2NetworkList{}
-	if err := r.List(ctx, sourceNetworks, &client.ListOptions{Namespace: request.Namespace, LabelSelector: sourceSelector}); err != nil {
+	if err := (allocationStore{Client: r.Client, Reader: r.APIReader}).reader().List(ctx, sourceNetworks, &client.ListOptions{Namespace: request.Namespace, LabelSelector: sourceSelector}); err != nil {
 		return nil, ctrl.Result{}, err
 	}
 
@@ -145,110 +156,167 @@ func (r *QuarantinePodRequestReconciler) resolveSourceNetwork(ctx context.Contex
 	}
 }
 
-func (r *QuarantinePodRequestReconciler) movePodToTargetNetwork(ctx context.Context, pod *corev1.Pod, sourceNetwork, targetNetwork *l2smv1.L2Network) (bool, error) {
-	l2smNetworksRaw, ok := pod.Annotations[networkannotation.L2SM_NETWORK_ANNOTATION]
-	if !ok {
-		return false, nil
-	}
-	multusNetworksRaw, ok := pod.Annotations[networkannotation.MULTUS_ANNOTATION_KEY]
-	if !ok {
-		return false, nil
-	}
+const pendingMoveAnnotation = "l2sm.l2sm.k8s.local/pending-move"
+const completedMoveAnnotation = "l2sm.l2sm.k8s.local/completed-move"
 
-	l2smNetworks, err := networkannotation.ExtractNetworks(l2smNetworksRaw, pod.Namespace)
+type pendingMove struct {
+	RequestID string `json:"requestID,omitempty"`
+	Source    string `json:"source"`
+	Target    string `json:"target"`
+	SourceUID string `json:"sourceUID"`
+	TargetUID string `json:"targetUID"`
+}
+
+func (r *QuarantinePodRequestReconciler) movePodToTargetNetwork(ctx context.Context, pod *corev1.Pod, sourceNetwork, targetNetwork *l2smv1.L2Network, requestIDs ...string) (bool, error) {
+	store := allocationStore{Client: r.Client, Reader: r.APIReader}
+	key := client.ObjectKeyFromObject(pod)
+	operationCtx, release, err := acquirePodOperation(ctx, store, key)
 	if err != nil {
-		return false, fmt.Errorf("could not extract pod L2Network annotations: %w", err)
-	}
-	sourceIndex := networkAnnotationIndex(l2smNetworks, sourceNetwork.Name)
-	if sourceIndex == -1 {
-		return false, nil
-	}
-
-	multusNetworks, err := networkannotation.ExtractNetworks(multusNetworksRaw, pod.Namespace)
-	if err != nil {
-		return false, fmt.Errorf("could not extract pod Multus annotations: %w", err)
-	}
-	if len(multusNetworks) != len(l2smNetworks) {
-		return false, fmt.Errorf("pod has mismatched l2sm and Multus annotation counts: %d l2sm networks, %d Multus networks", len(l2smNetworks), len(multusNetworks))
-	}
-
-	portNumber, err := utils.GetPortNumberFromNetAttachDef(multusNetworks[sourceIndex].Name)
-	if err != nil {
-		return false, fmt.Errorf("could not get port number from network attachment definition %q: %w", multusNetworks[sourceIndex].Name, err)
-	}
-	ofID := fmt.Sprintf("of:%s", dp.GenerateID(dp.GetSwitchName(dp.DatapathParams{NodeName: pod.Spec.NodeName, ProviderName: l2smv1.OVERLAY_PROVIDER})))
-	ofPort := fmt.Sprintf("%s/%s", ofID, portNumber)
-
-	sourcePayload := sdnclient.VnetPayload{NetworkId: sourceNetwork.Name, Port: []string{ofPort}}
-	if err := r.InternalClient.DetachPodFromNetwork(sourceNetwork.Spec.Type, sourcePayload); err != nil {
-		return false, fmt.Errorf("could not detach pod %s/%s port %s from source L2Network %q: %w", pod.Namespace, pod.Name, ofPort, sourceNetwork.Name, err)
-	}
-
-	targetPayload := sdnclient.VnetPayload{NetworkId: targetNetwork.Name, Port: []string{ofPort}}
-	if err := r.InternalClient.AttachPodToNetwork(targetNetwork.Spec.Type, targetPayload); err != nil {
-		return false, fmt.Errorf("could not attach pod %s/%s port %s to target L2Network %q: %w", pod.Namespace, pod.Name, ofPort, targetNetwork.Name, err)
-	}
-
-	l2smNetworks[sourceIndex].Name = targetNetwork.Name
-	pod.Annotations[networkannotation.L2SM_NETWORK_ANNOTATION] = networkannotation.MultusAnnotationToString(l2smNetworks)
-	if err := r.Update(ctx, pod); err != nil {
-		return false, fmt.Errorf("could not update pod network annotation: %w", err)
-	}
-
-	if err := r.updateNetworkStatuses(ctx, sourceNetwork, targetNetwork, pod.Name, multusNetworks[sourceIndex].IPAddresses); err != nil {
 		return false, err
 	}
+	defer release()
+	ctx = operationCtx
+	if err := store.reader().Get(ctx, key, pod); err != nil {
+		return false, err
+	}
+	networks, err := networkannotation.ExtractNetworks(pod.Annotations[networkannotation.L2SM_NETWORK_ANNOTATION], pod.Namespace)
+	if err != nil {
+		return false, err
+	}
+	sourceIndex := networkAnnotationIndex(networks, sourceNetwork.Name)
+	journal := pendingMove{Source: sourceNetwork.Name, Target: targetNetwork.Name, SourceUID: string(sourceNetwork.UID), TargetUID: string(targetNetwork.UID)}
+	previous := pod.Annotations[pendingMoveAnnotation]
+	if len(requestIDs) > 0 {
+		journal.RequestID = requestIDs[0]
+	} else if previous != "" {
+		var unfinished pendingMove
+		if err := json.Unmarshal([]byte(previous), &unfinished); err != nil {
+			return false, err
+		}
+		journal.RequestID = unfinished.RequestID
+	}
+	encoded, _ := json.Marshal(journal)
+	desiredJournal := string(encoded)
 
+	if previous != "" && previous != desiredJournal {
+		return false, fmt.Errorf("pod %s has another pending network move", pod.Name)
+	}
+	if sourceIndex == -1 {
+		if previous == "" {
+			// Preserve counts when another reconcile completed this request's
+			// move after our previous attempt stopped midway through a batch.
+			completed := journal.RequestID != "" && pod.Annotations[completedMoveAnnotation] == desiredJournal && networkAnnotationIndex(networks, targetNetwork.Name) >= 0
+			return completed, nil
+		}
+		// A previous attempt changed the pod annotation but failed during status
+		// updates. Its durable journal keeps that unfinished move discoverable.
+		sourceIndex = networkAnnotationIndex(networks, targetNetwork.Name)
+	}
+	if sourceIndex == -1 {
+		return false, fmt.Errorf("pending move has no matching pod interface")
+	}
+	attachments, err := networkannotation.ExtractNetworks(pod.Annotations[networkannotation.MULTUS_ANNOTATION_KEY], pod.Namespace)
+	if err != nil || len(attachments) != len(networks) {
+		return false, fmt.Errorf("pod has invalid network attachment mapping: %v", err)
+	}
+	port, err := utils.GetPortNumberFromNetAttachDef(attachments[sourceIndex].Name)
+	if err != nil {
+		return false, err
+	}
+	// Persist intent before external effects. Concurrent moves of the same pod
+	// compare the journal on a fresh resource version instead of racing blindly.
+	if err := updatePod(ctx, store, key, func(current *corev1.Pod) error {
+		if current.DeletionTimestamp != nil {
+			return fmt.Errorf("pod is deleting")
+		}
+		if current.Annotations[pendingMoveAnnotation] != "" && current.Annotations[pendingMoveAnnotation] != desiredJournal {
+			return fmt.Errorf("another network move is in progress")
+		}
+		if current.Annotations[networkannotation.L2SM_NETWORK_ANNOTATION] != pod.Annotations[networkannotation.L2SM_NETWORK_ANNOTATION] {
+			return fmt.Errorf("pod membership changed; retry move")
+		}
+		current.Annotations[pendingMoveAnnotation] = desiredJournal
+		return nil
+	}); err != nil {
+		return false, err
+	}
+	// Reserve target addresses before forwarding changes; refuse collisions with
+	// existing target members rather than overwriting their status entries.
+	ips := attachments[sourceIndex].IPAddresses
+	if _, err := store.reserveIPs(ctx, client.ObjectKeyFromObject(targetNetwork), pod.Name, podAllocationID(pod), ips); err != nil {
+		// Nothing external has changed; remove our intent so a permanent address
+		// collision does not prevent a different request from moving the pod.
+		_ = updatePod(ctx, store, key, func(current *corev1.Pod) error {
+			if current.Annotations[pendingMoveAnnotation] == desiredJournal {
+				delete(current.Annotations, pendingMoveAnnotation)
+			}
+			return nil
+		})
+		return false, err
+	}
+	ofPort := fmt.Sprintf("of:%s/%s", dp.GenerateID(dp.GetSwitchName(dp.DatapathParams{NodeName: pod.Spec.NodeName, ProviderName: l2smv1.OVERLAY_PROVIDER})), port)
+	if err := r.InternalClient.DetachPodFromNetwork(sourceNetwork.Spec.Type, sdnclient.VnetPayload{NetworkId: sourceNetwork.Name, Port: []string{ofPort}}); err != nil {
+		return false, err
+	}
+	if err := r.InternalClient.AttachPodToNetwork(targetNetwork.Spec.Type, sdnclient.VnetPayload{NetworkId: targetNetwork.Name, Port: []string{ofPort}}); err != nil {
+		return false, err
+	}
+	if err := updatePod(ctx, store, key, func(current *corev1.Pod) error {
+		if current.Annotations[pendingMoveAnnotation] != desiredJournal {
+			return fmt.Errorf("move journal changed")
+		}
+		currentNetworks, err := networkannotation.ExtractNetworks(current.Annotations[networkannotation.L2SM_NETWORK_ANNOTATION], current.Namespace)
+		if err != nil {
+			return err
+		}
+		index := networkAnnotationIndex(currentNetworks, sourceNetwork.Name)
+		if index >= 0 {
+			currentNetworks[index].Name = targetNetwork.Name
+		}
+		value := networkannotation.MultusAnnotationToString(currentNetworks)
+		current.Annotations[networkannotation.L2SM_NETWORK_ANNOTATION] = value
+		current.Annotations[attachedNetworksAnnotation] = value
+		return nil
+	}); err != nil {
+		return false, err
+	}
+	if err := store.releaseIPs(ctx, client.ObjectKeyFromObject(sourceNetwork), pod.Name, podAllocationID(pod)); err != nil {
+		return false, err
+	}
+	if err := updatePod(ctx, store, key, func(current *corev1.Pod) error {
+		if current.Annotations[pendingMoveAnnotation] == desiredJournal {
+			current.Annotations[completedMoveAnnotation] = desiredJournal
+			delete(current.Annotations, pendingMoveAnnotation)
+		}
+		return nil
+	}); err != nil {
+		return false, err
+	}
 	return true, nil
 }
 
-func (r *QuarantinePodRequestReconciler) updateNetworkStatuses(ctx context.Context, sourceNetwork, targetNetwork *l2smv1.L2Network, podName string, ipAddresses []string) error {
-	if sourceNetwork.Status.ConnectedPodCount > 0 {
-		sourceNetwork.Status.ConnectedPodCount--
-	}
-	targetNetwork.Status.ConnectedPodCount++
-
-	for _, podCIDR := range ipAddresses {
-		ip, _, err := net.ParseCIDR(podCIDR)
-		if err != nil {
-			continue
-		}
-		ipString := ip.String()
-		delete(sourceNetwork.Status.AssignedIPs, ipString)
-		if targetNetwork.Status.AssignedIPs == nil {
-			targetNetwork.Status.AssignedIPs = map[string]string{}
-		}
-		targetNetwork.Status.AssignedIPs[ipString] = podName
-	}
-
-	if err := r.Status().Update(ctx, sourceNetwork); err != nil {
-		return fmt.Errorf("could not update source L2Network status: %w", err)
-	}
-	if err := r.Status().Update(ctx, targetNetwork); err != nil {
-		return fmt.Errorf("could not update target L2Network status: %w", err)
-	}
-
-	return nil
-}
-
 func (r *QuarantinePodRequestReconciler) setQuarantineStatus(ctx context.Context, request *l2smv1.QuarantinePodRequest, conditionStatus metav1.ConditionStatus, reason, message, sourceNetworkName, targetNetworkName string, matchedPodCount, movedPodCount int32) error {
-	request.Status.ObservedGeneration = request.Generation
-	request.Status.SourceL2NetworkName = sourceNetworkName
-	request.Status.TargetL2NetworkName = targetNetworkName
-	request.Status.MatchedPodCount = matchedPodCount
-	request.Status.MovedPodCount = movedPodCount
-	meta.SetStatusCondition(&request.Status.Conditions, metav1.Condition{
-		Type:               "Available",
-		Status:             conditionStatus,
-		ObservedGeneration: request.Generation,
-		Reason:             reason,
-		Message:            message,
+	store := allocationStore{Client: r.Client, Reader: r.APIReader}
+	return retry.RetryOnConflict(allocationBackoff, func() error {
+		current := &l2smv1.QuarantinePodRequest{}
+		if err := store.reader().Get(ctx, client.ObjectKeyFromObject(request), current); err != nil {
+			return client.IgnoreNotFound(err)
+		}
+		if current.Generation != request.Generation || current.UID != request.UID {
+			return fmt.Errorf("quarantine request changed during reconciliation")
+		}
+		before := current.DeepCopy().Status
+		current.Status.ObservedGeneration = current.Generation
+		current.Status.SourceL2NetworkName = sourceNetworkName
+		current.Status.TargetL2NetworkName = targetNetworkName
+		current.Status.MatchedPodCount = matchedPodCount
+		current.Status.MovedPodCount = movedPodCount
+		meta.SetStatusCondition(&current.Status.Conditions, metav1.Condition{Type: "Available", Status: conditionStatus, ObservedGeneration: current.Generation, Reason: reason, Message: message})
+		if reflect.DeepEqual(current.Status, before) {
+			return nil
+		}
+		return r.Status().Update(ctx, current)
 	})
-
-	if err := r.Status().Update(ctx, request); err != nil {
-		return client.IgnoreNotFound(err)
-	}
-	return nil
 }
 
 func networkAnnotationIndex(networks []networkannotation.NetworkAnnotation, networkName string) int {
@@ -262,6 +330,7 @@ func networkAnnotationIndex(networks []networkannotation.NetworkAnnotation, netw
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *QuarantinePodRequestReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	r.APIReader = mgr.GetAPIReader()
 	if r.InternalClient == nil {
 		clientConfig := sdnclient.ClientConfig{BaseURL: fmt.Sprintf("http://%s:%s/onos", env.GetControllerIP(), env.GetControllerPort()), Username: "karaf", Password: "karaf"}
 		internalClient, err := sdnclient.NewClient(sdnclient.InternalType, clientConfig)

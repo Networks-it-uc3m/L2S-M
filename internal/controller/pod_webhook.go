@@ -17,10 +17,10 @@ package controller
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+	l2smv1 "github.com/Networks-it-uc3m/L2S-M/api/v1"
 	"math/rand"
-	"net"
 	"net/http"
+	"time"
 
 	"github.com/Networks-it-uc3m/L2S-M/internal/networkannotation"
 	"github.com/go-logr/logr"
@@ -31,189 +31,125 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
-// +kubebuilder:webhook:path=/mutate-v1-pod,mutating=true,failurePolicy=fail,groups="",resources=pods,verbs=update,versions=v1,name=mpod.kb.io
+// +kubebuilder:webhook:path=/mutate-v1-pod,mutating=true,failurePolicy=fail,groups="",resources=pods,verbs=create,versions=v1,name=mpod.kb.io,sideEffects=NoneOnDryRun,admissionReviewVersions=v1
 type PodAnnotator struct {
 	Client            client.Client
+	APIReader         client.Reader
 	Decoder           *admission.Decoder
 	SwitchesNamespace string
 }
 
 func (a *PodAnnotator) Handle(ctx context.Context, req admission.Request) admission.Response {
-	log := log.FromContext(ctx)
-	log.Info("Webhook: registering pod")
-	// First we decode the pod
 	pod := &corev1.Pod{}
-	err := a.Decoder.Decode(req, pod)
-	if err != nil {
-		log.Error(err, "Error decoding pod")
+	if err := a.Decoder.Decode(req, pod); err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
 	}
-	if !pod.ObjectMeta.DeletionTimestamp.IsZero() {
-		return admission.Allowed("Allowing pod's deletion")
+	if pod.DeletionTimestamp != nil {
+		return admission.Allowed("pod deletion")
 	}
-
+	raw, uses := pod.Annotations[networkannotation.L2SM_NETWORK_ANNOTATION]
+	if !uses || pod.Annotations[networkannotation.MULTUS_ANNOTATION_KEY] != "" {
+		return admission.Allowed("no allocation required")
+	}
+	if req.DryRun != nil && *req.DryRun {
+		// Admission reserves real resources. A dry-run must never mutate them.
+		return admission.Denied("L2S-M attachment allocation requires a non-dry-run request")
+	}
+	if pod.Namespace == "" {
+		pod.Namespace = req.Namespace
+	}
+	if pod.Name == "" {
+		return admission.Denied("L2S-M allocation requires a pod name")
+	}
+	store := allocationStore{Client: a.Client, Reader: a.APIReader}
 	if pod.Spec.NodeName == "" {
-		// List available nodes.
-		nodeList := &corev1.NodeList{}
-		if err := a.Client.List(ctx, nodeList); err != nil {
-			log.Error(err, "Error listing nodes")
+		nodes := &corev1.NodeList{}
+		if err := store.reader().List(ctx, nodes); err != nil {
 			return admission.Errored(http.StatusInternalServerError, err)
 		}
-		if len(nodeList.Items) == 0 {
-			return admission.Errored(http.StatusInternalServerError, fmt.Errorf("no available nodes"))
+		if len(nodes.Items) == 0 {
+			return admission.Denied("no available nodes")
 		}
-
-		// Seed the random number generator.
-
-		selectedNode := nodeList.Items[rand.Intn(len(nodeList.Items))].Name
-		log.Info("Selected node", "node", selectedNode)
-		pod.Spec.NodeName = selectedNode
+		pod.Spec.NodeName = nodes.Items[rand.Intn(len(nodes.Items))].Name
 	}
-	if _, ok := pod.Annotations[ERROR_ANNOTATION]; ok {
-		return admission.Allowed("Already errored creation")
+	networks, err := networkannotation.ExtractNetworks(raw, pod.Namespace)
+	if err != nil {
+		return admission.Errored(http.StatusBadRequest, err)
 	}
-	// Check if the pod has the annotation l2sm/networks. This webhook operation only will happen if so. Else, it will just
-	// let the creation begin.
-	if annot, ok := pod.Annotations[networkannotation.L2SM_NETWORK_ANNOTATION]; ok {
-		if _, ok := pod.Annotations[networkannotation.MULTUS_ANNOTATION_KEY]; ok {
-			return admission.Allowed("Pod already using multus cni plugin")
-		}
-		netAttachDefLabel := networkannotation.NET_ATTACH_LABEL_PREFIX + pod.Spec.NodeName
-		// We extract which networks the user intends to attach the pod to. If there is any error, or the
-		// Networks aren't created, the pod will be set as errored, until a network is created.
-		l2NetAnnotations, err := networkannotation.ExtractNetworks(annot, a.SwitchesNamespace)
-		if err != nil {
-			log.Error(err, "L2S-M Network annotations could not be extracted")
-			return admission.Errored(http.StatusInternalServerError, err)
-		}
-
-		// Map of the l2networks for quick lookup
-		networkResources, err := GetL2NetworksMap(ctx, a.Client, l2NetAnnotations)
-		if err != nil {
-			log.Info("Pod's network annotation incorrect. L2Network not attached.")
-			// return admission.Allowed("Pod's network annotation incorrect. L2Network not attached.")
-
-		}
-
-		// We get the available network attachment definitions. These are interfaces attached to the switches, so
-		// by using labelling, we can know which interfaces the switch has.
-		var multusAnnotations []networkannotation.NetworkAnnotation
-		netAttachDefs := GetFreeNetAttachDefs(ctx, a.Client, a.SwitchesNamespace, netAttachDefLabel)
-
-		// If there are no available network attachment definitions, we can't attach the pod to the desired networks
-		// So, we launch an error.
-		fmt.Println(a.SwitchesNamespace)
-		if len(netAttachDefs.Items) < len(l2NetAnnotations) {
-			msg := fmt.Sprintf("No interfaces available for node %s", pod.Spec.NodeName)
-			return patchErrorPod(req, pod, &log, msg)
-		}
-		// Now we create the multus annotations, by using the network attachment definition name
-		// And the desired IP address.
-		for index, l2NetAnnot := range l2NetAnnotations {
-
-			// We get the l2network from the l2network map, based on the annotation
-			network, ok := networkResources[l2NetAnnot.Name]
-			if !ok {
-				log.Error(err, "Could not retrieve l2network")
-			}
-
-			// Array of the ip addresses we'll try to assign the pod
-			var assignIPAddr []string
-
-			// We get the network attachment definition as an annotation for the pod. If switches namespace is not set,
-			//it will be the same as the pod's namespace
-			netAttachDef := &netAttachDefs.Items[index]
-
-			// New annotation is the multus that will be attached to the pod
-			multusAnnotation := networkannotation.NetworkAnnotation{Name: netAttachDef.Name, Namespace: a.SwitchesNamespace}
-
-			// If the user specified a static ip address, we will use that
-			if len(l2NetAnnot.IPAddresses) != 0 {
-				assignIPAddr = l2NetAnnot.IPAddresses
-			} else {
-
-				// Else, we check if the l2network has a l3 config or not
-				// If it hasn't got an ip address, and the network is not set to layer 3, by default it will be layer 2
-				if network.Spec.NetworkCIDR != "" {
-
-					// We take the network address range and the pod address range. The network one specifies the routing option; the pod range is
-					// inside that subnet specifying which available ip address to take. This is because we want compatibility with inter domain networks
-					// where logic is not fully shared
-					addressRange := network.Spec.NetworkCIDR
-					_, ipNet, err := net.ParseCIDR(addressRange)
-					subnet, _ := ipNet.Mask.Size()
-					subnetMask := fmt.Sprintf("/%d", subnet)
-
-					if err != nil {
-						log.Error(err, "NetworkCIDR couldn't be parsed correctly", "network", network.Name)
-					}
-
-					if network.Spec.PodAddressRange != "" {
-						addressRange = network.Spec.PodAddressRange
-					}
-
-					// We take the next available ip address from the network assigned ips, checking it's not been already assigned.
-					nextIP, _, err := GetNextAvailableIP(addressRange, network.Status.LastAssignedIP, network.Status.AssignedIPs)
-
-					if err != nil {
-						log.Error(err, "No available IP addresses for network", "network", network.Name)
-					}
-
-					network.Status.LastAssignedIP = nextIP
-					assignIPAddr = append(assignIPAddr, nextIP+subnetMask)
-				}
-
-			}
-
-			// If there is ipv4, we update the multus annotation and network to notify the new ip and pod
-			if len(assignIPAddr) != 0 {
-				multusAnnotation.IPAddresses = assignIPAddr
-				if network.Status.AssignedIPs == nil {
-					network.Status.AssignedIPs = make(map[string]string)
-				}
-
-				// Now safely assign the IP to the pod
-				assignedIPAddress, _, _ := net.ParseCIDR(multusAnnotation.IPAddresses[0])
-				network.Status.AssignedIPs[assignedIPAddress.String()] = pod.Name
-
-			} else {
-
-				// If there is no ipv4, it means its L2, so to bypass the static ipam plugin, we give a localhost ipv6 to the annotation
-				multusAnnotation.GenerateIPv6Address()
-			}
-
-			// We update the net attach definition to specify that for this pod node it's taken, and the network to say it has 1 more pod
-			network.Status.ConnectedPodCount++
-
-			netAttachDef.Labels[netAttachDefLabel] = "true"
-
-			err = a.Client.Update(ctx, netAttachDef)
-			if err != nil {
-				log.Error(err, "Could not update network attachment definition")
-
-			}
-			err = a.Client.Status().Update(ctx, &network)
-			if err != nil {
-				log.Error(err, "Could not update l2network status")
-
-			}
-			multusAnnotations = append(multusAnnotations, multusAnnotation)
-		}
-		pod.Annotations[networkannotation.MULTUS_ANNOTATION_KEY] = networkannotation.MultusAnnotationToString(multusAnnotations)
-
-		// pod.Annotations["k8s.v1.cni.cncf.io/networks"] = `[{"name": "veth10","ips": ["10.0.0.1/24"]}]`
-		log.Info("Pod assigned to the l2networks")
-
-		marshaledPod, err := json.Marshal(pod)
-		if err != nil {
-			log.Error(err, "Error marshaling pod")
-			return admission.Errored(http.StatusInternalServerError, err)
-		}
-		return admission.PatchResponseFromRaw(req.Object.Raw, marshaledPod)
-
+	// An admission ID distinguishes a new pod incarnation from delayed cleanup
+	// of another pod with the same namespace/name.
+	id := string(req.UID)
+	if id == "" {
+		return admission.Denied("missing admission request UID")
 	}
-	return admission.Allowed("Pod not using l2sm networks")
-
+	pod.Annotations[allocationIDAnnotation] = id
+	type acquired struct {
+		network client.ObjectKey
+		port    client.ObjectKey
+		owner   portOwner
+	}
+	var held []acquired
+	committed := false
+	defer func() {
+		if committed {
+			return
+		}
+		// Request cancellation must not prevent rollback. Orphan reconciliation
+		// handles failures of these best-effort compensations.
+		cleanup, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		for _, claim := range held {
+			if err := store.releaseIPs(cleanup, claim.network, pod.Name, id); err != nil {
+				log.FromContext(ctx).Error(err, "allocation rollback failed")
+			}
+			if err := store.releasePort(cleanup, claim.port, pod.Spec.NodeName, claim.owner); err != nil {
+				log.FromContext(ctx).Error(err, "port rollback failed")
+			}
+		}
+	}()
+	var attachments []networkannotation.NetworkAnnotation
+	seen := map[client.ObjectKey]bool{}
+	for _, network := range networks {
+		namespace := network.Namespace
+		if namespace == "" {
+			namespace = pod.Namespace
+		}
+		if namespace != pod.Namespace {
+			return admission.Denied("cross-namespace L2Network attachment is not supported")
+		}
+		key := client.ObjectKey{Namespace: namespace, Name: network.Name}
+		if seen[key] {
+			return admission.Denied("duplicate L2Network attachment")
+		}
+		seen[key] = true
+		// Validate the network before reserving a scarce attachment.
+		n := &l2smv1.L2Network{}
+		if err := store.reader().Get(ctx, key, n); err != nil {
+			return admission.Errored(http.StatusBadRequest, err)
+		}
+		owner := podPortOwner(pod.Namespace, pod.Name, id, network.Name)
+		nad, err := store.reservePort(ctx, a.SwitchesNamespace, pod.Spec.NodeName, owner)
+		if err != nil {
+			return admission.Errored(http.StatusServiceUnavailable, err)
+		}
+		held = append(held, acquired{key, client.ObjectKeyFromObject(nad), owner})
+		ips, err := store.reserveIPs(ctx, key, pod.Name, id, network.IPAddresses)
+		if err != nil {
+			return admission.Errored(http.StatusServiceUnavailable, err)
+		}
+		attachment := networkannotation.NetworkAnnotation{Name: nad.Name, Namespace: nad.Namespace, IPAddresses: ips}
+		if len(ips) == 0 {
+			attachment.GenerateIPv6Address()
+		}
+		attachments = append(attachments, attachment)
+	}
+	pod.Annotations[networkannotation.MULTUS_ANNOTATION_KEY] = networkannotation.MultusAnnotationToString(attachments)
+	encoded, err := json.Marshal(pod)
+	if err != nil {
+		return admission.Errored(http.StatusInternalServerError, err)
+	}
+	committed = true
+	return admission.PatchResponseFromRaw(req.Object.Raw, encoded)
 }
 
 func (a *PodAnnotator) InjectDecoder(d *admission.Decoder) error {

@@ -129,8 +129,19 @@ type L2NetworkSpec struct {
 	Ids *IdsRules `json:"ids,omitempty"`
 }
 
+// PodAllocation records a pod's reservation, including admission attempts that
+// have not yet resulted in a persisted Pod. ID is copied onto the Pod.
+type PodAllocation struct {
+	ID          string      `json:"id"`
+	IPAddresses []string    `json:"ipAddresses,omitempty"`
+	CreatedAt   metav1.Time `json:"createdAt"`
+}
+
 // L2NetworkStatus defines the observed state of L2Network
 type L2NetworkStatus struct {
+	// PodAllocations tracks membership independently of IP family and makes retries idempotent.
+	// +optional
+	PodAllocations map[string]PodAllocation `json:"podAllocations,omitempty"`
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 

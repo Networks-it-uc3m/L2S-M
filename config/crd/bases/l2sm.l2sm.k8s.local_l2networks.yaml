@@ -220,6 +220,28 @@ spec:
               lastAssignedIP:
                 description: Last assigned IP, used for sequential allocation
                 type: string
+              podAllocations:
+                additionalProperties:
+                  description: |-
+                    PodAllocation records a pod's reservation, including admission attempts that
+                    have not yet resulted in a persisted Pod. ID is copied onto the Pod.
+                  properties:
+                    createdAt:
+                      format: date-time
+                      type: string
+                    id:
+                      type: string
+                    ipAddresses:
+                      items:
+                        type: string
+                      type: array
+                  required:
+                  - createdAt
+                  - id
+                  type: object
+                description: PodAllocations tracks membership independently of IP
+                  family and makes retries idempotent.
+                type: object
               providerConnectivity:
                 description: Status of the connectivity to the external provider SDN
                   Controller. If there is no connectivity, the exisitng l2sm-ned in

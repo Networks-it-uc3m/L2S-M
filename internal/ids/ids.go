@@ -157,8 +157,9 @@ func generateSuricataDeployment(idsRules *l2smv1.IdsRules, networkName, netAttac
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
-							Name:  "suricata",
-							Image: "jasonish/suricata:latest",
+							Name:            "suricata",
+							Image:           "jasonish/suricata:latest",
+							ImagePullPolicy: corev1.PullIfNotPresent,
 							// Command args to listen specifically on the Multus interface (net1)
 							Command: []string{"/bin/bash", "-c"},
 							Args: []string{

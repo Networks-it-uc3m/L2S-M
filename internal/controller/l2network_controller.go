@@ -19,20 +19,18 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"time"
 
 	dp "github.com/Networks-it-uc3m/l2sm-switch/pkg/datapath"
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	l2smv1 "github.com/Networks-it-uc3m/L2S-M/api/v1"
 	"github.com/Networks-it-uc3m/L2S-M/internal/dnsinterface"
 	"github.com/Networks-it-uc3m/L2S-M/internal/env"
-	"github.com/Networks-it-uc3m/L2S-M/internal/ids"
-	"github.com/Networks-it-uc3m/L2S-M/internal/networkannotation"
 	"github.com/Networks-it-uc3m/L2S-M/internal/sdnclient"
 	"github.com/Networks-it-uc3m/L2S-M/internal/talpainterface"
 	"github.com/Networks-it-uc3m/L2S-M/internal/utils"
@@ -42,8 +40,9 @@ import (
 // L2NetworkReconciler reconciles a L2Network object
 type L2NetworkReconciler struct {
 	client.Client
-	Log    logr.Logger
-	Scheme *runtime.Scheme
+	APIReader client.Reader
+	Log       logr.Logger
+	Scheme    *runtime.Scheme
 
 	// Manages interactions with the onos SDN Controller.
 	InternalClient    sdnclient.Client
@@ -71,7 +70,7 @@ func (r *L2NetworkReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	// Fetch the L2Network instance
 	network := &l2smv1.L2Network{}
 
-	err := r.Get(ctx, req.NamespacedName, network)
+	err := (allocationStore{Client: r.Client, Reader: r.APIReader}).reader().Get(ctx, req.NamespacedName, network)
 	if err != nil {
 		logger.Error(err, "unable to fetch L2Network")
 		return ctrl.Result{}, client.IgnoreNotFound(err)
@@ -80,14 +79,30 @@ func (r *L2NetworkReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	// Check if the object is being deleted
 	if network.GetDeletionTimestamp() != nil {
 		if slices.Contains(network.GetFinalizers(), l2smFinalizer) {
-			// The object is being deleted
-			if err := r.InternalClient.DeleteNetwork(network.Spec.Type, network.Name); err != nil {
-				// If fail to delete the external dependency here, return with error
-				// so that it can be retried
-				logger.Error(err, "couldn't delete network in sdn controller")
+			done, err := r.deleteIDS(ctx, network)
+			if err != nil {
 				return ctrl.Result{}, err
 			}
+			if !done {
+				return ctrl.Result{RequeueAfter: time.Second}, nil
+			}
+			// The object is being deleted
+			exists, checkErr := r.InternalClient.CheckNetworkExists(network.Spec.Type, network.Name)
+			if checkErr != nil {
+				return ctrl.Result{}, checkErr
+			}
+			if exists {
+				if err := r.InternalClient.DeleteNetwork(network.Spec.Type, network.Name); err != nil {
+					// If fail to delete the external dependency here, return with error
+					// so that it can be retried
+					logger.Error(err, "couldn't delete network in sdn controller")
+					return ctrl.Result{}, err
+				}
+			}
 
+			if err := (allocationStore{Client: r.Client, Reader: r.APIReader}).releaseOwnedPorts(ctx, r.SwitchesNamespace, networkPortOwner(network)); err != nil {
+				return ctrl.Result{}, err
+			}
 			// Remove our finalizer from the list and update it.
 			network.SetFinalizers(utils.RemoveString(network.GetFinalizers(), l2smFinalizer))
 			if err := r.Update(ctx, network); err != nil {
@@ -102,16 +117,20 @@ func (r *L2NetworkReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 	// Add finalizer for this CR
 	if !slices.Contains(network.GetFinalizers(), l2smFinalizer) {
-		err := r.InternalClient.CreateNetwork(network.Spec.Type, sdnclient.VnetPayload{NetworkId: network.Name})
+		exists, err := r.InternalClient.CheckNetworkExists(network.Spec.Type, network.Name)
 		if err != nil {
-			logger.Error(err, "failed to create network")
-			r.updateControllerStatus(ctx, network, l2smv1.OfflineStatus)
-
 			return ctrl.Result{}, err
 		}
+		if !exists {
+			if err := r.InternalClient.CreateNetwork(network.Spec.Type, sdnclient.VnetPayload{NetworkId: network.Name}); err != nil {
+				_ = r.updateControllerStatus(ctx, network, l2smv1.OfflineStatus)
+				return ctrl.Result{}, err
+			}
+		}
 		logger.Info("Network created in SDN controller", "NetworkID", network.Name)
-		r.updateControllerStatus(ctx, network, l2smv1.OnlineStatus)
-		network.Status.AssignedIPs = make(map[string]string)
+		if err := r.updateControllerStatus(ctx, network, l2smv1.OfflineStatus); err != nil {
+			return ctrl.Result{}, err
+		}
 		network.SetFinalizers(append(network.GetFinalizers(), l2smFinalizer))
 		if err := r.Update(ctx, network); err != nil {
 			return ctrl.Result{}, err
@@ -123,10 +142,8 @@ func (r *L2NetworkReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 				logger.Error(err, "failed to connect to provider")
 			}
 
-			network.Status.ProviderConnectivity = &provStatus
-
-			// Update the status in the Kubernetes API
-			if statusUpdateErr := r.Status().Update(ctx, network); statusUpdateErr != nil {
+			// Preserve allocations written concurrently by admission.
+			if statusUpdateErr := (allocationStore{Client: r.Client, Reader: r.APIReader}).updateNetwork(ctx, client.ObjectKeyFromObject(network), func(current *l2smv1.L2Network) error { current.Status.ProviderConnectivity = &provStatus; return nil }); statusUpdateErr != nil {
 				logger.Error(statusUpdateErr, "unable to update L2Network provider status")
 				return ctrl.Result{}, statusUpdateErr
 			}
@@ -143,7 +160,7 @@ func (r *L2NetworkReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 			}
 			// Then, we create the connection between the NED and the l2sm-switch, in the internal SDN Controller
-			nedNetworkAttachDef, err := r.ConnectInternalSwitchToNED(ctx, network.Name, ned.Spec.NodeConfig.NodeName, ned.Spec.Provider.Name)
+			nedNetworkAttachDef, err := r.ConnectInternalSwitchToNED(ctx, network.Namespace, network.Name, ned.Spec.NodeConfig.NodeName, ned.Spec.Provider.Name)
 			if err != nil {
 				logger.Error(err, "error connecting NED")
 				return ctrl.Result{}, nil
@@ -169,76 +186,13 @@ func (r *L2NetworkReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 		}
 
-		// we check if intrusion detection system is set and true. if not, we skip this part
-		if network.Spec.Ids != nil && network.Spec.Ids.Enabled {
+	}
 
-			// first lets use a network attachment definition for our new ids pod. IDS in l2sm relies on traffic duplicated through the ovs switches
-			// so we need a multus interface where all network traffic will be sent to.
-			// note: the node is important as it will specify which node to get a free net attach def from
-			netAttachDefLabel := networkannotation.NET_ATTACH_LABEL_PREFIX + network.Spec.Ids.Node
-			netAttachDefs := GetFreeNetAttachDefs(ctx, r.Client, r.SwitchesNamespace, netAttachDefLabel)
-
-			// no interfaces means no monitoring for us
-			if len(netAttachDefs.Items) == 0 {
-				err = errors.New("no interfaces available in control plane node")
-				//logger.Error(err, fmt.Sprintf("No interfaces available for node %s", gatewayNodeName))
-
-				//todo: check if we should handle this differently. pending to test this case... should we continue but just with no monitoring and give back an error? by this
-				// point there is already some stuff we have created, and we would need to delete it...
-				return ctrl.Result{}, err
-			}
-
-			// we get a free attach definition from the node we chose. the first one, we just need one
-			netAttachDef := &netAttachDefs.Items[0]
-
-			// we specify that we are keeping this network attachment definition in the spec node by configuring to true
-			if netAttachDef.Labels == nil {
-				netAttachDef.Labels = map[string]string{}
-			}
-			netAttachDef.Labels[netAttachDefLabel] = "true"
-
-			// we generate the openflow id from this networkattach def + switch in the node. this way we can tell the network that we want to mirror to this new port
-			portNumber, err := utils.GetPortNumberFromNetAttachDef(netAttachDef.Name)
-			if err != nil {
-				// If there is an error, it must be that the name is not compliant, so we can't be certain of which
-				// port we are trying to attach.
-				return ctrl.Result{}, fmt.Errorf("could not get port number from the multus network annotation: %v. Can't attach pod to network", err)
-			}
-
-			mirrorPortOFID := fmt.Sprintf("of:%s/%s", dp.GenerateID(dp.GetSwitchName(dp.DatapathParams{NodeName: network.Spec.Ids.Node, ProviderName: l2smv1.OVERLAY_PROVIDER})), portNumber)
-			if err := r.InternalClient.SetUpMirrorPort(network.Spec.Type, sdnclient.VnetPayload{NetworkId: network.Name, MirrorPort: mirrorPortOFID}); err != nil {
-				return ctrl.Result{}, fmt.Errorf("could not set up mirror port for IDS on network %q: %w", network.Name, err)
-			}
-
-			// we generate the network attachment definition annotation, so that multus appends this interface to the ids pod (not yet specified, that will come later)
-			netAnnot := networkannotation.NetworkAnnotation{Name: netAttachDef.Name, Namespace: netAttachDef.Namespace}
-			netAnnot.GenerateIPv6Address()
-			netAnnotString := networkannotation.MultusAnnotationToString([]networkannotation.NetworkAnnotation{netAnnot})
-
-			// generate resources. in total we get a configmap with the rules and a deployment
-			resArray, err := ids.GenerateExternalResources(network, netAnnotString)
-
-			if err != nil {
-				logger.Error(err, "error creating intrusion detecion system resources")
-				return ctrl.Result{}, nil
-			}
-			for _, res := range resArray {
-
-				// we set ownership to our new resources so that when deleting the network, these resources will go with it
-				if err := controllerutil.SetControllerReference(network, res, r.Scheme); err != nil {
-					return ctrl.Result{}, nil
-				}
-
-				// create ids deploy + configmap in the k8s cluster
-				r.Client.Create(ctx, res)
-			}
-			// if everything went as expected, we update the network attachment definition with the used label, so that we dontr try using it again
-			err = r.Client.Update(ctx, netAttachDef)
-			if err != nil {
-				return ctrl.Result{}, fmt.Errorf("could not update network attachment definition: %s", err)
-
-			}
-		}
+	if err := r.ensureIDS(ctx, network); err != nil {
+		return ctrl.Result{}, err
+	}
+	if err := r.updateControllerStatus(ctx, network, l2smv1.OnlineStatus); err != nil {
+		return ctrl.Result{}, err
 	}
 
 	return ctrl.Result{}, nil
@@ -246,6 +200,7 @@ func (r *L2NetworkReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *L2NetworkReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	r.APIReader = mgr.GetAPIReader()
 	var err error
 
 	// Initialize the InternalClient with the base URL of the SDN controller
@@ -299,26 +254,32 @@ func interDomainReconcile(network *l2smv1.L2Network, log logr.Logger) (l2smv1.Co
 
 func (r *L2NetworkReconciler) updateControllerStatus(ctx context.Context, network *l2smv1.L2Network, status l2smv1.ConnectivityStatus) error {
 
-	network.Status.InternalConnectivity = &status
-
-	return r.Status().Update(ctx, network)
+	store := allocationStore{Client: r.Client, Reader: r.APIReader}
+	err := store.updateNetwork(ctx, client.ObjectKeyFromObject(network), func(current *l2smv1.L2Network) error {
+		current.Status.InternalConnectivity = &status
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	return store.reader().Get(ctx, client.ObjectKeyFromObject(network), network)
 
 }
 
-func (r *L2NetworkReconciler) ConnectInternalSwitchToNED(ctx context.Context, networkName, nedNodeName, providerName string) (nettypes.NetworkAttachmentDefinition, error) {
+func (r *L2NetworkReconciler) ConnectInternalSwitchToNED(ctx context.Context, networkNamespace, networkName, nedNodeName, providerName string) (nettypes.NetworkAttachmentDefinition, error) {
 
-	// We get a free interface in the node name of the NED, this way we can interconnect the NED with the l2sm switch
-	var err error
-	netAttachDefLabel := networkannotation.NET_ATTACH_LABEL_PREFIX + nedNodeName
-	netAttachDefs := GetFreeNetAttachDefs(ctx, r.Client, r.SwitchesNamespace, netAttachDefLabel)
-
-	if len(netAttachDefs.Items) == 0 {
-		err = errors.New("no interfaces available in control plane node")
-		//logger.Error(err, fmt.Sprintf("No interfaces available for node %s", gatewayNodeName))
+	ownerNetwork := &l2smv1.L2Network{}
+	store := allocationStore{Client: r.Client, Reader: r.APIReader}
+	if err := store.reader().Get(ctx, client.ObjectKey{Namespace: networkNamespace, Name: networkName}, ownerNetwork); err != nil {
 		return nettypes.NetworkAttachmentDefinition{}, err
 	}
-
-	netAttachDef := &netAttachDefs.Items[0]
+	owner := networkPortOwner(ownerNetwork)
+	owner.Scope = "ned"
+	owner.Kind = "NEDLink" // Physical NED links retain their reservation until explicitly dismantled.
+	netAttachDef, err := store.reservePort(ctx, r.SwitchesNamespace, nedNodeName, owner)
+	if err != nil {
+		return nettypes.NetworkAttachmentDefinition{}, err
+	}
 
 	portNumber, _ := utils.GetPortNumberFromNetAttachDef(netAttachDef.Name)
 
@@ -330,13 +291,6 @@ func (r *L2NetworkReconciler) ConnectInternalSwitchToNED(ctx context.Context, ne
 
 	if err != nil {
 		return nettypes.NetworkAttachmentDefinition{}, fmt.Errorf("could not make a connection between the internal switch and the NED. Internal SDN controller error: %s", err)
-
-	}
-
-	netAttachDef.Labels[netAttachDefLabel] = "true"
-	err = r.Client.Update(ctx, netAttachDef)
-	if err != nil {
-		return nettypes.NetworkAttachmentDefinition{}, fmt.Errorf("could not update network attachment definition: %s", err)
 
 	}
 

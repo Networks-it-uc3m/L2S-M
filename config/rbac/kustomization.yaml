@@ -32,6 +32,9 @@ resources:
 # default, aiding admins in cluster management. Those roles are
 # not used by the controllermanager itself. You can comment the following lines
 # if you do not want those helpers be installed with your Project.
+- ccipsinteroverlay_admin_role.yaml
+- ccipsinteroverlay_editor_role.yaml
+- ccipsinteroverlay_viewer_role.yaml
 - ccipsoverlay_admin_role.yaml
 - ccipsoverlay_editor_role.yaml
 - ccipsoverlay_viewer_role.yaml

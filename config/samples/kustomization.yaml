@@ -20,4 +20,5 @@ resources:
 - l2sm_v1_overlay.yaml
 - l2sm_v1_quarantinepodrequest.yaml
 - l2sm_v1_ccipsoverlay.yaml
+- l2sm_v1_ccipsinteroverlay.yaml
 #+kubebuilder:scaffold:manifestskustomizesamples

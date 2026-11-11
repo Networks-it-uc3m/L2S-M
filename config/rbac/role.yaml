@@ -76,6 +76,7 @@ rules:
 - apiGroups:
   - l2sm.l2sm.k8s.local
   resources:
+  - ccipsinteroverlays
   - ccipsoverlays
   - l2networks
   - networkedgedevices
@@ -92,6 +93,7 @@ rules:
 - apiGroups:
   - l2sm.l2sm.k8s.local
   resources:
+  - ccipsinteroverlays/finalizers
   - ccipsoverlays/finalizers
   - l2networks/finalizers
   - networkedgedevices/finalizers
@@ -102,6 +104,7 @@ rules:
 - apiGroups:
   - l2sm.l2sm.k8s.local
   resources:
+  - ccipsinteroverlays/status
   - ccipsoverlays/status
   - l2networks/status
   - networkedgedevices/status

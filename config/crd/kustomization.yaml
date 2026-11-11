@@ -21,6 +21,7 @@ resources:
 - bases/l2sm.l2sm.k8s.local_overlays.yaml
 - bases/l2sm.l2sm.k8s.local_quarantinepodrequests.yaml
 - bases/l2sm.l2sm.k8s.local_ccipsoverlays.yaml
+- bases/l2sm.l2sm.k8s.local_ccipsinteroverlays.yaml
 #+kubebuilder:scaffold:crdkustomizeresource
 
 patches:
